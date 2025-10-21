@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${pontanoSans.className} bg-background-500  antialiased`}
+        className={`${pontanoSans.className} bg-background-500 antialiased`}
       >
         {children}
       </body>
