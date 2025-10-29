@@ -74,7 +74,7 @@ export default function Home() {
       { /* Main Features part STARTS here  */}
 
 
-      <div className="min-h-screen bg-accent-200">sa</div>
+      <div className="min-h-screen bg-accent-200">ben cafer dayak yemeyi severim -FA</div>
 
 
 

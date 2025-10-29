@@ -9,7 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "daisyui": "^5.3.0",
+    "@tailwindcss/cli": "^4.1.16",
+    "daisyui": "^5.3.10",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0"
@@ -21,7 +22,7 @@
     "@types/react": "19.2.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4.1.16"
   },
   "browserslist": "> 1%"
 }
