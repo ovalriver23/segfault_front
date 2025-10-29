@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const imgHome = "http://localhost:3845/assets/1861b8292a983bcc25c71541a406d52777e85501.svg";
-const imgTable = "http://localhost:3845/assets/4d86b09cdf4f431820fb07505881bb14697e4452.svg";
-const imgMenu = "http://localhost:3845/assets/2a80877f85bcf126bf05694f61b129190ae7b53e.svg";
-const imgStats = "http://localhost:3845/assets/de4b84e9ee1d4bd9d44a9ec85e5a4771ca41fae2.svg";
-const imgSettings = "http://localhost:3845/assets/1741b25ed6c01aa9eec196a71b53f4efbb787388.svg";
-const imgAvatar = "http://localhost:3845/assets/700a5e209a2ff8d2772381b94a03f945b1216285.png";
+const imgHome = "/images/admin/home-navbar.svg";
+const imgTable = "/images/admin/tables-navbar.svg";
+const imgMenu = "/images/admin/menu-navbar.svg";
+const imgStats = "/images/admin/stats-navbar.svg";
+const imgSettings = "/images/admin/options-navbar.svg";
+const imgAvatar = "/images/admin/avatar-navbar.png";
 
 interface SideNavProps {
   activeTab?: string;
