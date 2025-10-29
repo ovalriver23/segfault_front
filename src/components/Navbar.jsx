@@ -1,0 +1,59 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+export default function Navbar() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show navbar when scrolling up, hide when scrolling down
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+  return (
+    <div 
+      className={`navbar bg-background-500 shadow-sm fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
+        isVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
+      <div className="flex-1">
+        <a className="btn btn-ghost text-xl text-accent-500 hover:shadow-none hover:bg-background-500 hover:border-background-500">
+          Qrinyo
+        </a>
+      </div>
+      <div className="flex-none">
+        <Link href="/log-in">
+          <button className="btn btn-sm btn-outline border-primary-500 bg-primary-500 hover:bg-primary-600 hover:border-primary-600 mx-2">
+            Giriş Yap
+          </button>
+        </Link>
+        <Link href="/sign-up">
+          <button className="btn btn-sm btn-outline border-secondary-500 text-secondary-500 hover:bg-secondary-500 hover:text-background-500">
+            <svg width="16" height="16" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" clipRule="evenodd" d="M6.14714 3.4904C4.76642 3.4904 3.64714 4.60969 3.64714 5.9904V14.3237C3.64714 15.7044 4.76642 16.8237 6.14714 16.8237H14.4805C15.8612 16.8237 16.9805 15.7044 16.9805 14.3237V10.9904C16.9805 10.5302 17.3536 10.1571 17.8138 10.1571C18.274 10.1571 18.6471 10.5302 18.6471 10.9904V14.3237C18.6471 16.6249 16.7817 18.4904 14.4805 18.4904H6.14714C3.84595 18.4904 1.98047 16.6249 1.98047 14.3237V5.9904C1.98047 3.68921 3.84595 1.82373 6.14714 1.82373H9.48047C9.94071 1.82373 10.3138 2.19683 10.3138 2.65706C10.3138 3.1173 9.94071 3.4904 9.48047 3.4904H6.14714Z" fill="currentColor" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M18.4031 2.06781C18.7285 2.39325 18.7285 2.92088 18.4031 3.24632L10.9031 10.7463C10.5776 11.0718 10.05 11.0718 9.72455 10.7463C9.39911 10.4209 9.39911 9.89325 9.72455 9.56781L17.2245 2.06781C17.55 1.74237 18.0776 1.74237 18.4031 2.06781Z" fill="currentColor" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M11.9805 2.65706C11.9805 2.19683 12.3536 1.82373 12.8138 1.82373H17.8138C18.274 1.82373 18.6471 2.19683 18.6471 2.65706V7.65706C18.6471 8.1173 18.274 8.4904 17.8138 8.4904C17.3536 8.4904 16.9805 8.1173 16.9805 7.65706V3.4904H12.8138C12.3536 3.4904 11.9805 3.1173 11.9805 2.65706Z" fill="currentColor" />
+            </svg>
+            Kayıt Ol
+          </button>
+        </Link>
+      </div>
+    </div>
+  );
+}
