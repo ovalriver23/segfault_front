@@ -4,7 +4,7 @@
     to be able to show this page, you need to navigate to /sign-in
 */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 
 /*  Array describing each character (key, image path, position, eye position, animation speed).*/
@@ -42,10 +42,12 @@ const charactersData = [
 const SignInPage = () => {
   const charsRef = useRef<Array<HTMLDivElement | null>>([]);
   const lookingAway = useRef(false);
+  const [mouseMoved, setMouseMoved] = useState(false);
 
   // Mouse tracking and floating animation
   useEffect(() => {
     function handleMouseMove(e: MouseEvent) {
+      if (!mouseMoved) setMouseMoved(true);
       if (lookingAway.current) return;
       charsRef.current.forEach((char, i) => {
         if (!char) return;
@@ -73,7 +75,7 @@ const SignInPage = () => {
     }
     document.addEventListener("mousemove", handleMouseMove);
 
-    // Floating animation
+    // Floating animation (optional)
     charsRef.current.forEach((char, i) => {
       if (!char) return;
       const duration = 3 + i * 0.5;
@@ -96,7 +98,16 @@ const SignInPage = () => {
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, []);
+  }, [mouseMoved]);
+
+  // In your character movement logic, add:
+  if (!mouseMoved) {
+    // Reset transforms so characters stay in place
+    charsRef.current.forEach((char) => {
+      if (char) char.style.transform = "none";
+    });
+    return;
+  }
 
   // Password toggle and character reactions
   function togglePassword() {
