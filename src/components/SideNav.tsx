@@ -82,6 +82,7 @@ export default function SideNav({ activeTab = 'menu', isOpen = false, onClose }:
           const isActive = active === item.id;
           return (
             <Link
+              replace={true}
               key={item.id}
               href={item.href}
               onClick={() => handleLinkClick(item.id)}
