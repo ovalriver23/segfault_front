@@ -1,10 +1,41 @@
 "use client";
 
-/* This page is sign-up page
-    to be able to show this page, you need to navigate to /sign-up
-*/
 
-const SignUpPage = () => {
+import { useState } from "react";
+import * as z from "zod";
+
+interface SignUpClickEvent extends React.FormEvent<HTMLButtonElement> {}
+
+const SignUpPage = () =>{
+
+  const [restaurantName, setRestaurantName] = useState<string>("")
+  const [userName, setUserName] = useState<string>("")
+  const [email, setEmail] = useState<string>("")
+  const [password, setPassword] = useState<string>("")
+  const [confirmPassword, setConfirmPassword] = useState<string>("")
+
+  const User = z.object({
+    restaurantName: z.string().min(1).trim(),
+    userName: z.string().min(1).trim(),
+    email: z.email(),
+    password: z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/).trim(),
+    confirmPassword: z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/).trim(),    
+  });
+function SignUpClick(event: SignUpClickEvent): void {
+    try {
+      const data = User.parse({restaurantName,userName,email,password,confirmPassword})
+      console.log(data)
+    } catch (error) {
+      console.log(error)
+    }
+  
+}
+
+
+  // Let the form's onSubmit handle the actual submission.
+  // If you prefer to programmatically submit after validation, uncomment:
+  // form.requestSubmit();
+
   return (
     <div
       className="min-h-screen flex justify-center items-center"
@@ -34,6 +65,7 @@ const SignUpPage = () => {
               Restaurant Name
             </label>
             <input
+              onChange={(e) => setRestaurantName(e.target.value)}
               type="text"
               id="restaurantName"
               placeholder="Enter the restaurant name"
@@ -46,6 +78,7 @@ const SignUpPage = () => {
               Full Name
             </label>
             <input
+            onChange={(e) => setUserName(e.target.value)}
               type="text"
               id="ownerName"
               placeholder="Enter your full name"
@@ -58,6 +91,7 @@ const SignUpPage = () => {
               Email
             </label>
             <input
+              onChange={(e) => setEmail(e.target.value)}
               type="email"
               id="email"
               placeholder="Enter your email"
@@ -70,6 +104,7 @@ const SignUpPage = () => {
               Password
             </label>
             <input
+            onChange={(e) => setPassword(e.target.value)}
               type="password"
               id="password"
               placeholder="Enter your password"
@@ -82,6 +117,7 @@ const SignUpPage = () => {
               Confirm Password
             </label>
             <input
+            onChange={(e) => setConfirmPassword(e.target.value)}
               type="password"
               id="confirmPassword"
               placeholder="Confirm your password"
@@ -90,11 +126,13 @@ const SignUpPage = () => {
             />
           </div>
           <button
+            onClick={SignUpClick}
             type="submit"
             className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold mb-5 hover:bg-[#E11383] transition"
           >
             Sign Up
           </button>
+
           <button
             type="button"
             className="w-full py-3 bg-white border-2 border-[#F8645A] rounded-lg text-[#F8645A] text-base flex items-center justify-center gap-2 hover:border-[#E11383] hover:text-[#E11383] transition"
