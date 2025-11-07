@@ -1,7 +1,5 @@
 "use client";
 
-//proper error message must reflected
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import * as z from "zod";
