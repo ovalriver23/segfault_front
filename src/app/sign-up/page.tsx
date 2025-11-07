@@ -406,6 +406,17 @@ const SignUpPage = () => {
           Already have an account? <a href="/log-in" className="text-[#E11383] font-bold">Log In</a>
         </div>
       </div>
+      {/* Prevent gray background on autofill/autocomplete */}
+      <style jsx>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+          -webkit-text-fill-color: #683817 !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      `}</style>
     </div>
   );
 };
