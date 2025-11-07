@@ -198,7 +198,7 @@ const SignUpPage = () => {
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }, 1500);
 
     } catch (error) {
@@ -225,9 +225,6 @@ const SignUpPage = () => {
       }}
     >
       <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl p-8 md:p-12">
-        <div className="logo w-10 h-10 bg-black rounded-full flex items-center justify-center mb-8 mx-auto">
-          <span className="text-white text-xl">✦</span>
-        </div>
         <h1 className="text-2xl md:text-3xl mb-2 font-bold text-center text-text-500">
           Create your account
         </h1>

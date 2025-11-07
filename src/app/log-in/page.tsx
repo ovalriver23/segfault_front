@@ -196,7 +196,7 @@ const SignInPage = () => {
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }, 1500);
     } catch (error) {
       console.error('Sign-in error:', error);
@@ -256,9 +256,6 @@ const SignInPage = () => {
         </div>
         {/* Right Section: Login Form */}
         <div className="flex-1 p-8 md:p-16 flex flex-col justify-center">
-          <div className="logo w-10 h-10 bg-black rounded-full flex items-center justify-center mb-8 mx-auto md:mx-0">
-            <span className="text-white text-xl">✦</span>
-          </div>
           <h1 className="text-2xl md:text-[32px] mb-2 font-bold" style={{ color: "#683817" }}>Welcome back!</h1>
           <p className="subtitle mb-10 text-base md:text-lg" style={{ color: "#E11383" }}>Please enter your details</p>
           
