@@ -12,7 +12,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/cli": "^4.1.16",
     "daisyui": "^5.3.10",
-    "next": "15.5.4",
+    "next": "^16.0.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.66.0",
