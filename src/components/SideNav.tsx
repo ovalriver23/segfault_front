@@ -87,7 +87,7 @@ export default function SideNav({ activeTab = 'menu', isOpen = false, onClose }:
               href={item.href}
               onClick={() => handleLinkClick(item.id)}
               className={`
-                flex items-center justify-center md:justify-start gap-2 h-16 md:h-12 px-3 md:px-4 mb-2 rounded-[32px] md:rounded-[24px]
+                flex items-center justify-center md:justify-start gap-2 h-16 md:h-12 px-3 md:px-4 mb-2 rounded-4xl md:rounded-3xl
                 transition-all duration-200
                 ${isActive 
                   ? 'border-2 border-primary-500' 
@@ -95,7 +95,7 @@ export default function SideNav({ activeTab = 'menu', isOpen = false, onClose }:
                 }
               `}
             >
-              <div className="w-[42px] h-[42px] md:w-[32px] md:h-[32px] flex items-center justify-center flex-shrink-0">
+              <div className="w-[42px] h-[42px] md:w-8 md:h-8 flex items-center justify-center shrink-0">
                 <img src={item.icon} alt={item.label} className="w-full h-full object-contain" />
               </div>
               <span 

@@ -59,7 +59,7 @@ export default function PricingCard({
       </div>
       
       {/* Features */}
-      <div className="flex flex-col gap-[14px] items-center">
+      <div className="flex flex-col gap-3.5 items-center">
         {features.map((feature, index) => (
           <p 
             key={index} 

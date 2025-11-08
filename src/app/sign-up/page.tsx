@@ -256,7 +256,7 @@ const SignUpPage = () => {
               type="text"
               id="restaurantName"
               placeholder="Enter the restaurant name"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.restaurantName && touchedFields.has('restaurantName')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.restaurantName && touchedFields.has('restaurantName')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -279,7 +279,7 @@ const SignUpPage = () => {
               type="text"
               id="restaurantLocation"
               placeholder="e.g., Istanbul, Besiktas"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.restaurantLocation && touchedFields.has('restaurantLocation')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.restaurantLocation && touchedFields.has('restaurantLocation')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -302,7 +302,7 @@ const SignUpPage = () => {
               type="text"
               id="ownerName"
               placeholder="Enter your full name"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.userName && touchedFields.has('userName')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.userName && touchedFields.has('userName')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -324,7 +324,7 @@ const SignUpPage = () => {
               type="email"
               id="email"
               placeholder="Enter your email"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.email && touchedFields.has('email')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.email && touchedFields.has('email')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -346,7 +346,7 @@ const SignUpPage = () => {
               type="password"
               id="password"
               placeholder="Enter your password"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.password && touchedFields.has('password')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.password && touchedFields.has('password')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -368,7 +368,7 @@ const SignUpPage = () => {
               type="password"
               id="confirmPassword"
               placeholder="Confirm your password"
-              className={`w-full p-3 border-2 rounded-lg text-[#683817] placeholder:text-[#b09886] focus:border-[#E11383] text-base ${errors.confirmPassword && touchedFields.has('confirmPassword')
+              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.confirmPassword && touchedFields.has('confirmPassword')
                   ? 'border-red-500'
                   : 'border-[#F8645A]'
                 }`}
@@ -400,7 +400,7 @@ const SignUpPage = () => {
             Sign Up with Google
           </button>
         </form>
-        <div className="text-center mt-8 text-[#683817] text-base">
+        <div className="text-center mt-8 text-text-500 text-base">
           Already have an account? <a href="/log-in" className="text-[#E11383] font-bold">Log In</a>
         </div>
       </div>

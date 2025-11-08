@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <div className="flex-grow overflow-y-auto p-6 md:p-12 pt-16 md:pt-6">
+      <div className="grow overflow-y-auto p-6 md:p-12 pt-16 md:pt-6">
         {children}
       </div>
     </div>

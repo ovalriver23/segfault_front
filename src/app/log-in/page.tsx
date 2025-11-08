@@ -281,7 +281,7 @@ const SignInPage = () => {
                 id="username" 
                 placeholder="Enter your username"
                 {...register("username")}
-                className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-[#683817] focus:border-[#E11383] text-base" 
+                className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-text-500 focus:border-[#E11383] text-base" 
               />
               {errors.username && (
                 <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
@@ -295,7 +295,7 @@ const SignInPage = () => {
                   id="password" 
                   placeholder="Enter your password"
                   {...register("password")}
-                  className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-[#683817] focus:border-[#E11383] text-base" 
+                  className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-text-500focus:border-[#E11383] text-base" 
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={togglePassword}>
@@ -333,7 +333,7 @@ const SignInPage = () => {
               Log in with Google
             </button>
           </form>
-          <div className="text-center mt-8 text-[#683817] text-base">
+          <div className="text-center mt-8 text-text-500 text-base">
             Don't have an account? <a href="/sign-up" className="text-[#E11383] font-bold">Sign Up</a>
           </div>
         </div>

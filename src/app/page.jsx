@@ -19,7 +19,7 @@ export default function Home() {
       
       {/* First landing section with image STARTS here*/}
 
-      <div className="flex flex-1 flex-col justify-baseline items-center bg-[url(../../public/images/landing/landing_image.png)] bg-bottom bg-cover md:min-h-128 sm:min-h-128 px-4 sm:px-8 lg:px-16 py-8 sm:py-12 text-background-500">
+      <div className="flex flex-1 flex-col justify-baseline items-center bg-[url(/images/landing/landing_image.png)] bg-bottom bg-cover md:min-h-128 sm:min-h-128 px-4 sm:px-8 lg:px-16 py-8 sm:py-12 text-background-500">
         <h2 className="mx-4 mb-6 sm:mb-8 text-3xl sm:text-4xl lg:text-5xl font-bold sm:mx-8 lg:mx-16 text-center max-w-xs sm:max-w-md lg:max-w-3xl leading-tight">Her masa için tek ihtiyacınız {<br></br>}Qrinyo</h2>
         <h3 className="mx-4 sm:mx-16 lg:mx-32 mb-8 sm:mb-12 font-normal text-background-200 text-center text-base sm:text-lg lg:text-xl max-w-sm sm:max-w-2xl lg:max-w-4xl leading-relaxed">Müşterilerinizin menü ve sipariş işlemleri için yenilikçi çözüm</h3>
         <button className="rounded-2xl btn btn-outline hover:bg-primary-600 hover:border-primary-600 text-base sm:text-lg font-medium">Hemen Başla</button>
