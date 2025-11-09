@@ -3,63 +3,76 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+// Navigation icons imports
 const imgHome = "/images/admin/home-navbar.svg";
 const imgTable = "/images/admin/tables-navbar.svg";
 const imgMenu = "/images/admin/menu-navbar.svg";
 const imgStats = "/images/admin/stats-navbar.svg";
+const imgStaff = "/images/admin/staff-navbar.svg";
 const imgSettings = "/images/admin/options-navbar.svg";
 const imgAvatar = "/images/admin/avatar-navbar.png";
 
+// Component props interface
 interface SideNavProps {
-  activeTab?: string;
-  isOpen?: boolean;
-  onClose?: () => void;
+  activeTab?: string;    // Currently active navigation tab
+  isOpen?: boolean;      // Controls sidebar visibility on mobile
+  onClose?: () => void;  // Callback to close sidebar on mobile
+  onToggle?: () => void; // Callback to toggle sidebar on mobile
 }
 
-export default function SideNav({ activeTab = 'menu', isOpen = false, onClose }: SideNavProps) {
+/**
+ * SideNav Component
+ * 
+ * Responsive sidebar navigation for the dashboard.
+ * - Desktop: Always visible on the left side
+ * - Mobile: Slides in from left when opened, with overlay backdrop and full text labels
+ */
+export default function SideNav({ activeTab = 'general', isOpen = false, onClose, onToggle }: SideNavProps) {
+  // Track active navigation item
   const [active, setActive] = useState(activeTab);
 
+  // Navigation menu items configuration
   const navItems = [
-    { id: 'general', label: 'GENEL', icon: imgHome, href: '/dashboard' },
-    { id: 'tables', label: 'MASALAR', icon: imgTable, href: '/dashboard/tables' },
-    { id: 'menu', label: 'MENÜ', icon: imgMenu, href: '/dashboard/menu' },
-    { id: 'stats', label: 'VERİ', icon: imgStats, href: '/dashboard/stats' },
-    { id: 'settings', label: 'AYARLAR', icon: imgSettings, href: '/dashboard/settings' },
+    { id: 'general', label: 'Genel', icon: imgHome, href: '/dashboard' },
+    { id: 'tables', label: 'Masalar', icon: imgTable, href: '/dashboard/tables' },
+    { id: 'menu', label: 'Menü', icon: imgMenu, href: '/dashboard/menu' },
+    { id: 'stats', label: 'İstatistik', icon: imgStats, href: '/dashboard/stats' },
+    { id: 'staff', label: 'Personel', icon: imgStaff, href: '/dashboard/staff' },
+    { id: 'settings', label: 'Ayarlar', icon: imgSettings, href: '/dashboard/settings' },
   ];
 
+  // Handle navigation item click
   const handleLinkClick = (itemId: string) => {
     setActive(itemId);
-    if (onClose) onClose(); // Close drawer on mobile after clicking
+    if (onClose) onClose(); // Close mobile sidebar after navigation
   };
 
   return (
     <>
-      {/* Overlay for mobile */}
+      {/* Mobile overlay - darkens background when sidebar is open */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-accent-200 opacity-70 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onClose}
         />
       )}
       
-      {/* Sidebar */}
+      {/* Main sidebar container */}
       <div 
         className={`
-          fixed md:relative h-full bg-background-500 flex flex-col z-50
+          fixed md:relative h-full bg-white flex flex-col z-50
           transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          w-20 md:w-48
+          w-72 md:w-64
+          border-r border-gray-200
         `}
         data-name="SideNav"
       >
-        {/* Vertical Divider */}
-        <div className="absolute right-0 top-0 bottom-0 w-px bg-gray-300" />
-        
-        {/* Close button for mobile */}
+        {/* Close button - only visible on mobile */}
         <div className="flex justify-between items-center pl-6 pr-4 pt-4 pb-2 md:hidden">
           <button 
             onClick={onClose}
-            className=" btn btn-sm btn-ghost btn-circle hover:border-secondary-500 text-secondary-500 hover:bg-secondary-500 hover:text-background-500"
+            className="btn btn-sm btn-ghost btn-circle text-gray-600 hover:bg-orange-50 hover:text-orange-600"
             aria-label="Close menu"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,56 +81,79 @@ export default function SideNav({ activeTab = 'menu', isOpen = false, onClose }:
           </button>
         </div>
 
-        {/* Brand Section */}
-        <div className="md:flex md:flex-row md:items-center md:justify-center px-4 pt-2 md:pt-3 pb-6 md:pb-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-accent-500 text-center md:text-left">
-            <a className="md:hidden " href='/'>QR</a>
-            <a className="hidden md:inline btn btn-ghost text-2xl md:text-3xl text-accent-500 hover:shadow-none hover:bg-background-500 hover:border-background-500" href='/'>Qrinyo</a>
-          </h1>
+        {/* Brand section - EasyOrder logo */}
+        <div className="flex flex-row items-center justify-start px-7 pt-2 md:pt-4 pb-3">
+          <Link
+            href="/dashboard"
+            className="text-2xl md:text-3xl font-black text-black hover:text-gray-800 transition-colors"
+            style={{ fontFamily: 'Pontano Sans, sans-serif' }}
+            onClick={() => handleLinkClick('general')}
+          >
+            {/* Always show full EasyOrder text */}
+            EasyOrder
+          </Link>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="flex-1 px-2 md:px-3 py-2">
-        {navItems.map((item) => {
-          const isActive = active === item.id;
-          return (
-            <Link
-              replace={true}
-              key={item.id}
-              href={item.href}
-              onClick={() => handleLinkClick(item.id)}
-              className={`
-                flex items-center justify-center md:justify-start gap-2 h-16 md:h-12 px-3 md:px-4 mb-2 rounded-4xl md:rounded-3xl
-                transition-all duration-200
-                ${isActive 
-                  ? 'border-2 border-primary-500' 
-                  : 'hover:bg-background-600'
-                }
-              `}
-            >
-              <div className="w-[42px] h-[42px] md:w-8 md:h-8 flex items-center justify-center shrink-0">
-                <img src={item.icon} alt={item.label} className="w-full h-full object-contain" />
-              </div>
-              <span 
+        {/* Navigation menu */}
+        <nav className="flex-1 px-4 py-2 pt-4 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = active === item.id;
+            return (
+              <Link
+                replace={true}
+                key={item.id}
+                href={item.href}
+                onClick={() => handleLinkClick(item.id)}
                 className={`
-                  hidden md:block text-lg font-semibold
-                  ${isActive ? 'text-primary-500' : 'text-primary-400'}
+                  flex items-center justify-start gap-4 h-14 md:h-12 px-4 mb-3 md:mb-2 rounded-xl
+                  transition-all duration-200
+                  group
+                  ${isActive 
+                    ? 'bg-orange-50 text-orange-600'  // Active state: orange background & text
+                    : 'text-gray-600 hover:bg-orange-50'  // Inactive state: gray with orange hover
+                  }
                 `}
-                style={{ fontFamily: 'Pontano Sans, sans-serif' }}
               >
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+                {/* Navigation icon */}
+                <div className="w-6 h-6 md:w-5 md:h-5 flex items-center justify-center shrink-0">
+                  <img 
+                    src={item.icon} 
+                    alt={item.label} 
+                    className={`w-full h-full object-contain transition-all
+                      ${isActive 
+                        ? 'brightness-0 saturate-100 invert-[45%] sepia-[100%] saturate-[1500%] hue-rotate-[350deg] brightness-[105%]'  // Orange filter for active icon
+                        : 'opacity-60 group-hover:opacity-80'  // Gray filter for inactive icons
+                      }
+                    `}
+                  />
+                </div>
+                
+                {/* Navigation label - now always visible on both mobile and desktop */}
+                <span 
+                  className={`
+                    text-base font-medium
+                    ${isActive ? 'text-orange-600 font-semibold' : 'text-gray-600'}
+                  `}
+                  style={{ fontFamily: 'Pontano Sans, sans-serif' }}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* Avatar Section */}
-      <div className="px-4 md:px-6 pb-6 md:pb-4 flex justify-center md:justify-start">
-        <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl overflow-hidden">
-          <img src={imgAvatar} alt="User Avatar" className="w-full h-full object-cover" />
+        {/* User avatar at bottom of sidebar */}
+        <div className="px-4 md:px-6 pb-6 flex justify-start items-center gap-3">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
+            <span className="text-lg font-bold text-gray-700">N</span>
+          </div>
+          {/* User info - only visible when sidebar is open (mobile) or on desktop */}
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-gray-800">User Name</span>
+            <span className="text-xs text-gray-500">Admin</span>
+          </div>
         </div>
-      </div>
       </div>
     </>
   );

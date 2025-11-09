@@ -1,37 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, createContext, useContext } from 'react';
 import SideNav from '../../components/SideNav';
+
+interface PageContextType {
+  pageTitle: string;
+  setPageTitle: (title: string) => void;
+}
+
+const PageContext = createContext<PageContextType>({
+  pageTitle: '',
+  setPageTitle: () => {},
+});
+
+export const usePageTitle = () => useContext(PageContext);
  
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [pageTitle, setPageTitle] = useState('');
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Hamburger menu button for mobile */}
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="fixed top-4 left-4 z-30 md:hidden btn btn-circle btn-ghost hover:border-secondary-500 text-secondary-500 hover:bg-secondary-500 hover:text-background-500"
-        aria-label="Toggle menu"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Sidebar */}
-      <div className="w-20 md:w-64 flex-none">
+    <PageContext.Provider value={{ pageTitle, setPageTitle }}>
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
+        {/* Sidebar */}
         <SideNav 
           activeTab='general' 
           isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
+          onClose={closeSidebar}
+          onToggle={toggleSidebar}
         />
-      </div>
 
-      {/* Main content */}
-      <div className="grow overflow-y-auto p-6 md:p-12 pt-16 md:pt-6">
-        {children}
+        {/* Main content - Full width with gray background */}
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          {/* Page content with padding inside */}
+          <div className="p-6">
+            {children}
+          </div>
+        </main>
       </div>
-    </div>
+    </PageContext.Provider>
   );
 }
