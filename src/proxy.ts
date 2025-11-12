@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
  
 // 1. Specify protected and public routes
-const protectedRoutes = ['/dashboard']
+const protectedRoutes = ['/dashboard','dashboard/staff','dashboard/menu','dashboard/settings','dashboard/tables','dashboard/stats']
 const publicRoutes = ['/log-in', '/sign-up', '/']
  
 export default async function proxy(req: NextRequest) {
