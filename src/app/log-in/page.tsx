@@ -295,7 +295,7 @@ const SignInPage = () => {
                   id="password" 
                   placeholder="Enter your password"
                   {...register("password")}
-                  className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-text-500 focus:border-[#E11383] text-base" 
+                  className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-gray-800 placeholder:text-gray-400 focus:border-[#E11383] text-base" 
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={togglePassword}>
