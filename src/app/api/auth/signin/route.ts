@@ -89,8 +89,6 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    // Handle network errors and other exceptions
-    console.error('Sign-in proxy error:', error);
 
     // Check if it's a network error
     if (error instanceof TypeError && error.message.includes('fetch')) {
