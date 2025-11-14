@@ -175,15 +175,6 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
           })}
         </nav>
 
-{/*
-        <div className="dropdown dropdown-top">
-          <div tabIndex={0} role="button" className="btn m-1">Click ⬆️</div>
-          <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-            <li><a>Item 1</a></li>
-            <li><a>Item 2</a></li>
-          </ul>
-        </div>
-        */}
 
         {/* User avatar at bottom of sidebar */}
         <div className="dropdown dropdown-top dropdown-center px-4 md:px-6 pb-6">
