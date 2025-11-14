@@ -2,6 +2,7 @@
 
 import { useState, createContext, useContext } from 'react';
 import SideNav from '../../components/SideNav';
+import { AuthProvider } from '../lib/context/AuthContext';
 
 interface PageContextType {
   pageTitle: string;
@@ -10,11 +11,11 @@ interface PageContextType {
 
 const PageContext = createContext<PageContextType>({
   pageTitle: '',
-  setPageTitle: () => {},
+  setPageTitle: () => { },
 });
 
 export const usePageTitle = () => useContext(PageContext);
- 
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pageTitle, setPageTitle] = useState('');
@@ -29,23 +30,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <PageContext.Provider value={{ pageTitle, setPageTitle }}>
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
-        {/* Sidebar */}
-        <SideNav 
-          activeTab='general' 
-          isOpen={isSidebarOpen}
-          onClose={closeSidebar}
-          onToggle={toggleSidebar}
-        />
+      <AuthProvider>
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
+          {/* Sidebar */}
+          <SideNav
+            activeTab='general'
+            isOpen={isSidebarOpen}
+            onClose={closeSidebar}
+            onToggle={toggleSidebar}
+          />
 
-        {/* Main content - Full width with gray background */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          {/* Page content with padding inside */}
-          <div className="p-6">
-            {children}
-          </div>
-        </main>
-      </div>
+          {/* Main content - Full width with gray background */}
+          <main className="flex-1 overflow-y-auto bg-gray-50">
+            {/* Page content with padding inside */}
+            <div className="p-6">
+              {children}
+            </div>
+          </main>
+        </div>
+      </AuthProvider>
     </PageContext.Provider>
   );
 }

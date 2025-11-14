@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../app/lib/context/AuthContext';
 
 // Navigation icons imports
 const imgHome = "/images/admin/home-navbar.svg";
@@ -32,6 +33,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
   // Track active navigation item
   const [active, setActive] = useState(activeTab);
   const router = useRouter();
+   const { user, loading, error, logout } = useAuth();
 
   // Navigation menu items configuration
   const navItems = [
@@ -51,7 +53,6 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
 
   // Handle user logout
   const handleLogOut = async () => {
-    console.log("logging out")
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -61,8 +62,9 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
       });
 
       if (response.ok) {
+        logout();
         // Redirect to login page after successful logout
-        router.push('/log-in');
+        router.push('/');
       } else {
         const data = await response.json();
         console.error('Logout failed:', data.error || data.message);
@@ -186,12 +188,18 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
         <div className="dropdown dropdown-top dropdown-center px-4 md:px-6 pb-6">
           <div tabIndex={0} role="button" className="flex justify-start items-center gap-3 cursor-pointer">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-              <div className="text-lg font-bold text-gray-700">N</div>
+              <div className="text-lg font-bold text-gray-700">
+                {loading ? '...' : user?.username?.charAt(0).toUpperCase() || 'N'}
+              </div>
             </div>
             {/* User info - only visible when sidebar is open (mobile) or on desktop */}
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-800">User Name</span>
-              <span className="text-xs text-gray-500">Admin</span>
+              <span className="text-sm font-semibold text-gray-800">
+                {loading ? 'Loading...' : user?.username || 'User Name'}
+              </span>
+              <span className="text-xs text-gray-500">
+                {loading ? '...' : user?.role || 'Admin'}
+              </span>
             </div>
           </div>
           <ul tabIndex={0} className="dropdown-content menu bg-white text-gray-700 rounded-box z-1 w-52 p-2 mb-2 shadow-lg border border-gray-200">
