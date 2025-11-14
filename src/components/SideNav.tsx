@@ -73,6 +73,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
       }
     } catch (error) {
       console.error('Logout error:', error);
+      logout();
       // Redirect to login page even if there's an error
       router.push('/log-in');
     }
