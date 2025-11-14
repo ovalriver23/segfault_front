@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Navigation icons imports
 const imgHome = "/images/admin/home-navbar.svg";
@@ -30,6 +31,7 @@ interface SideNavProps {
 export default function SideNav({ activeTab = 'general', isOpen = false, onClose, onToggle }: SideNavProps) {
   // Track active navigation item
   const [active, setActive] = useState(activeTab);
+  const router = useRouter();
 
   // Navigation menu items configuration
   const navItems = [
@@ -47,18 +49,45 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
     if (onClose) onClose(); // Close mobile sidebar after navigation
   };
 
+  // Handle user logout
+  const handleLogOut = async () => {
+    console.log("logging out")
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Redirect to login page after successful logout
+        router.push('/log-in');
+      } else {
+        const data = await response.json();
+        console.error('Logout failed:', data.error || data.message);
+        // Still redirect to login page even if backend logout fails
+        router.push('/log-in');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Redirect to login page even if there's an error
+      router.push('/log-in');
+    }
+  };
+
   return (
     <>
       {/* Mobile overlay - darkens background when sidebar is open */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onClose}
         />
       )}
-      
+
       {/* Main sidebar container */}
-      <div 
+      <div
         className={`
           fixed md:relative h-full bg-white flex flex-col z-50
           transition-transform duration-300 ease-in-out
@@ -70,7 +99,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
       >
         {/* Close button - only visible on mobile */}
         <div className="flex justify-between items-center pl-6 pr-4 pt-4 pb-2 md:hidden">
-          <button 
+          <button
             onClick={onClose}
             className="btn btn-sm btn-ghost btn-circle text-gray-600 hover:bg-orange-50 hover:text-orange-600"
             aria-label="Close menu"
@@ -108,7 +137,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
                   flex items-center justify-start gap-4 h-14 md:h-12 px-4 mb-3 md:mb-2 rounded-xl
                   transition-all duration-200
                   group
-                  ${isActive 
+                  ${isActive
                     ? 'bg-orange-50 text-orange-600'  // Active state: orange background & text
                     : 'text-gray-600 hover:bg-orange-50'  // Inactive state: gray with orange hover
                   }
@@ -116,20 +145,20 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
               >
                 {/* Navigation icon */}
                 <div className="w-6 h-6 md:w-5 md:h-5 flex items-center justify-center shrink-0">
-                  <img 
-                    src={item.icon} 
-                    alt={item.label} 
+                  <img
+                    src={item.icon}
+                    alt={item.label}
                     className={`w-full h-full object-contain transition-all
-                      ${isActive 
-                        ? 'brightness-0 saturate-100 invert-[45%] sepia-[100%] saturate-[1500%] hue-rotate-[350deg] brightness-[105%]'  // Orange filter for active icon
+                      ${isActive
+                        ? 'brightness-0 saturate-100 invert-45 sepia-100 hue-rotate-350 '  // Orange filter for active icon
                         : 'opacity-60 group-hover:opacity-80'  // Gray filter for inactive icons
                       }
                     `}
                   />
                 </div>
-                
+
                 {/* Navigation label - now always visible on both mobile and desktop */}
-                <span 
+                <span
                   className={`
                     text-base font-medium
                     ${isActive ? 'text-orange-600 font-semibold' : 'text-gray-600'}
@@ -143,16 +172,31 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
           })}
         </nav>
 
+{/*
+        <div className="dropdown dropdown-top">
+          <div tabIndex={0} role="button" className="btn m-1">Click ⬆️</div>
+          <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <li><a>Item 1</a></li>
+            <li><a>Item 2</a></li>
+          </ul>
+        </div>
+        */}
+
         {/* User avatar at bottom of sidebar */}
-        <div className="px-4 md:px-6 pb-6 flex justify-start items-center gap-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-            <span className="text-lg font-bold text-gray-700">N</span>
+        <div className="dropdown dropdown-top dropdown-center px-4 md:px-6 pb-6">
+          <div tabIndex={0} role="button" className="flex justify-start items-center gap-3 cursor-pointer">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
+              <div className="text-lg font-bold text-gray-700">N</div>
+            </div>
+            {/* User info - only visible when sidebar is open (mobile) or on desktop */}
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-800">User Name</span>
+              <span className="text-xs text-gray-500">Admin</span>
+            </div>
           </div>
-          {/* User info - only visible when sidebar is open (mobile) or on desktop */}
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-800">User Name</span>
-            <span className="text-xs text-gray-500">Admin</span>
-          </div>
+          <ul tabIndex={0} className="dropdown-content menu bg-white text-gray-700 rounded-box z-1 w-52 p-2 mb-2 shadow-lg border border-gray-200">
+            <li><button onClick={handleLogOut} className="w-full text-left">Çıkış Yap</button></li>
+          </ul>
         </div>
       </div>
     </>
