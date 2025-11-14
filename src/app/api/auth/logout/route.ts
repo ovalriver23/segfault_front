@@ -32,7 +32,17 @@ export async function POST(request: NextRequest) {
       credentials: 'include'
     });
 
-    const responseData: LogoutResponse = await backendResponse.json();
+    // Backend returns text/plain, not JSON
+    let responseData: LogoutResponse;
+    const contentType = backendResponse.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await backendResponse.json();
+    } else {
+      // Handle text/plain response
+      const textResponse = await backendResponse.text();
+      responseData = { message: textResponse };
+    }
 
     // Create response and delete JWT cookie regardless of backend status
     const response = NextResponse.json(
