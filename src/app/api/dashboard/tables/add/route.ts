@@ -68,6 +68,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Handle 400 error from backend (table already exists)
+        if (backendResponse.status === 400) {
+            return NextResponse.json(
+                {
+                    message: 'Böyle bir masa zaten var.',
+                    error: 'TABLE_ALREADY_EXISTS'
+                },
+                { status: 400 }
+            );
+        }
+
         const response = NextResponse.json(
             responseData,
             { status: backendResponse.status }

@@ -2,37 +2,53 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface Table {
+    id: number;
+    tableNumber: string;
+    restaurantId: number;
+}
 
 export default function Tables() {
     // State management
-    const [tableList, setTableList] = useState([
-        { id: 1, capacity: 4, status: 'occupied' },
-        { id: 2, capacity: 4, status: 'available' },
-        { id: 3, capacity: 4, status: 'occupied' },
-        { id: 4, capacity: 4, status: 'occupied' },
-        { id: 5, capacity: 4, status: 'occupied' },
-        { id: 6, capacity: 4, status: 'available' },
-        { id: 7, capacity: 4, status: 'occupied' },
-        { id: 8, capacity: 4, status: 'occupied' },
-        { id: 9, capacity: 4, status: 'occupied' },
-        { id: 10, capacity: 4, status: 'occupied' },
-        { id: 11, capacity: 4, status: 'reserved' },
-        { id: 12, capacity: 4, status: 'occupied' },
-        { id: 13, capacity: 4, status: 'occupied' },
-        { id: 14, capacity: 4, status: 'occupied' },
-        { id: 15, capacity: 4, status: 'available' },
-    ]);
-    
+    const [tableList, setTableList] = useState<Table[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [tableName, setTableName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
 
+    // Fetch tables on component mount
+    useEffect(() => {
+        fetchTables();
+    }, []);
+
+    const fetchTables = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/dashboard/tables/get', {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch tables');
+            }
+
+            const tables: Table[] = await response.json();
+            setTableList(tables);
+        } catch (error) {
+            console.error('Error fetching tables:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Calculate summary stats from tableList
     const totalTables = tableList.length;
-    const availableTables = tableList.filter(t => t.status === 'available').length;
-    const occupiedTables = tableList.filter(t => t.status === 'occupied').length;
-    const reservedTables = tableList.filter(t => t.status === 'reserved').length;
+    const availableTables = tableList.length; // Default all to available for now
+    const occupiedTables = 0;
+    const reservedTables = 0;
 
     // Modal handlers
     const openModal = () => {
@@ -82,8 +98,8 @@ export default function Tables() {
             // Success - append new table to the list
             setTableList(prev => [...prev, {
                 id: data.id,
-                capacity: 4, // Default capacity
-                status: 'available' // Default status
+                tableNumber: data.tableNumber,
+                restaurantId: data.restaurantId
             }]);
 
             closeModal();
@@ -98,6 +114,7 @@ export default function Tables() {
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
             {/* Header */}
+
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-semibold text-neutral-900">Masalar</h1>
 
@@ -133,49 +150,50 @@ export default function Tables() {
             {/* Adding Table Modal */}
             <dialog id="Add_Table" className="modal">
                 <div className="modal-box bg-white rounded-xl shadow-xl p-6">
-                    {/* Modal Header */}
-                    <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
-                    
-                    {/* Input Field */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Masa Adı
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Masa adını giriniz"
-                            value={tableName}
-                            onChange={(e) => setTableName(e.target.value)}
-                            className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
-                        />
-                        {formError && (
-                            <p className="text-sm text-red-600 mt-2">{formError}</p>
-                        )}
-                    </div>
-                    
-                    {/* Modal Action Buttons */}
-                    <div className="modal-action mt-8">
-                        <div className="flex gap-3 w-full">
-                            {/* Cancel Button */}
-                            <button 
-                                type="button"
-                                onClick={closeModal}
-                                disabled={isSubmitting}
-                                className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
-                            >
-                                İptal
-                            </button>
-                            {/* Add Button */}
-                            <button 
-                                type="button"
-                                onClick={handleAddTable}
-                                disabled={isSubmitting}
-                                className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSubmitting ? 'Ekleniyor...' : 'Ekle'}
-                            </button>
+                    <form onSubmit={handleAddTable}>
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
+                        
+                        {/* Input Field */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Masa Adı
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Masa adını giriniz"
+                                value={tableName}
+                                onChange={(e) => setTableName(e.target.value)}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                            {formError && (
+                                <p className="text-sm text-red-600 mt-2">{formError}</p>
+                            )}
                         </div>
-                    </div>
+                        
+                        {/* Modal Action Buttons */}
+                        <div className="modal-action mt-8">
+                            <div className="flex gap-3 w-full">
+                                {/* Cancel Button */}
+                                <button 
+                                    type="button"
+                                    onClick={closeModal}
+                                    disabled={isSubmitting}
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                {/* Add Button */}
+                                <button 
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Ekleniyor...' : 'Ekle'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
                 <form method="dialog" className="modal-backdrop">
                     <button onClick={closeModal}>close</button>
@@ -239,60 +257,52 @@ export default function Tables() {
 
             {/* Tables Grid */}
             <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {tableList.map((table) => (
-                    <div
-                        key={table.id}
-                        className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${table.status === 'occupied'
-                            ? 'border-red-300'
-                            : table.status === 'available'
-                                ? 'border-green-300'
-                                : 'border-blue-300'
-                            }`}
-                    >
-                        {/* Edit Button Indicator - Shows only on hover */}
-                        <div className="indicator-item indicator-top opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button className="btn btn-sm p-2 h-9 min-h-9 w-9 bg-white hover:bg-gray-50 border border-gray-300 rounded-full shadow-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" className="text-gray-700">
-                                    <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83l3.75 3.75z" />
-                                </svg>
-                            </button>
-                        </div>
+                {isLoading ? (
+                    <>
+                        {[...Array(10)].map((_, index) => (
+                                        <div key={index} className="h-32 w-full bg-gray-100 rounded-xl animate-pulse"></div>
+                        ))}
+                    </>
+                ) : tableList.length === 0 ? (
+                    <div className="col-span-full text-center py-12 text-gray-500">
+                        Henüz masa eklenmemiş
+                    </div>
+                ) : (
+                    
+                    tableList.map((table) => (
+                        <div
+                            key={table.id}
+                            className="indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group border-green-300"
+                        >
+                            {/* Edit Button Indicator - Shows only on hover */}
+                            <div className="indicator-item indicator-top opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <button className="btn btn-sm p-2 h-9 min-h-9 w-9 bg-white hover:bg-gray-50 border border-gray-300 rounded-full shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" className="text-gray-700">
+                                        <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83l3.75 3.75z" />
+                                    </svg>
+                                </button>
+                            </div>
 
-                        {/* Status Badge - Positioned in top right */}
-                        <div className="absolute right-5 top-3">
-                            {table.status === 'available' && (
-
+                            {/* Status Badge - Positioned in top right */}
+                            <div className="absolute right-5 top-3">
                                 <div className="inline-grid *:[grid-area:1/1]">
                                     <div className="status status-success animate-ping"></div>
                                     <div className="status status-success"></div>
                                 </div>
+                            </div>
 
-                            )}
-                            {table.status === 'occupied' && (
-                                <div className="inline-grid *:[grid-area:1/1]">
-                                    <div className="status status-error animate-ping"></div>
-                                    <div className="status status-error"></div>
-                                </div>
-                            )}
-                            {table.status === 'reserved' && (
-                                <div className="inline-grid *:[grid-area:1/1]">
-                                    <div className="status status-info animate-ping"></div>
-                                    <div className="status status-info"></div>
-                                </div>
-                            )}
+                            {/* Table Info */}
+                            <div className="mt-8">
+                                <p className="text-xl font-medium text-neutral-900 mb-2">
+                                    {table.tableNumber}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    4 kişilik
+                                </p>
+                            </div>
                         </div>
-
-                        {/* Table Info */}
-                        <div className="mt-8">
-                            <p className="text-xl font-medium text-neutral-900 mb-2">
-                                Masa No: {table.id}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                                {table.capacity} kişilik
-                            </p>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
         </div>
     );
