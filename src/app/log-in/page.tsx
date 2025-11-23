@@ -5,6 +5,7 @@
 */
 
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -231,7 +232,7 @@ const SignInPage = () => {
                   cursor: "pointer",
                 }}
               >
-                <img src={char.img} alt={char.key} style={{ width: "100%", height: "auto" }} />
+                <Image src={char.img} alt={char.key} width={200} height={200} style={{ width: "100%", height: "auto" }} />
                 <div
                   className="eyes"
                   style={{
@@ -334,7 +335,7 @@ const SignInPage = () => {
             </button>
           </form>
           <div className="text-center mt-8 text-text-500 text-base">
-            Don't have an account? <a href="/sign-up" className="text-[#E11383] font-bold">Sign Up</a>
+            Don&apos;t have an account? <a href="/sign-up" className="text-[#E11383] font-bold">Sign Up</a>
           </div>
         </div>
       </div>

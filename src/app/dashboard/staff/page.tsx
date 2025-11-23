@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 /**
  * Staff interface - Represents a staff member
@@ -359,7 +360,7 @@ export default function StaffPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                         <p className="text-lg font-medium text-gray-600 mb-2">Henüz personel yok</p>
-                        <p className="text-sm text-gray-400">İlk ekip üyenizi eklemek için "Yeni Personel Ekle" butonuna tıklayın</p>
+                        <p className="text-sm text-gray-400">İlk ekip üyenizi eklemek için &quot;Yeni Personel Ekle&quot; butonuna tıklayın</p>
                       </div>
                     </td>
                   </tr>
@@ -373,7 +374,7 @@ export default function StaffPage() {
                           <div className="avatar placeholder">
                             <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center">
                               {staff.avatar ? (
-                                <img src={staff.avatar} alt={staff.username} className="rounded-full w-12 h-12 object-cover" />
+                                <Image src={staff.avatar} alt={staff.username} width={48} height={48} className="rounded-full w-12 h-12 object-cover" />
                               ) : (
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -447,7 +448,7 @@ export default function StaffPage() {
                 <div className="avatar placeholder">
                   <div className="bg-orange-100 text-orange-600 rounded-full w-20 h-20 flex items-center justify-center">
                     {selectedStaff.avatar ? (
-                      <img src={selectedStaff.avatar} alt={selectedStaff.username} className="rounded-full w-20 h-20 object-cover" />
+                      <Image src={selectedStaff.avatar} alt={selectedStaff.username} width={80} height={80} className="rounded-full w-20 h-20 object-cover" />
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
