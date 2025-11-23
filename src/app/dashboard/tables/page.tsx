@@ -260,7 +260,7 @@ export default function Tables() {
                 {isLoading ? (
                     <>
                         {[...Array(10)].map((_, index) => (
-                                        <div key={index} className="h-32 w-full bg-gray-100 rounded-xl animate-pulse"></div>
+                                        <div key={index} className="skeleton h-32 w-full text-pri bg-gray-100 text-prim rounded-xl [--color-base-100:#fbd0a9]"></div>
                         ))}
                     </>
                 ) : tableList.length === 0 ? (
