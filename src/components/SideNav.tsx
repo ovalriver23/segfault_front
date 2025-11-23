@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../app/lib/context/AuthContext';
@@ -148,9 +149,11 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
               >
                 {/* Navigation icon */}
                 <div className="w-6 h-6 md:w-5 md:h-5 flex items-center justify-center shrink-0">
-                  <img
+                  <Image
                     src={item.icon}
                     alt={item.label}
+                    width={24}
+                    height={24}
                     className={`w-full h-full object-contain transition-all
                       ${isActive
                         ? 'brightness-0 saturate-100 invert-45 sepia-100 hue-rotate-350 '  // Orange filter for active icon
