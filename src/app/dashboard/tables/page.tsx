@@ -17,28 +17,34 @@ export default function Tables() {
     const [tableName, setTableName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
+    const [fetchError, setFetchError] = useState('');
 
     // Fetch tables on component mount
     useEffect(() => {
-        fetchTables();
+            fetchTables();
     }, []);
 
     const fetchTables = async () => {
         try {
             setIsLoading(true);
+            setFetchError('');
             const response = await fetch('/api/dashboard/tables/get', {
                 method: 'GET',
                 credentials: 'include',
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch tables');
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Masalar yüklenirken bir hata oluştu';
+                setFetchError(errorMessage);
+                return;
             }
 
             const tables: Table[] = await response.json();
             setTableList(tables);
         } catch (error) {
             console.error('Error fetching tables:', error);
+            setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
         } finally {
             setIsLoading(false);
         }
@@ -263,6 +269,21 @@ export default function Tables() {
                                         <div key={index} className="skeleton h-32 w-full text-pri bg-gray-100 text-prim rounded-xl [--color-base-100:#fbd0a9]"></div>
                         ))}
                     </>
+                ) : fetchError ? (
+                    <div className="col-span-full">
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-red-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-red-600 font-medium mb-2">{fetchError}</p>
+                            <button 
+                                onClick={fetchTables}
+                                className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none mt-2"
+                            >
+                                Tekrar Dene
+                            </button>
+                        </div>
+                    </div>
                 ) : tableList.length === 0 ? (
                     <div className="col-span-full text-center py-12 text-gray-500">
                         Henüz masa eklenmemiş
