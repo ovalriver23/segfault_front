@@ -30,7 +30,7 @@ const popularItems = [
 // Durum Etiketi (Pill)
 const StatusPill = ({ status }: { status: string }) => {
   const baseClasses = "px-3 py-1 text-xs font-semibold rounded-full";
-  const statusClasses = {
+  const statusClasses: Record<string, string> = {
     "Hazırlanıyor": "bg-orange-100 text-orange-600",
     "Tamamlandı": "bg-green-100 text-green-600",
   };

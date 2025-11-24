@@ -3,9 +3,10 @@
 import { createContext,useContext,useState,useEffect,ReactNode } from "react";
 
 interface User {
-    id: string;
+    id:number;
+    email: string | null;
     username: string;
-    email: string;
+    role: string;
 }
 
 interface AuthContextType {
@@ -29,7 +30,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({children} : {children:ReactNode}){
 
     const [user, setUser] = useState<User|null>(null);
-    const [loading, setLoading] = useState(false); // Yüklemeyi de false yapalım
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchUser = async () => {
