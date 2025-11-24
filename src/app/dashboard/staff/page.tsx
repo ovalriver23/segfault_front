@@ -395,7 +395,7 @@ export default function StaffPage() {
                           <div className="avatar placeholder">
                             <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center">
                               {staff.avatar ? (
-                                <Image src={staff.avatar} alt={staff.username} className="rounded-full w-12 h-12 object-cover" width={48} height={48} />
+                                <Image src={staff.avatar} alt={staff.username} width={48} height={48} className="rounded-full w-12 h-12 object-cover" />
                               ) : (
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -469,7 +469,7 @@ export default function StaffPage() {
                 <div className="avatar placeholder">
                   <div className="bg-orange-100 text-orange-600 rounded-full w-20 h-20 flex items-center justify-center">
                     {selectedStaff.avatar ? (
-                      <Image src={selectedStaff.avatar} alt={selectedStaff.username} className="rounded-full w-20 h-20 object-cover" width={80} height={80} />
+                      <Image src={selectedStaff.avatar} alt={selectedStaff.username} width={80} height={80} className="rounded-full w-20 h-20 object-cover" />
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
