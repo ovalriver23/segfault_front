@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { z } from 'zod';
 
 /**
  * Staff interface - Represents a staff member
@@ -16,6 +17,51 @@ interface Staff {
   createdAt: string;
   avatar?: string;
 }
+
+/**
+ * Zod validation schema for staff form
+ */
+const staffSchema = z.object({
+  username: z.string()
+    .min(3, 'Kullanıcı adı en az 3 karakter olmalıdır')
+    .max(50, 'Kullanıcı adı en fazla 50 karakter olabilir'),
+  email: z
+    .email('Geçerli bir e-posta adresi giriniz')
+    .min(1, 'E-posta adresi gereklidir'),
+  phone: z.string()
+    .transform(val => val.replace(/\s/g, ''))
+    .pipe(z.string().regex(/^\d{10,}$/, 'Geçerli bir telefon numarası giriniz (en az 10 rakam)')),
+  password: z.string().superRefine((val, ctx) => {
+    // Check minimum length first (highest priority)
+    if (val.length < 8) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Şifre en az 8 karakter olmalıdır',
+      });
+      return; // Stop validation here, don't check regex
+    }
+    
+    // Only check regex if length requirement is met
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/.test(val)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Büyük harf, küçük harf, rakam ve özel karakter',
+      });
+    }
+  }),
+  confirmPassword: z.string()
+    .min(8, 'Lütfen şifrenizi onaylayın'),
+  role: z.string()
+    .min(1, 'Lütfen bir rol seçiniz'),
+  gender: z.string()
+    .min(1, 'Lütfen cinsiyet seçiniz'),
+  avatar: z.any().optional()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Şifreler eşleşmiyor',
+  path: ['confirmPassword'],
+});
+
+type StaffFormData = z.infer<typeof staffSchema>;
 
 /**
  * StaffPage Component
@@ -88,51 +134,26 @@ export default function StaffPage() {
   };
 
   /**
-   * Validates form data before submission
+   * Validates form data using Zod schema
    * @returns boolean - true if form is valid
    */
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    // Username validation
-    if (!formData.username || formData.username.length < 3) {
-      newErrors.username = 'Kullanıcı adı en az 3 karakter olmalıdır';
+    try {
+      staffSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.issues.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email || !emailRegex.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
-    }
-
-    // Phone validation
-    const phoneRegex = /^\d{10,}$/;
-    if (!formData.phone || !phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Geçerli bir telefon numarası giriniz (en az 10 rakam)';
-    }
-
-    // Gender validation
-    if (!formData.gender) {
-      newErrors.gender = 'Lütfen cinsiyet seçiniz';
-    }
-
-    // Password validation
-    if (!formData.password || formData.password.length < 8) {
-      newErrors.password = 'Şifre en az 8 karakter olmalıdır';
-    }
-
-    // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Şifreler eşleşmiyor';
-    }
-
-    // Role validation
-    if (!formData.role) {
-      newErrors.role = 'Lütfen bir rol seçiniz';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   /**
@@ -576,7 +597,7 @@ export default function StaffPage() {
                     borderColor: passwordError ? '#EF4444' : '#E5E7EB',
                     color: '#1f2937'
                   }}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handlePasswordVerification();
                     }
@@ -642,7 +663,7 @@ export default function StaffPage() {
             <form onSubmit={handleSubmit}>
               {/* Profile Photo Upload Section */}
               <div className="mb-6">
-                <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E11383' }}>
+                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Profil Fotoğrafı</h4>
                   <div className="flex items-center gap-6">
                     {/* Avatar preview */}
@@ -691,7 +712,7 @@ export default function StaffPage() {
                       </div>
                       <p className="text-xs text-gray-500 mt-3">JPG, PNG veya GIF (MAX. 2MB)</p>
                       {formData.avatar && (
-                        <p className="text-sm font-medium mt-2" style={{ color: '#E11383' }}>✓ {formData.avatar.name}</p>
+                        <p className="text-sm font-medium mt-2" >✓ {formData.avatar.name}</p>
                       )}
                     </div>
                   </div>
@@ -700,7 +721,7 @@ export default function StaffPage() {
 
               {/* Kişisel Bilgiler */}
               <div className="mb-6">
-                <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E11383' }}>
+                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm" >
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Kişisel Bilgiler</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -780,10 +801,7 @@ export default function StaffPage() {
                         onChange={handleInputChange}
                       >
                         <option value="">Rol seçiniz</option>
-                        <option value="Müdür">Müdür</option>
-                        <option value="Aşçı">Aşçı</option>
                         <option value="Garson">Garson</option>
-                        <option value="Barista">Barista</option>
                         <option value="Kasiyer">Kasiyer</option>
                       </select>
                       {errors.role && (
@@ -798,7 +816,7 @@ export default function StaffPage() {
 
               {/* İletişim Bilgileri */}
               <div className="mb-6">
-                <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E11383' }}>
+                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">İletişim Bilgileri</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -861,7 +879,7 @@ export default function StaffPage() {
 
               {/* Güvenlik */}
               <div className="mb-6">
-                <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E11383' }}>
+                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Güvenlik</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -54,3 +54,21 @@
   --color-background-900: #5c5c5c;
 
 }
+
+/* Override browser autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #f9fafb inset !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* For dark mode inputs */
+input:-webkit-autofill.bg-gray-50 {
+  -webkit-box-shadow: 0 0 0 30px #f9fafb inset !important;
+}

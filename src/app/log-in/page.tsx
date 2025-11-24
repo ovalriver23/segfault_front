@@ -232,7 +232,7 @@ const SignInPage = () => {
                   cursor: "pointer",
                 }}
               >
-                <Image src={char.img} alt={char.key} width={200} height={200} style={{ width: "100%", height: "auto" }} />
+                <Image src={char.img} alt={char.key} style={{ width: "100%", height: "auto" }} width={400} height={400} />
                 <div
                   className="eyes"
                   style={{

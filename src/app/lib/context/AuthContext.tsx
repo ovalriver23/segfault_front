@@ -43,17 +43,35 @@ export function AuthProvider({children} : {children:ReactNode}){
                 credentials: "include"
             })
 
+            // If unauthorized or not found, the backend session is invalid
+            if (response.status === 401 || response.status === 404) {
+                // Clear everything and redirect to login
+                setUser(null);
+                sessionStorage.removeItem('user');
+                
+                // Clear the JWT cookie by calling logout endpoint
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                // Redirect to login page
+                window.location.href = '/';
+                return;
+            }
+
             if(!response.ok) throw new Error('Failed to get user info!');
 
             const userData = await response.json();
+            
             setUser(userData);
-            // Save to localStorage
-            localStorage.setItem('user', JSON.stringify(userData));
+            // Save to sessionStorage
+            sessionStorage.setItem('user', JSON.stringify(userData));
 
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Unknown error');
             setUser(null);
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('user');
         }finally{
             setLoading(false);
         }
@@ -61,12 +79,12 @@ export function AuthProvider({children} : {children:ReactNode}){
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
     }
 
     useEffect(() => {
         // First, check if user data exists in localStorage
-        const storedUser = localStorage.getItem('user');
+        const storedUser = sessionStorage.getItem('user');
         if (storedUser) {
             try {
                 setUser(JSON.parse(storedUser));

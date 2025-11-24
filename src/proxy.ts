@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { decodeJwt } from 'jose'
  
 // 1. Specify protected and public routes
-const protectedRoutes = ['/dashboard','dashboard/staff','dashboard/menu','dashboard/settings','dashboard/tables','dashboard/stats']
+const protectedRoutes = ['/dashboard','/dashboard/staff','/dashboard/menu','/dashboard/settings','/dashboard/tables','/dashboard/stats']
 const publicRoutes = ['/log-in', '/sign-up', '/']
  
 export default async function proxy(req: NextRequest) {
