@@ -32,9 +32,7 @@ yarn-error.log*
 
 # env files (examples can be committed)
 .env*
-!.env*.example
-.env.deploy.example
-.env.front.example
+.env.example
 docker-compose.yml
 docker-compose.*.yml
 # vercel
