@@ -1,715 +1,640 @@
-# EasyOrder REST API Dokümantasyonu
+# EasyOrder REST API Documentation
 
-## Genel Bakış
+EasyOrder is a REST API developed for restaurant management systems.
 
-EasyOrder, restoran yönetim sistemi için geliştirilmiş bir REST API'dir.
+## Table of Contents
 
-### 1. HTTP Metodları
+- [Overview](#overview)
+  - [HTTP Methods](#http-methods)
+  - [HTTP Status Codes](#http-status-codes)
+  - [Authentication](#authentication)
+- [API Endpoints](#api-endpoints)
+  - [Authentication](#1-authentication)
+  - [Account](#2-account)
+  - [Manager Operations](#3-manager-operations)
+  - [Staff Operations](#4-staff-operations)
+  - [Public Endpoints](#5-public-endpoints)
 
-EasyOrder REST API'si aşağıdaki HTTP metodlarını kullanır:
+---
 
-| Metod | Kullanım |
-| :--- | :--- |
-| `GET` | Kaynak getirmek için kullanılır |
-| `POST` | Yeni kaynak oluşturmak veya eylem gerçekleştirmek için kullanılır |
-| `PUT` | Mevcut kaynağı güncellemek için kullanılır |
-| `PATCH` | Mevcut kaynağı kısmen güncellemek için kullanılır |
-| `DELETE` | Mevcut kaynağı silmek için kullanılır |
+## Overview
 
-### 2. HTTP Durum Kodları
+### HTTP Methods
 
-EasyOrder REST API'si aşağıdaki HTTP durum kodlarını kullanır:
+| Method   | Usage                                              |
+| -------- | -------------------------------------------------- |
+| `GET`    | Used to retrieve resources                         |
+| `POST`   | Used to create new resources or perform actions    |
+| `PUT`    | Used to update existing resources                  |
+| `PATCH`  | Used to partially update existing resources        |
+| `DELETE` | Used to delete existing resources                  |
 
-| Durum Kodu | Kullanım |
-| :--- | :--- |
-| `200 OK` | İstek başarılı bir şekilde işlendi |
-| `201 Created` | Yeni kaynak başarıyla oluşturuldu |
-| `204 No Content` | Güncellenme işlemi başarılı, ancak döndürülecek içerik yok |
-| `400 Bad Request` | İstek hatalı (örn: validation hatası) |
-| `401 Unauthorized` | Kimlik doğrulama gerekli veya başarısız |
-| `403 Forbidden` | Kimlik doğrulama başarılı ancak yetkisiz |
-| `404 Not Found` | İstenen kaynak bulunamadı |
-| `500 Internal Server Error` | Sunucu hatası |
+### HTTP Status Codes
 
-### 3. Kimlik Doğrulama
+| Status Code               | Usage                                           |
+| ------------------------- | ----------------------------------------------- |
+| `200 OK`                  | Request processed successfully                  |
+| `201 Created`             | New resource created successfully               |
+| `204 No Content`          | Update successful, no content to return         |
+| `400 Bad Request`         | Invalid request (e.g., validation error)        |
+| `401 Unauthorized`        | Authentication required or failed               |
+| `403 Forbidden`           | Authentication successful but unauthorized      |
+| `404 Not Found`           | Requested resource not found                    |
+| `500 Internal Server Error` | Server error                                  |
 
-EasyOrder API, JWT (JSON Web Token) tabanlı kimlik doğrulama kullanır. Login veya signup işlemi sonrasında dönen token'ı, sonraki isteklerde `Authorization` header'ında `Bearer {token}` formatında göndermeniz gerekir. Ayrıca token HTTP-only cookie olarak da döndürülür.
+### Authentication
 
------
+EasyOrder API uses JWT (JSON Web Token) based authentication. After login or signup, you need to send the returned token in the `Authorization` header as `Bearer {token}` format in subsequent requests. The token is also returned as an HTTP-only cookie.
 
-## 4. Kimlik Doğrulama (Authentication)
+---
 
-Kayıt, giriş ve çıkış işlemlerini yönetir.
+## API Endpoints
 
-### 4.1. Manager Kayıt
+### 1. Authentication
 
-Yeni bir manager hesabı ve restoran oluşturur.
+Manages registration, login, and logout operations.
 
-#### 4.1.1. Örnek İstek
+#### 1.1 Manager Signup
 
-```http
-POST /api/auth/signup HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 189
-Host: localhost:8080
+Creates a new manager account and restaurant.
 
+**Endpoint:** `POST /api/auth/signup`
+
+**Request Body:**
+
+```json
 {
-  "username" : "testmanager",
-  "email" : "testmanager@example.com",
-  "password" : "TestPass123!",
-  "restaurantName" : "Test Restaurant",
-  "restaurantLocation" : "Istanbul, Besiktas"
+  "username": "testmanager",
+  "email": "testmanager@example.com",
+  "password": "TestPass123!",
+  "restaurantName": "Test Restaurant",
+  "restaurantLocation": "Istanbul, Besiktas"
 }
 ```
 
-#### 4.1.2. Örnek Yanıt
+**Request Fields:**
 
-```http
-HTTP/1.1 201 Created
-Set-Cookie: JWT_TOKEN=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0bWFuYWdlciIsImlhdCI6MTc2MjkzMzg4OCwiZXhwIjoxNzYzMDIwMjg4fQ.bY-OvFWrkVt3dTy6NtG3x_kfNUnRjlOedRj61V9KxIDu2S-X9b5uEUE3iG69ZCNgnZ0uLfzlAzSNLrezP1EoOw; Path=/; Max-Age=86400; Expires=Thu, 13 Nov 2025 07:51:28 GMT; HttpOnly
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 329
+| Field              | Type     | Description          |
+| ------------------ | -------- | -------------------- |
+| `username`         | `String` | Username             |
+| `email`            | `String` | Email address        |
+| `password`         | `String` | Password             |
+| `restaurantName`   | `String` | Restaurant name      |
+| `restaurantLocation` | `String` | Restaurant location |
 
+**Success Response (201 Created):**
+
+```json
 {
-  "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0bWFuYWdlciIsImlhdCI6MTc2MjkzMzg4OCwiZXhwIjoxNzYzMDIwMjg4fQ.bY-OvFWrkVt3dTy6NtG3x_kfNUnRjlOedRj61V9KxIDu2S-X9b5uEUE3iG69ZCNgnZ0uLfzlAzSNLrezP1EoOw",
-  "username" : "testmanager",
-  "role" : "MANAGER",
-  "hasRestaurant" : true,
-  "message" : "Kayıt başarılı! Hoşgeldiniz."
+  "token": "eyJhbGciOiJIUzUxMiJ9...",
+  "username": "testmanager",
+  "role": "MANAGER",
+  "hasRestaurant": true,
+  "message": "Kayıt başarılı! Hoşgeldiniz."
 }
 ```
 
-#### 4.1.3. İstek Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `username` | `String` | Kullanıcı adı (benzersiz olmalı) |
-| `email` | `String` | E-posta adresi (geçerli format ve benzersiz olmalı) |
-| `password` | `String` | Şifre (minimum 8 karakter) |
-| `restaurantName` | `String` | Restoran adı |
-| `restaurantLocation` | `String` | Restoran konumu |
+| Field          | Type      | Description        |
+| -------------- | --------- | ------------------ |
+| `token`        | `String`  | JWT Token          |
+| `username`     | `String`  | Username           |
+| `role`         | `String`  | Role               |
+| `hasRestaurant`| `Boolean` | Restaurant status  |
+| `message`      | `String`  | Message            |
 
-#### 4.1.4. Yanıt Alanları
+**Error Response - Validation Error (400):**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `token` | `String` | JWT authentication token |
-| `username` | `String` | Kullanıcı adı |
-| `role` | `String` | Kullanıcı rolü (MANAGER, STAFF, SUPER\_ADMIN) |
-| `hasRestaurant` | `Boolean` | Kullanıcının restoranı olup olmadığı |
-| `message` | `String` | İşlem sonucu mesajı |
-
-#### 4.1.5. Yanıt Cookies
-
-| Name | Description |
-| :--- | :--- |
-| `JWT_TOKEN` | HTTP-only JWT cookie |
-
------
-
-### 4.2. Login
-
-Mevcut kullanıcı girişi yapar.
-
-#### 4.2.1. Örnek İstek
-
-```http
-POST /api/auth/login HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 61
-Host: localhost:8080
-
+```json
 {
-  "username" : "logintest",
-  "password" : "TestPass123!"
+  "password": "Şifre en az 1 büyük harf, 1 küçük harf, 1 rakam ve 1 özel karakter içermelidir",
+  "restaurantLocation": "Restoran konumu 5-200 karakter arasında olmalıdır",
+  "restaurantName": "Restoran adı boş olamaz",
+  "email": "Geçerli bir email adresi giriniz",
+  "username": "Kullanıcı adı 3-20 karakter arasında olmalıdır"
 }
 ```
 
-#### 4.2.2. Örnek Yanıt
+---
 
-```http
-```http
-HTTP/1.1 200 OK
-Set-Cookie: JWT_TOKEN=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJsb2dpbnRlc3QiLCJpYXQiOjE3NjI5MzM4ODgsImV4cCI6MTc2MzAyMDI4OH0.Yfvo6escsyHALXf8R9khOGeVYz2F7xc4vQAQp08giY9uRsA7ZnmmrCxnS7P7t33fLY27sqBRHPoiL2TbrRzs9A; Path=/; Max-Age=86400; Expires=Thu, 13 Nov 2025 07:51:28 GMT; HttpOnly
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 324
+#### 1.2 Login
 
+Logs in an existing user.
+
+**Endpoint:** `POST /api/auth/login`
+
+**Request Body:**
+
+```json
 {
-  "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJsb2dpbnRlc3QiLCJpYXQiOjE3NjI5MzM4ODgsImV4cCI6MTc2MzAyMDI4OH0.Yfvo6escsyHALXf8R9khOGeVYz2F7xc4vQAQp08giY9uRsA7ZnmmrCxnS7P7t33fLY27sqBRHPoiL2TbrRzs9A",
-  "username" : "logintest",
-  "role" : "MANAGER",
-  "hasRestaurant" : true,
-  "message" : "Giriş başarılı! Hoşgeldiniz."
+  "username": "logintest",
+  "password": "TestPass123!"
 }
 ```
+
+**Request Fields:**
+
+| Field      | Type     | Description |
+| ---------- | -------- | ----------- |
+| `username` | `String` | Username    |
+| `password` | `String` | Password    |
+
+**Success Response (200 OK):**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9...",
+  "username": "logintest",
+  "role": "MANAGER",
+  "hasRestaurant": true,
+  "message": "Giriş başarılı! Hoşgeldiniz."
+}
 ```
 
-#### 4.2.3. İstek Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `username` | `String` | Kullanıcı adı |
-| `password` | `String` | Şifre |
+| Field          | Type      | Description        |
+| -------------- | --------- | ------------------ |
+| `token`        | `String`  | JWT Token          |
+| `username`     | `String`  | Username           |
+| `role`         | `String`  | Role               |
+| `hasRestaurant`| `Boolean` | Restaurant status  |
+| `message`      | `String`  | Message            |
 
-#### 4.2.4. Yanıt Alanları
+**Error Response - Invalid Login (401):**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `token` | `String` | JWT authentication token |
-| `username` | `String` | Kullanıcı adı |
-| `role` | `String` | Kullanıcı rolü (MANAGER, STAFF, SUPER\_ADMIN) |
-| `hasRestaurant` | `Boolean` | Kullanıcının restoranı olup olmadığı |
-| `message` | `String` | İşlem sonucu mesajı |
-
-#### 4.2.5. Yanıt Cookies
-
-| Name | Description |
-| :--- | :--- |
-| `JWT_TOKEN` | HTTP-only JWT cookie |
-
------
-
-### 4.3. Logout
-
-Kullanıcı çıkışı yapar ve JWT cookie’yi temizler.
-
-#### 4.3.1. Örnek İstek
-
-```http
-POST /api/auth/logout HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Host: localhost:8080
+```json
+{
+  "error": "Kullanıcı adı veya şifre hatalı"
+}
 ```
 
-#### 4.3.2. Örnek Yanıt
+---
 
-```http
-HTTP/1.1 200 OK
-Set-Cookie: JWT_TOKEN=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 21
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
+#### 1.3 Logout
 
+Logs out the user and clears the JWT cookie.
+
+**Endpoint:** `POST /api/auth/logout`
+
+**Success Response (200 OK):**
+
+```
 Çıkış başarılı
 ```
 
------
+---
 
-## 5. Hesap (Account)
+### 2. Account
 
-Giriş yapmış kullanıcının hesap işlemlerini yönetir.
+Manages account operations for logged-in users.
 
-### 5.1. Kullanıcı Bilgilerini Getir (Manager)
+#### 2.1 Get User Info (Manager)
 
-Oturum açmış Manager rolündeki kullanıcının bilgilerini döndürür.
-
-**Endpoint:** `GET /api/account/me`
-
-#### 5.1.1. Örnek Yanıt (Manager)
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 184
-
-{
-  "id" : 10,
-  "username" : "testmanager_account",
-  "email" : "testmanager_account@example.com",
-  "role" : "MANAGER",
-  "hasRestaurant" : true,
-  "passwordChangeRequired" : false
-}
-```
-
-#### 5.1.2. Yanıt Alanları
-
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Number` | Kullanıcı ID |
-| `username` | `String` | Kullanıcı adı |
-| `email` | `String` | E-posta adresi (varsa) |
-| `role` | `String` | Kullanıcı rolü (MANAGER) |
-| `hasRestaurant` | `Boolean` | Kullanıcının bir restoranı olup olmadığı (MANAGER için true) |
-| `passwordChangeRequired` | `Boolean` | Kullanıcının şifresini değiştirmesi gerekip gerekmediği |
-
------
-
-### 5.2. Kullanıcı Bilgilerini Getir (Staff)
-
-Oturum açmış Staff rolündeki kullanıcının bilgilerini döndürür.
+Returns information of the logged-in Manager user.
 
 **Endpoint:** `GET /api/account/me`
 
-#### 5.2.1. Örnek Yanıt (Staff)
+**Success Response (200 OK) - Manager:**
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 151
-
+```json
 {
-  "id" : 15,
-  "username" : "teststaff_account",
-  "email" : null,
-  "role" : "STAFF",
-  "hasRestaurant" : false,
-  "passwordChangeRequired" : true
+  "id": 13,
+  "username": "testmanager_account",
+  "email": "testmanager_account@example.com",
+  "role": "MANAGER",
+  "hasRestaurant": true,
+  "passwordChangeRequired": false
 }
 ```
 
-#### 5.2.2. Yanıt Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Number` | Kullanıcı ID |
-| `username` | `String` | Kullanıcı adı |
-| `email` | `Null` | E-posta adresi (varsa, staff için null olabilir) |
-| `role` | `String` | Kullanıcı rolü (STAFF) |
-| `hasRestaurant` | `Boolean` | Kullanıcının bir restoranı olup olmadığı (STAFF için false) |
-| `passwordChangeRequired` | `Boolean` | Kullanıcının şifresini değiştirmesi gerekip gerekmediği (STAFF için true) |
+| Field                   | Type      | Description                    |
+| ----------------------- | --------- | ------------------------------ |
+| `id`                    | `Number`  | User ID                        |
+| `username`              | `String`  | Username                       |
+| `email`                 | `String`  | Email                          |
+| `role`                  | `String`  | Role                           |
+| `hasRestaurant`         | `Boolean` | Has restaurant                 |
+| `passwordChangeRequired`| `Boolean` | Password change required       |
 
------
+---
 
-### 5.3. Şifre Değiştir
+#### 2.2 Get User Info (Staff)
 
-Oturum açmış kullanıcının şifresini değiştirmesini sağlar.
+Returns information of the logged-in Staff user.
+
+**Endpoint:** `GET /api/account/me`
+
+**Success Response (200 OK) - Staff:**
+
+```json
+{
+  "id": 20,
+  "username": "teststaff_account",
+  "email": null,
+  "role": "STAFF",
+  "hasRestaurant": false,
+  "passwordChangeRequired": true
+}
+```
+
+**Response Fields:**
+
+| Field                   | Type      | Description                    |
+| ----------------------- | --------- | ------------------------------ |
+| `id`                    | `Number`  | User ID                        |
+| `username`              | `String`  | Username                       |
+| `email`                 | `Null`    | Email                          |
+| `role`                  | `String`  | Role                           |
+| `hasRestaurant`         | `Boolean` | Has restaurant                 |
+| `passwordChangeRequired`| `Boolean` | Password change required       |
+
+---
+
+#### 2.3 Change Password
+
+Allows the logged-in user to change their password.
 
 **Endpoint:** `POST /api/account/change-password`
 
-#### 5.3.1. Örnek İstek
+**Request Body:**
 
-```http
-POST /api/account/change-password HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 37
-Host: localhost:8080
-
+```json
 {
-  "newPassword" : "YeniSifre123!"
+  "currentPassword": "TestPass123!",
+  "newPassword": "YeniSifre123!"
 }
 ```
 
-#### 5.3.2. İstek Alanları
+**Request Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `newPassword` | `String` | Yeni şifre (validation kurallarına uymalı) |
+| Field            | Type     | Description      |
+| ---------------- | -------- | ---------------- |
+| `currentPassword`| `String` | Current password |
+| `newPassword`    | `String` | New password     |
 
-#### 5.3.3. Örnek Yanıt
+**Success Response (200 OK):**
 
-```http
-HTTP/1.1 200 OK
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 32
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-
+```
 Şifre başarıyla güncellendi.
 ```
 
------
+**Error Response - Wrong Current Password (400):**
 
-## 6. Manager İşlemleri
+```json
+{
+  "error": "Mevcut şifreniz hatalı. Lütfen kontrol ediniz."
+}
+```
 
-Manager rolündeki kullanıcının restoranını yönetmesi için olan endpoint'ler.
+**Error Response - New Password Same as Old (400):**
 
-### 6.1. Personel (Staff) Oluştur
+```json
+{
+  "error": "Yeni şifre, mevcut şifrenizle aynı olamaz. Lütfen farklı bir şifre seçiniz."
+}
+```
+
+---
+
+### 3. Manager Operations
+
+Endpoints for Manager role users to manage their restaurant.
+
+#### 3.1 Create Staff
+
+Creates a new staff member.
 
 **Endpoint:** `POST /api/manager/staff`
 
-#### 6.1.1. Örnek İstek
+**Request Body:**
 
-```http
-POST /api/manager/staff HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 66
-Host: localhost:8080
-
+```json
 {
-  "username" : "newstaff_user",
-  "password" : "StaffPass123!"
+  "username": "newstaff_user",
+  "password": "StaffPass123!"
 }
 ```
 
-#### 6.1.2. İstek Alanları
+**Request Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `username` | `String` | Oluşturulacak personelin kullanıcı adı (benzersiz olmalı) |
-| `password` | `String` | Personelin geçici şifresi (validation kurallarına uymalı) |
+| Field      | Type     | Description        |
+| ---------- | -------- | ------------------ |
+| `username` | `String` | Username           |
+| `password` | `String` | Temporary password |
 
-#### 6.1.3. Örnek Yanıt
+**Success Response (201 Created):**
 
-```http
-HTTP/1.1 201 Created
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 56
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-
-Personel (Staff) başarıyla oluşturuldu: newstaff_user
+```json
+{
+  "message": "Personel (Staff) başarıyla oluşturuldu: newstaff_user"
+}
 ```
 
------
+**Error Response - Username Conflict (400):**
 
-### 6.2. Kategori Oluştur
+```json
+{
+  "error": "Bu kullanıcı adı zaten mevcut."
+}
+```
+
+---
+
+#### 3.2 Create Category
+
+Creates a new menu category.
 
 **Endpoint:** `POST /api/manager/menu/categories`
 
-#### 6.2.1. Örnek İstek
+**Request Body:**
 
-```http
-POST /api/manager/menu/categories HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 28
-Host: localhost:8080
-
+```json
 {
-  "name" : "İçecekler"
+  "name": "İçecekler"
 }
 ```
 
-#### 6.2.2. İstek Alanları
+**Request Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `name` | `String` | Yeni kategorinin adı |
+| Field  | Type     | Description   |
+| ------ | -------- | ------------- |
+| `name` | `String` | Category name |
 
-#### 6.2.3. Örnek Yanıt
+**Success Response (201 Created):**
 
-```http
-HTTP/1.1 201 Created
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 83
-
+```json
 {
-  "id" : 7,
-  "name" : "İçecekler",
-  "menuItems" : [ ],
-  "restaurantId" : 8
+  "id": 10,
+  "name": "İçecekler",
+  "menuItems": [],
+  "restaurantId": "52c86e78-602f-443f-a7d5-24f218879650"
 }
 ```
 
-#### 6.2.4. Yanıt Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Number` | Oluşturulan kategorinin ID'si |
-| `name` | `String` | Kategorinin adı |
-| `menuItems` | `Array` | Kategorideki menü öğeleri (yeni kategori için boş) |
-| `restaurantId` | `Number` | Restoran ID'si |
+| Field         | Type     | Description   |
+| ------------- | -------- | ------------- |
+| `id`          | `Number` | Category ID   |
+| `name`        | `String` | Category name |
+| `menuItems`   | `Array`  | Menu items    |
+| `restaurantId`| `String` | Restaurant ID |
 
------
+---
 
-### 6.3. Menü Öğesi Ekle
+#### 3.3 Add Menu Item
+
+Adds a new item to a category.
 
 **Endpoint:** `POST /api/manager/menu/categories/{categoryId}/items`
 
-#### 6.3.1. Path Parametreleri
+**Path Parameters:**
 
-| Parameter | Description |
-| :--- | :--- |
-| `categoryId` | Menü öğesinin ekleneceği kategori ID'si |
+| Parameter    | Description |
+| ------------ | ----------- |
+| `categoryId` | Category ID |
 
-#### 6.3.2. Örnek İstek
+**Request Body:**
 
-```http
-POST /api/manager/menu/categories/4/items HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 176
-Host: localhost:8080
-
+```json
 {
-  "name" : "Mercimek Çorbası",
-  "description" : "Sıcak ve taze",
-  "price" : 25.5,
-  "imageUrl" : "http://example.com/corba.jpg",
-  "style" : "NONE",
-  "categoryId" : 4
+  "name": "Mercimek",
+  "description": "Sıcak",
+  "price": 25.5,
+  "imageUrl": "http://url",
+  "style": "NONE",
+  "categoryId": 7
 }
 ```
 
-#### 6.3.3. İstek Alanları
+**Request Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `name` | `String` | Menü öğesinin adı |
-| `description` | `String` | Açıklama |
-| `price` | `Number` | Fiyat |
-| `imageUrl` | `String` | Görsel URL'si |
-| `style` | `String` | Öğe stili (Şu an sadece 'NONE' destekleniyor) |
-| `categoryId` | `Number` | Kategori ID'si |
+| Field        | Type     | Description  |
+| ------------ | -------- | ------------ |
+| `name`       | `String` | Name         |
+| `description`| `String` | Description  |
+| `price`      | `Number` | Price        |
+| `imageUrl`   | `String` | Image URL    |
+| `style`      | `String` | Style        |
+| `categoryId` | `Number` | Category ID  |
 
-#### 6.3.4. Örnek Yanıt
+**Success Response (201 Created):**
 
-```http
-HTTP/1.1 201 Created
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 226
-
+```json
 {
-  "id" : 2,
-  "name" : "Mercimek Çorbası",
-  "description" : "Sıcak ve taze",
-  "price" : 25.5,
-  "imageUrl" : "http://example.com/corba.jpg",
-  "style" : "NONE",
-  "categoryId" : 4,
-  "categoryName" : "Başlangıçlar"
+  "id": 4,
+  "name": "Mercimek",
+  "description": "Sıcak",
+  "price": 25.5,
+  "imageUrl": "http://url",
+  "style": "NONE",
+  "categoryId": 7,
+  "categoryName": "Başlangıçlar"
 }
 ```
 
-#### 6.3.5. Yanıt Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Number` | Oluşturulan menü öğesinin ID'si |
-| `name` | `String` | Öğe adı |
-| `description` | `String` | Açıklama |
-| `price` | `Number` | Fiyat |
-| `imageUrl` | `String` | Görsel URL'si |
-| `style` | `String` | Öğe stili |
-| `categoryId` | `Number` | Kategori ID'si |
-| `categoryName` | `String` | Kategori adı |
+| Field         | Type     | Description   |
+| ------------- | -------- | ------------- |
+| `id`          | `Number` | ID            |
+| `name`        | `String` | Name          |
+| `description` | `String` | Description   |
+| `price`       | `Number` | Price         |
+| `imageUrl`    | `String` | Image URL     |
+| `style`       | `String` | Style         |
+| `categoryId`  | `Number` | Category ID   |
+| `categoryName`| `String` | Category name |
 
------
+---
 
-### 6.4. Masa Oluştur
+#### 3.4 Create Table
+
+Creates a new table.
 
 **Endpoint:** `POST /api/manager/tables`
 
-#### 6.4.1. Örnek İstek
+**Request Body:**
 
-```http
-POST /api/manager/tables HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Content-Length: 40
-Host: localhost:8080
-
+```json
 {
-  "tableNumber" : "Masa 10 (Bahçe)"
+  "tableNumber": "Masa 10"
 }
 ```
 
-#### 6.4.2. İstek Alanları
+**Request Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `tableNumber` | `String` | Masa numarası veya adı (Restoran içinde benzersiz olmalı) |
+| Field        | Type     | Description  |
+| ------------ | -------- | ------------ |
+| `tableNumber`| `String` | Table number |
 
-#### 6.4.3. Örnek Yanıt
+**Success Response (201 Created):**
 
-```http
-HTTP/1.1 201 Created
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 74
-
+```json
 {
-  "id" : 3,
-  "tableNumber" : "Masa 10 (Bahçe)",
-  "restaurantId" : 5
+  "id": 2,
+  "tableNumber": "Masa 10",
+  "restaurantId": "f47024e4-effb-47b7-ad5a-38d594296055"
 }
 ```
 
-#### 6.4.4. Yanıt Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Number` | Oluşturulan masanın ID'si |
-| `tableNumber` | `String` | Masa numarası |
-| `restaurantId` | `Number` | Restoran ID'si |
+| Field         | Type     | Description   |
+| ------------- | -------- | ------------- |
+| `id`          | `Number` | ID            |
+| `tableNumber` | `String` | Table number  |
+| `restaurantId`| `String` | Restaurant ID |
 
------
+**Error Response - Table Number Conflict (400):**
 
-### 6.5. Masaları Listele
+```json
+{
+  "error": "Aynı numaraya sahip masa zaten mevcut."
+}
+```
+
+---
+
+#### 3.5 List Tables
+
+Returns all tables for the restaurant.
 
 **Endpoint:** `GET /api/manager/tables`
 
-#### 6.5.1. Örnek Yanıt
+**Success Response (200 OK):**
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 68
-
-[ {
-  "id" : 5,
-  "tableNumber" : "Masa 1",
-  "restaurantId" : 7
-} ]
+```json
+[
+  {
+    "id": 3,
+    "tableNumber": "Bahçe 1",
+    "restaurantId": "a98a5221-c52a-4b85-969c-333ae72fddd3"
+  },
+  {
+    "id": 4,
+    "tableNumber": "Salon 5",
+    "restaurantId": "a98a5221-c52a-4b85-969c-333ae72fddd3"
+  }
+]
 ```
 
-#### 6.5.2. Yanıt Alanları
+**Response Fields:**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `[]` | `Array` | Restorana ait masaların listesi |
-| `[].id` | `Number` | Masa ID'si |
-| `[].tableNumber` | `String` | Masa numarası |
-| `[].restaurantId` | `Number` | Restoran ID'si |
+| Field              | Type     | Description   |
+| ------------------ | -------- | ------------- |
+| `[]`               | `Array`  | Table list    |
+| `[].id`            | `Number` | ID            |
+| `[].tableNumber`   | `String` | Table number  |
+| `[].restaurantId`  | `String` | Restaurant ID |
 
------
+---
 
-## 7. Staff İşlemleri
+### 4. Staff Operations
 
-### 7.1. Merhaba Endpoint'i (Test)
+Endpoints for Staff role users.
+
+#### 4.1 Hello Endpoint (Test)
+
+A test endpoint for staff.
 
 **Endpoint:** `GET /api/staff/hello`
 
-#### 7.1.1. Örnek İstek
+**Success Response (200 OK):**
 
-```http
-GET /api/staff/hello HTTP/1.1
-Host: localhost:8080
 ```
-
-#### 7.1.2. Örnek Yanıt
-
-```http
-HTTP/1.1 200 OK
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 39
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-
 Merhaba Staff, Manager ve Süper Admin!
 ```
 
------
+---
 
-## 8. Halka Açık (Public) Endpoint'ler
+### 5. Public Endpoints
 
-Kimlik doğrulama gerektirmeyen endpoint'ler.
+Endpoints that do not require authentication.
 
-### 8.1. Restoran Menüsünü Getir
+#### 5.1 Get Restaurant Menu
+
+Returns the menu for a specific restaurant.
 
 **Endpoint:** `GET /api/public/restaurants/{restaurantId}/menu`
 
-#### 8.1.1. Path Parametreleri
+**Path Parameters:**
 
-| Parameter | Description |
-| :--- | :--- |
-| `restaurantId` | Menüsü alınacak restoranın ID'si |
+| Parameter      | Description            |
+| -------------- | ---------------------- |
+| `restaurantId` | Restaurant ID (UUID)   |
 
-#### 8.1.2. Örnek İstek
+**Success Response (200 OK):**
 
-```http
-GET /api/public/restaurants/1/menu HTTP/1.1
-Content-Type: application/json;charset=UTF-8
-Host: localhost:8080
+```json
+[
+  {
+    "id": 1,
+    "name": "Çorbalar",
+    "menuItems": [
+      {
+        "id": 1,
+        "name": "Mercimek",
+        "description": null,
+        "price": 30.0,
+        "imageUrl": null,
+        "style": null,
+        "categoryId": 1,
+        "categoryName": "Çorbalar"
+      }
+    ],
+    "restaurantId": "031db5ec-5d0f-42c7-a24d-c415fd987f2f"
+  }
+]
 ```
 
-#### 8.1.3. Örnek Yanıt
+**Response Fields:**
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 0
-Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-Pragma: no-cache
-Expires: 0
-X-Frame-Options: DENY
-Content-Length: 274
+| Field                        | Type     | Description    |
+| ---------------------------- | -------- | -------------- |
+| `[]`                         | `Array`  | Category list  |
+| `[].id`                      | `Number` | Category ID    |
+| `[].name`                    | `String` | Category name  |
+| `[].restaurantId`            | `String` | Restaurant ID  |
+| `[].menuItems`               | `Array`  | Menu items     |
+| `[].menuItems[].id`          | `Number` | Item ID        |
+| `[].menuItems[].name`        | `String` | Item name      |
+| `[].menuItems[].description` | `String` | Description    |
+| `[].menuItems[].price`       | `Number` | Price          |
+| `[].menuItems[].imageUrl`    | `String` | Image URL      |
+| `[].menuItems[].style`       | `String` | Style          |
+| `[].menuItems[].categoryId`  | `Number` | Category ID    |
+| `[].menuItems[].categoryName`| `String` | Category name  |
 
-[ {
-  "id" : 1,
-  "name" : "Çorbalar",
-  "menuItems" : [ {
-    "id" : 1,
-    "name" : "Mercimek",
-    "description" : null,
-    "price" : 30.0,
-    "imageUrl" : null,
-    "style" : null,
-    "categoryId" : 1,
-    "categoryName" : "Çorbalar"
-  } ],
-  "restaurantId" : 1
-} ]
+**Error Response - Restaurant Not Found (400):**
+
+```json
+{
+  "error": "Restoran bulunamadı"
+}
 ```
 
-#### 8.1.4. Yanıt Alanları
+**Error Response - Invalid ID Format (400):**
 
-| Path | Type | Description |
-| :--- | :--- | :--- |
-| `[]` | `Array` | Restoranın menü kategorileri listesi |
-| `[].id` | `Number` | Kategori ID'si |
-| `[].name` | `String` | Kategori adı |
-| `[].restaurantId` | `Number` | Restoran ID'si |
-| `[].menuItems` | `Array` | Kategoriye ait menü öğeleri (Boş olabilir) |
-| `[].menuItems[].id` | `Number` | Menü öğesi ID'si |
-| `[].menuItems[].name` | `String` | Öğe adı |
-| `[].menuItems[].description` | `String` | Açıklama (null olabilir) |
-| `[].menuItems[].price` | `Number` | Fiyat |
-| `[].menuItems[].imageUrl` | `String` | Görsel URL'si (null olabilir) |
-| `[].menuItems[].style` | `String` | Öğe stili (null olabilir) |
-| `[].menuItems[].categoryId` | `Number` | Kategori ID'si |
-| `[].menuItems[].categoryName` | `String` | Kategori adı |
+```json
+{
+  "error": "Geçersiz parametre formatı: restaurantId"
+}
 ```
+
+---
+
+## Notes
+
+- All authenticated endpoints require the JWT token to be sent either as a `Bearer` token in the `Authorization` header or as an HTTP-only cookie named `JWT_TOKEN`.
+- Passwords must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
+- Username must be between 3-20 characters.
+- Restaurant location must be between 5-200 characters.
+
+---
+
+*Last updated: November 2025*
