@@ -1,15 +1,17 @@
+"use client";
 /* THIS PAGE WILL BE OUR LANDING PAGE */
 
-
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import StepCard from "../components/StepCard";
 import PricingCard from "../components/PricingCard";
 import FeatureCard from "../components/FeatureCard";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
-
 export default function Home() {
+  const router = useRouter();
+
   return (
     <>
       {/* NAVBAR section - shows/hides on scroll */}
@@ -20,9 +22,15 @@ export default function Home() {
       {/* First landing section with image STARTS here*/}
 
       <div className="flex flex-1 flex-col justify-baseline items-center bg-[url(/images/landing/landing_image.png)] bg-bottom bg-cover md:min-h-128 sm:min-h-128 px-4 sm:px-8 lg:px-16 py-8 sm:py-12 text-background-500">
-        <h2 className="mx-4 mb-6 sm:mb-8 text-3xl sm:text-4xl lg:text-5xl font-bold sm:mx-8 lg:mx-16 text-center max-w-xs sm:max-w-md lg:max-w-3xl leading-tight">Her masa için tek ihtiyacınız {<br></br>}Qrinyo</h2>
-        <h3 className="mx-4 sm:mx-16 lg:mx-32 mb-8 sm:mb-12 font-normal text-background-200 text-center text-base sm:text-lg lg:text-xl max-w-sm sm:max-w-2xl lg:max-w-4xl leading-relaxed">Müşterilerinizin menü ve sipariş işlemleri için yenilikçi çözüm</h3>
-        <button className="rounded-2xl btn btn-outline hover:bg-primary-600 hover:border-primary-600 text-base sm:text-lg font-medium">Hemen Başla</button>
+        <h2 className="mx-4 mb-6 sm:mb-8 text-3xl sm:text-4xl lg:text-5xl font-bold sm:mx-8 lg:mx-16 text-center max-w-xs sm:max-w-md lg:max-w-3xl leading-tight">Her masa için tek ihtiyaç</h2>
+        <h3 className="mx-4 sm:mx-16 lg:mx-32 mb-8 sm:mb-12 font-normal text-background-200 text-center text-base sm:text-lg lg:text-xl max-w-sm sm:max-w-2xl lg:max-w-4xl leading-relaxed">Müşterilerinizin menü ve sipariş süreçlerini kolaylaştıran dijital çözüm.</h3>
+        <button
+          type="button"
+          onClick={() => router.push("/sign-up")}
+          className="rounded-2xl btn btn-outline hover:bg-primary-600 hover:border-primary-600 text-base sm:text-lg font-medium"
+        >
+          Hemen Başla
+        </button>
       </div>
       {/* First landing section with image ENDS here */}
 
@@ -39,24 +47,26 @@ export default function Home() {
           <FeatureCard 
             icon="/images/landing/menu.svg"
             title="QR Menü"
-            description="Donec malesuada aliquam neque nec faucibus. Phasellus dictum enim eget porta bibendum. In molestie"
+            description="Her masaya özel QR kodu ile müşterileriniz menünüze kolayca erişebilir."
           />
           <FeatureCard 
             icon="/images/landing/basket.svg"
             title="Dijital menü üzerinden sipariş oluşturma"
-            description="Donec malesuada aliquam neque nec faucibus. Phasellus dictum enim eget porta bibendum. In molestie"
+            description="Müşterileriniz QR kodu okutarak menünüze erişir ve siparişlerini kolayca oluşturabilir."
           />
           <FeatureCard 
             icon="/images/landing/stats.svg"
             title="Restoranınız için veri analizi"
-            description="Donec malesuada aliquam neque nec faucibus. Phasellus dictum enim eget porta bibendum. In molestie"
+            description="Restoranınızın performansını artırmak için kapsamlı veri analizi ve raporlama araçları sunar."
           />
         </div>
 
         {/* Learn More Button */}
         {/* Belki bu butona basınca tüm sistemin detaylıca anlatıldığı
             bir dokümantasyon sayfası hazırlanabilir */}
-        <button className="btn bg-accent-500 text-background-500 border-2 border-background-200 hover:bg-accent-500/90 rounded-2xl px-8 text-xl font-bold">
+        <button 
+          onClick={() => router.push('/LearnMore')}
+          className="btn bg-accent-500 text-background-500 border-2 border-background-200 hover:bg-accent-500/90 rounded-2xl px-8 text-xl font-bold">
           Learn More
         </button>
       </div>

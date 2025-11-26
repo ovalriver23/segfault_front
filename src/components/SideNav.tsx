@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../app/lib/context/AuthContext';
 
 // Navigation icons imports
@@ -29,12 +29,12 @@ interface SideNavProps {
  * Responsive sidebar navigation for the dashboard.
  * - Desktop: Always visible on the left side
  * - Mobile: Slides in from left when opened, with overlay backdrop and full text labels
+ * - Automatically detects and maintains active tab from URL
  */
 export default function SideNav({ activeTab = 'general', isOpen = false, onClose, onToggle }: SideNavProps) {
-  // Track active navigation item
-  const [active, setActive] = useState(activeTab);
   const router = useRouter();
-   const { user, loading, error, logout } = useAuth();
+  const pathname = usePathname(); // Get current URL path
+  const { user, loading, error, logout } = useAuth();
 
   // Navigation menu items configuration
   const navItems = [
@@ -45,6 +45,31 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
     { id: 'staff', label: 'Personel', icon: imgStaff, href: '/dashboard/staff' },
     { id: 'settings', label: 'Ayarlar', icon: imgSettings, href: '/dashboard/settings' },
   ];
+
+  /**
+   * Determine active tab from current pathname
+   * This ensures the correct tab is highlighted even after page refresh
+   */
+  const getActiveTabFromPath = (path: string) => {
+    // Exact match for dashboard home
+    if (path === '/dashboard') return 'general';
+    
+    // Match against nav items - check if path starts with the item's href
+    const activeItem = navItems.find(item => 
+      item.href !== '/dashboard' && path.startsWith(item.href)
+    );
+    
+    return activeItem ? activeItem.id : 'general';
+  };
+
+  // Track active navigation item - initialize from URL
+  const [active, setActive] = useState(() => getActiveTabFromPath(pathname));
+
+  // Update active tab whenever the pathname changes (navigation or refresh)
+  useEffect(() => {
+    const newActive = getActiveTabFromPath(pathname);
+    setActive(newActive);
+  }, [pathname]);
 
   // Handle navigation item click
   const handleLinkClick = (itemId: string) => {
