@@ -1,35 +1,141 @@
-
-
 'use client';
 
+import { useState, useEffect } from "react";
+import * as z from "zod"
+
+interface CategoryItem {
+    id: number;
+    name: string;
+    menuItems: any[];
+    restaurantId: string;
+}
+interface MenuItem {
+    id: number,
+    name: string,
+    description: string
+    price: number,
+    available:boolean,
+    category: CategoryItem
+}
+
 export default function Menu() {
-    // Static data for categories
-    const categories = [
-        { id: 1, name: 'Kategori', active: false },
-        { id: 2, name: 'Ürün', active: true },
-    ];
+    const [categories, setCategories] = useState<CategoryItem[]>([])
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+    const [categoryForm, setCategoryForm] = useState("")
+    const [categoryFormError, setCategoryFormError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [fetchError, setFetchError] = useState("")
+    // Filter menu items based on selected category
+    const filteredMenuItems = selectedCategory
+        ? menuItems.filter(item => item.category.id === selectedCategory)
+        : menuItems
 
-    // Static data for menu items
-    const menuItems = [
-        { id: 1, name: 'Margarita Pizza', category: 'Pizza', price: '₺185.00', status: true },
-        { id: 2, name: 'Pepperoni Pizza', category: 'Pizza', price: '₺210.00', status: true },
-        { id: 3, name: 'Tavuklu Salata', category: 'Salatalar', price: '₺95.00', status: true },
-        { id: 4, name: 'Izgara Köfte', category: 'Ana Yemek', price: '₺165.00', status: false },
-        { id: 5, name: 'Mantı', category: 'Ana Yemek', price: '₺145.00', status: true },
-        { id: 6, name: 'Limonata', category: 'İçecekler', price: '₺45.00', status: true },
-        { id: 7, name: 'Tiramisu', category: 'Tatlılar', price: '₺85.00', status: true },
-        { id: 8, name: 'Sezar Salata', category: 'Salatalar', price: '₺105.00', status: true },
-    ];
+    // Fetch tables on component mount
+        useEffect(() => {
+                fetchCategories();
+        }, []);
+    
+        const fetchCategories = async () => {
+            try {
+                setIsLoading(true);
+                setFetchError('');
+                const response = await fetch('/api/dashboard/menu/category', {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+    
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.message || 'Kategoriler yüklenirken bir hata oluştu';
+                    setFetchError(errorMessage);
+                    return;
+                }
+    
+                const categories: CategoryItem[] = await response.json();
+                console.log(categories)
+                setCategories(categories);
+            } catch (error) {
+                console.error('Error fetching tables:', error);
+                setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        // Modal handlers
-    const openModal = () => {
-        (document.getElementById('Add_Table') as HTMLDialogElement)?.showModal();
+
+
+
+
+
+    // Modal handlers
+    const openCategoryModal = () => {
+        setCategoryForm('');
+        (document.getElementById('Add_Category') as HTMLDialogElement)?.showModal();
+    };
+    const openMenuModal = () => {
+        (document.getElementById('Add_Menu') as HTMLDialogElement)?.showModal();
     };
 
-    const closeModal = () => {
-        (document.getElementById('Add_Table') as HTMLDialogElement)?.close();
+    const closeCategoryModal = () => {
+        (document.getElementById('Add_Category') as HTMLDialogElement)?.close();
     };
 
+
+    const closeMenuModal = () => {
+        (document.getElementById('Add_Menu') as HTMLDialogElement)?.close();
+    };
+
+
+    // Add table handler
+    const handleAddCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        const trimmedName = categoryForm.trim();
+        if (!trimmedName) {
+            setCategoryFormError('Masa adı gereklidir');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setCategoryFormError('');
+
+        try {
+            const response = await fetch('/api/dashboard/menu/category', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: trimmedName })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Handle error responses
+                const errorMessage = data.message || 'Masa eklenirken bir hata oluştu';
+                setCategoryFormError(errorMessage);
+                return;
+            }
+
+            // Success - append new table to the list
+            setCategories(prev => [...prev, {
+                id: data.id,
+                name: data.name,
+                menuItems: [],
+                restaurantId: data.restaurantId || ''
+            }]);
+
+            closeCategoryModal();
+        } catch (error) {
+            console.error('Error adding table:', error);
+            setCategoryFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
 
     return (
@@ -38,7 +144,7 @@ export default function Menu() {
             <div className="flex justify-between items-center mb-12">
                 <div className="flex items-center gap-4">
                     <h1 className="text-2xl font-semibold text-neutral-900">Menü</h1>
-                    
+
                     {/* Phone Mockup Toggle */}
                     <div className="flex items-center gap-3 pl-24">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -73,44 +179,127 @@ export default function Menu() {
                         Ekle
                     </button>
                     <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-1 w-64 p-3 shadow-lg">
-                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py" onClick={openModal} >Kategori</button></li>
-                       <li><a className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openModal}>Menü Öğesi</a></li>
+                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py" onClick={openCategoryModal} >Kategori</button></li>
+                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openMenuModal}>Menü Öğesi</button></li>
                     </ul>
                 </div>
             </div>
 
-            {/* Adding Table Modal */}
-            <dialog id="Add_Table" className="modal">
+            {/* Adding CATEGORY Modal */}
+            <dialog id="Add_Category" className="modal">
                 <div className="modal-box bg-white rounded-xl shadow-xl p-6">
-                    <form >
+                    <form onSubmit={handleAddCategory} >
                         {/* Modal Header */}
-                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
-                        
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Ekle</h3>
+
                         {/* Input Field */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Masa Adı
+                                Kategori Adı
                             </label>
                             <input
                                 type="text"
-                                placeholder="Masa adını giriniz"
+                                placeholder="Kategori adını giriniz"
+                                value={categoryForm}
+                                onChange={(e) => setCategoryForm(e.target.value)}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
+                            {categoryFormError && (
+                                <p className="text-sm text-red-600 mt-2">{categoryFormError}</p>
+                            )}
                         </div>
-                        
+
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
                             <div className="flex gap-3 w-full">
                                 {/* Cancel Button */}
-                                <button 
-                                    onClick={closeModal}
+                                <button
+                                    disabled={isSubmitting}
+                                    onClick={closeCategoryModal}
                                     type="button"
                                     className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
                                 >
                                     İptal
                                 </button>
                                 {/* Add Button */}
-                                <button 
+                                <button
+                                    disabled={isSubmitting}
+                                    type="submit"
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Ekleniyor...' : 'Ekle'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button >close</button>
+                </form>
+            </dialog>
+
+
+            {/* Adding Menu Item Modal */}
+            <dialog id="Add_Menu" className="modal">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                    <form >
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
+
+                        {/* Input Field */}
+                        <div className="mb-6">
+                            <label htmlFor="category_choose" className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori
+                            </label>
+                            <select id="category_choose" defaultValue="" className="select bg-background-500 text-text-400 border-gray-300 mb-4">
+                                <option value="" disabled={true}>Kategori Seç</option>
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Ürün adı
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Ürün adını giriniz"
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
+                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Ürün Açıklaması
+                            </label>
+                            <input
+                                maxLength={255}
+                                type="text"
+                                placeholder="Ürün açıklamasını giriniz"
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
+                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Fiyat
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="Ürün Fiyatını giriniz"
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="modal-action mt-8">
+                            <div className="flex gap-3 w-full">
+                                {/* Cancel Button */}
+                                <button
+                                    onClick={closeMenuModal}
+                                    type="button"
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                {/* Add Button */}
+                                <button
                                     type="submit"
                                     className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -147,12 +336,64 @@ export default function Menu() {
 
                 {/* Right Side - Menu Management */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4.5">
-                    
+
 
                     {/* Section Header */}
                     <div className="mb-3">
                         <h2 className="text-lg font-semibold text-neutral-900">Menü Öğeleri</h2>
                         <p className="text-xs text-gray-500">Tüm menü ürünlerini yönetin</p>
+                    </div>
+
+                    {/* Category Filter Section */}
+                    <div className="mb-4 pb-4 border-b border-gray-200 overflow-hidden">
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <div key="skeleton-1" className="skeleton h-10 w-24 bg-gray-200"></div>
+                                <div key="skeleton-2" className="skeleton h-10 w-32 bg-gray-200"></div>
+                                <div key="skeleton-3" className="skeleton h-10 w-28 bg-gray-200"></div>
+                            </div>
+                        ) : fetchError ? (
+                            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-sm">{fetchError}</span>
+                            </div>
+                        ) : (
+                            <div className="carousel carousel-center rounded-box gap-2 p-2 w-full max-w-full">
+                                <div className="carousel-item">
+                                    <button
+                                        onClick={() => setSelectedCategory(null)}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                                            selectedCategory === null
+                                                ? 'bg-[#e63997] text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Tümü ({menuItems.length})
+                                    </button>
+                                </div>
+                                {categories.map((category) => {
+                                    const count = menuItems.filter(
+                                        item => item.category.id === category.id
+                                    ).length;
+                                    return (
+                                        <div key={category.id} className="carousel-item">
+                                            <button
+                                                onClick={() => setSelectedCategory(category.id)}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                                                    selectedCategory === category.id
+                                                        ? 'bg-[#e63997] text-white'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {category.name} ({count})
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Menu Items Table */}
@@ -170,12 +411,12 @@ export default function Menu() {
                             </thead>
                             {/* Table Body */}
                             <tbody>
-                                {menuItems.map((item) => (
+                                {filteredMenuItems && filteredMenuItems.map((item) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
                                         <td className="text-xs text-gray-900 font-medium">{item.name}</td>
                                         <td>
                                             <span className="badge badge-xs bg-orange-100 text-orange-600 border-none font-medium">
-                                                {item.category}
+                                                {item.category.name}
                                             </span>
                                         </td>
                                         <td className="text-xs text-gray-900 font-medium">{item.price}</td>
@@ -183,7 +424,7 @@ export default function Menu() {
                                             <input
                                                 type="checkbox"
                                                 className="toggle toggle-xs border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
-                                                defaultChecked={item.status}
+                                                defaultChecked={item.available}
                                             />
                                         </td>
                                         <td>
