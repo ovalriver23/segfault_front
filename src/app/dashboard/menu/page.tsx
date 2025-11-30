@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import * as z from "zod"
 
 interface CategoryItem {
     id: number;
