@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import * as z from "zod"
 
 interface CategoryItem {
@@ -67,6 +68,9 @@ export default function Menu() {
         price: ''
     })
     const [editMenuItemError, setEditMenuItemError] = useState('')
+
+    // View menu item detail state
+    const [viewingMenuItem, setViewingMenuItem] = useState<MenuItem & { categoryId: number, categoryName: string } | null>(null)
 
     // Debounce timer for availability toggle
     const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
@@ -227,6 +231,19 @@ export default function Menu() {
             price: ''
         });
         setEditMenuItemError('');
+    };
+
+    const openViewMenuItemModal = (item: MenuItem & { categoryId: number, categoryName: string }) => {
+        setViewingMenuItem(item);
+        (document.getElementById('View_Menu_Item') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeViewMenuItemModal = () => {
+        (document.getElementById('View_Menu_Item') as HTMLDialogElement)?.close();
+        // Delay clearing state to allow modal close animation
+        setTimeout(() => {
+            setViewingMenuItem(null);
+        }, 200);
     };
 
 
@@ -798,6 +815,111 @@ export default function Menu() {
             </dialog>
 
 
+            {/* View Menu Item Detail Modal */}
+            <dialog id="View_Menu_Item" className="modal">
+                {viewingMenuItem && (
+                    <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-2xl">
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Ürün Detayları</h3>
+
+                        {/* Item Image */}
+                        {viewingMenuItem.imageUrl ? (
+                            <div className="mb-6 rounded-lg overflow-hidden bg-gray-100 relative h-64">
+                                <Image 
+                                    src={viewingMenuItem.imageUrl} 
+                                    alt={viewingMenuItem.name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                        ) : (
+                            <div className="mb-6 rounded-lg bg-gray-100 h-64 flex items-center justify-center">
+                                <div className="text-center text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-sm">Görsel bulunmuyor</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Item Details Grid */}
+                        <div className="space-y-4">
+                            {/* Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500 mb-1">Ürün Adı</label>
+                                <p className="text-lg font-semibold text-gray-900">{viewingMenuItem.name}</p>
+                            </div>
+
+                            {/* Category */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500 mb-1">Kategori</label>
+                                <span className="badge badge-lg bg-orange-100 text-orange-600 border-none font-medium">
+                                    {viewingMenuItem.categoryName}
+                                </span>
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500 mb-1">Açıklama</label>
+                                {viewingMenuItem.description ? (
+                                    <p className="text-gray-700">{viewingMenuItem.description}</p>
+                                ) : (
+                                    <p className="text-gray-400 italic">Açıklama bulunmuyor</p>
+                                )}
+                            </div>
+
+                            {/* Price and Availability */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-500 mb-1">Fiyat</label>
+                                    <p className="text-xl font-bold text-gray-900">₺{viewingMenuItem.price.toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-500 mb-1">Durum</label>
+                                    {viewingMenuItem.available ? (
+                                        <span className="badge badge-lg bg-green-100 text-green-700 border-none font-medium">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                            Stokta
+                                        </span>
+                                    ) : (
+                                        <span className="badge badge-lg bg-red-100 text-red-700 border-none font-medium">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                            Tükendi
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Style */}
+                            {viewingMenuItem.style && viewingMenuItem.style !== 'NONE' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-500 mb-1">Stil</label>
+                                    <p className="text-gray-700">{viewingMenuItem.style}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Actions */}
+                        <div className="modal-action mt-8">
+                            <button
+                                onClick={closeViewMenuItemModal}
+                                className="btn bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                )}
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeViewMenuItemModal}>close</button>
+                </form>
+            </dialog>
+
             {/* Edit Menu Item Modal */}
             <dialog id="Edit_Menu_Item" className="modal">
                 <div className="modal-box bg-white rounded-xl shadow-xl p-6">
@@ -1093,7 +1215,9 @@ export default function Menu() {
                                             <td>
                                                 <div className="flex gap-1.5">
                                                     {/* Info Button */}
-                                                    <button className="btn btn-ghost btn-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200">
+                                                    <button 
+                                                        onClick={() => openViewMenuItemModal(item)}
+                                                        className="btn btn-ghost btn-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200">
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
                                                             fill="none"
