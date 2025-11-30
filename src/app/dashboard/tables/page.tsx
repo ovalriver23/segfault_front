@@ -23,6 +23,13 @@ export default function Tables() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
     const [fetchError, setFetchError] = useState('');
+    
+    // Edit modal state
+    const [editingTable, setEditingTable] = useState<Table | null>(null);
+    const [editTableName, setEditTableName] = useState('');
+    const [editTableCapacity, setEditTableCapacity] = useState<string>('4');
+    const [editTableStatus, setEditTableStatus] = useState<string>('EMPTY');
+    const [editFormError, setEditFormError] = useState('');
 
     // Fetch tables on component mount
     useEffect(() => {
@@ -75,6 +82,25 @@ export default function Tables() {
         setTableName('');
         setTableCapacity('4');
         setFormError('');
+    };
+
+    // Edit modal handlers
+    const openEditModal = (table: Table) => {
+        setEditingTable(table);
+        setEditTableName(table.name);
+        setEditTableCapacity(table.capacity.toString());
+        setEditTableStatus(table.status);
+        setEditFormError('');
+        (document.getElementById('Edit_Table') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeEditModal = () => {
+        (document.getElementById('Edit_Table') as HTMLDialogElement)?.close();
+        setEditingTable(null);
+        setEditTableName('');
+        setEditTableCapacity('4');
+        setEditTableStatus('EMPTY');
+        setEditFormError('');
     };
 
     // Add table handler
@@ -132,6 +158,71 @@ export default function Tables() {
         } catch (error) {
             console.error('Error adding table:', error);
             setFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Edit table handler
+    const handleEditTable = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!editingTable) return;
+
+        const trimmedName = editTableName.trim();
+        if (!trimmedName) {
+            setEditFormError('Masa adı gereklidir');
+            return;
+        }
+
+        const capacity = parseInt(editTableCapacity);
+        if (!editTableCapacity || isNaN(capacity) || capacity < 1) {
+            setEditFormError('Kapasite en az 1 olmalıdır');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setEditFormError('');
+
+        try {
+            const response = await fetch('/api/dashboard/tables/edit', {
+                method: 'PUT',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    id: editingTable.id,
+                    name: trimmedName,
+                    capacity: capacity,
+                    status: editTableStatus
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Masa güncellenirken bir hata oluştu';
+                setEditFormError(errorMessage);
+                return;
+            }
+
+            // Success - update table in the list
+            setTableList(prev => prev.map(table => 
+                table.id === editingTable.id ? {
+                    id: data.id,
+                    name: data.name,
+                    qrToken: data.qrToken,
+                    capacity: data.capacity,
+                    status: data.status,
+                    restaurantId: data.restaurantId
+                } : table
+            ));
+
+            closeEditModal();
+        } catch (error) {
+            console.error('Error editing table:', error);
+            setEditFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
         }
@@ -242,6 +333,90 @@ export default function Tables() {
             </dialog>
 
 
+            {/* Edit Table Modal */}
+            <dialog id="Edit_Table" className="modal">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                    <form onSubmit={handleEditTable}>
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Düzenle</h3>
+                        
+                        {/* Table Name Input Field */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Masa Adı
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Masa adını giriniz"
+                                value={editTableName}
+                                onChange={(e) => setEditTableName(e.target.value)}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                        </div>
+
+                        {/* Capacity Input Field */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kapasite
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="Kişi sayısı"
+                                min="1"
+                                value={editTableCapacity}
+                                onChange={(e) => setEditTableCapacity(e.target.value)}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                        </div>
+
+                        {/* Status Select Field */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Durum
+                            </label>
+                            <select
+                                value={editTableStatus}
+                                onChange={(e) => setEditTableStatus(e.target.value)}
+                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            >
+                                <option value="EMPTY">Müsait</option>
+                                <option value="OCCUPIED">Dolu</option>
+                            </select>
+                            {editFormError && (
+                                <p className="text-sm text-red-600 mt-2">{editFormError}</p>
+                            )}
+                        </div>
+                        
+                        {/* Modal Action Buttons */}
+                        <div className="modal-action mt-8">
+                            <div className="flex gap-3 w-full">
+                                {/* Cancel Button */}
+                                <button 
+                                    type="button"
+                                    onClick={closeEditModal}
+                                    disabled={isSubmitting}
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                {/* Update Button */}
+                                <button 
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeEditModal}>close</button>
+                </form>
+            </dialog>
+
+
             {/* Summary Stats Grid */}
             <div className="grid grid-cols-4 gap-6 mb-12">
                 {/* Total Tables Card */}
@@ -334,7 +509,13 @@ export default function Tables() {
                         >
                             {/* Edit Button Indicator - Shows only on hover */}
                             <div className="indicator-item indicator-top opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                <button className="btn btn-sm p-2 h-9 min-h-9 w-9 bg-white hover:bg-gray-50 border border-gray-300 rounded-full shadow-sm">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditModal(table);
+                                    }}
+                                    className="btn btn-sm p-2 h-9 min-h-9 w-9 bg-white hover:bg-gray-50 border border-gray-300 rounded-full shadow-sm"
+                                >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" className="text-gray-700">
                                         <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83l3.75 3.75z" />
                                     </svg>
