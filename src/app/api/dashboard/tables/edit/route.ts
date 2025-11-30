@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest) {
                 capacity: body.capacity,
                 status: body.status
             })
-        })
+        });
 
         let responseData: EditTableResBody | { message?: string; error?: string };
         try {
