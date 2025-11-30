@@ -53,10 +53,8 @@ export default function Tables() {
             }
 
             const tables: Table[] = await response.json();
-            console.log(tables);
             setTableList(tables);
         } catch (error) {
-            console.error('Error fetching tables:', error);
             setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
         } finally {
             setIsLoading(false);
@@ -156,7 +154,6 @@ export default function Tables() {
 
             closeModal();
         } catch (error) {
-            console.error('Error adding table:', error);
             setFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
@@ -221,7 +218,6 @@ export default function Tables() {
 
             closeEditModal();
         } catch (error) {
-            console.error('Error editing table:', error);
             setEditFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
@@ -264,7 +260,6 @@ export default function Tables() {
 
             closeEditModal();
         } catch (error) {
-            console.error('Error deleting table:', error);
             setEditFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
