@@ -228,6 +228,49 @@ export default function Tables() {
         }
     };
 
+    // Delete table handler
+    const handleDeleteTable = async () => {
+        if (!editingTable) return;
+
+        if (!confirm(`"${editingTable.name}" adlı masayı silmek istediğinizden emin misiniz?`)) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        setEditFormError('');
+
+        try {
+            const response = await fetch('/api/dashboard/tables/delete', {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    id: editingTable.id
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Masa silinirken bir hata oluştu';
+                setEditFormError(errorMessage);
+                return;
+            }
+
+            // Success - remove table from the list
+            setTableList(prev => prev.filter(table => table.id !== editingTable.id));
+
+            closeEditModal();
+        } catch (error) {
+            console.error('Error deleting table:', error);
+            setEditFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
             {/* Header */}
@@ -389,24 +432,40 @@ export default function Tables() {
                         
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
-                            <div className="flex gap-3 w-full">
-                                {/* Cancel Button */}
-                                <button 
-                                    type="button"
-                                    onClick={closeEditModal}
-                                    disabled={isSubmitting}
-                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
-                                >
-                                    İptal
-                                </button>
-                                {/* Update Button */}
-                                <button 
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
-                                </button>
+                            <div className="flex justify-between items-center w-full">
+                                {/* Delete Button */}
+                                <div className="tooltip tooltip-right" data-tip="Masayı Sil">
+                                    <button 
+                                        type="button"
+                                        onClick={handleDeleteTable}
+                                        disabled={isSubmitting}
+                                        className="btn btn-sm p-2 h-10 min-h-10 w-10 bg-red-600 hover:bg-red-700 border-none rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="text-white">
+                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    {/* Cancel Button */}
+                                    <button 
+                                        type="button"
+                                        onClick={closeEditModal}
+                                        disabled={isSubmitting}
+                                        className="btn bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                    >
+                                        İptal
+                                    </button>
+                                    {/* Update Button */}
+                                    <button 
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </form>
