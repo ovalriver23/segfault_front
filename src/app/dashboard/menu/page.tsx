@@ -274,7 +274,7 @@ export default function Menu() {
 
             if (!response.ok) {
                 // Handle error responses
-                const errorMessage = data.message || 'Masa eklenirken bir hata oluştu';
+                const errorMessage = data.message || 'Kategori eklenirken bir hata oluştu';
                 setCategoryFormError(errorMessage);
                 return;
             }
