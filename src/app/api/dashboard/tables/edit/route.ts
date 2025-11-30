@@ -1,29 +1,34 @@
+import { UUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 
-interface AddTableReqBody {
-    name: string
-    capacity: number
+interface EditTableReqBody {
+    id: string;
+    name: string;
+    capacity: number;
+    status: string;
 }
 
-interface AddTableResBody {
-    id: string
-    name: string
-    qrToken: string
-    capacity: number
-    status: string
-    restaurantId: string
+interface EditTableResBody {
+    id: UUID;
+    name: string;
+    qrToken: UUID;
+    capacity: number;
+    status: string;
+    restaurantId: UUID;
 }
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
     try {
-        const body: AddTableReqBody = await request.json();
+        const body: EditTableReqBody = await request.json();
 
-        const requiredFields: (keyof AddTableReqBody)[] = [
+        const requiredFields: (keyof EditTableReqBody)[] = [
+            'id',
             'name',
-            'capacity'
+            'capacity',
+            'status'
         ];
 
         const missingFields = requiredFields.filter(field => !body[field]);
@@ -49,16 +54,17 @@ export async function POST(request: NextRequest) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/tables`, {
-            method: 'POST',
+        const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/tables/${body.id}`, {
+            method: 'PUT',
             headers,
             body: JSON.stringify({
                 name: body.name,
-                capacity: body.capacity
+                capacity: body.capacity,
+                status: body.status
             })
-        })
+        });
 
-        let responseData: AddTableResBody | { message?: string; error?: string };
+        let responseData: EditTableResBody | { message?: string; error?: string };
         try {
             responseData = await backendResponse.json();
         } catch (error) {
@@ -74,15 +80,26 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Handle 400 error from backend (table already exists)
+        // Handle 400 error from backend (table not found or other validation errors)
         if (backendResponse.status === 400) {
-            const errorMessage = 'error' in responseData ? responseData.error : 'Böyle bir masa zaten var.';
+            const errorMessage = 'error' in responseData ? responseData.error : 'Masa güncellenirken bir hata oluştu.';
             return NextResponse.json(
                 {
                     message: errorMessage,
-                    error: 'TABLE_ALREADY_EXISTS'
+                    error: 'TABLE_UPDATE_ERROR'
                 },
                 { status: 400 }
+            );
+        }
+
+        // Handle 404 error from backend (table not found)
+        if (backendResponse.status === 404) {
+            return NextResponse.json(
+                {
+                    message: 'Masa bulunamadı.',
+                    error: 'TABLE_NOT_FOUND'
+                },
+                { status: 404 }
             );
         }
 
@@ -118,12 +135,10 @@ export async function POST(request: NextRequest) {
         // Generic error response
         return NextResponse.json(
             {
-                message: 'An unexpected error occurred while adding table',
+                message: 'An unexpected error occurred while updating table',
                 error: 'INTERNAL_ERROR'
             },
             { status: 500 }
         );
     }
 }
-
-
