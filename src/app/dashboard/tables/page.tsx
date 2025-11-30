@@ -2,12 +2,16 @@
 
 'use client';
 
+import { UUID } from 'crypto';
 import { useState, useEffect } from 'react';
 
 interface Table {
-    id: number;
-    tableNumber: string;
-    restaurantId: number;
+    id: UUID;
+    name: string;
+    qrToken: UUID;
+    capacity: number;
+    status: string;
+    restaurantId: UUID;
 }
 
 export default function Tables() {
@@ -41,6 +45,7 @@ export default function Tables() {
             }
 
             const tables: Table[] = await response.json();
+            console.log(tables);
             setTableList(tables);
         } catch (error) {
             console.error('Error fetching tables:', error);
@@ -52,8 +57,8 @@ export default function Tables() {
 
     // Calculate summary stats from tableList
     const totalTables = tableList.length;
-    const availableTables = tableList.length; // Default all to available for now
-    const occupiedTables = 0;
+    const availableTables = tableList.filter(t => t.status === 'EMPTY').length;
+    const occupiedTables = tableList.filter(t => t.status === 'OCCUPIED').length;
     const reservedTables = 0;
 
     // Modal handlers
@@ -104,7 +109,10 @@ export default function Tables() {
             // Success - append new table to the list
             setTableList(prev => [...prev, {
                 id: data.id,
-                tableNumber: data.tableNumber,
+                name: data.tableName,
+                qrToken: data.qrToken,
+                capacity: data.capacity,
+                status: data.tableStatus,
                 restaurantId: data.restaurantId
             }]);
 
@@ -293,7 +301,9 @@ export default function Tables() {
                     tableList.map((table) => (
                         <div
                             key={table.id}
-                            className="indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group border-green-300"
+                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${
+                                table.status === 'EMPTY' ? 'border-green-300' : 'border-red-300'
+                            }`}
                         >
                             {/* Edit Button Indicator - Shows only on hover */}
                             <div className="indicator-item indicator-top opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -305,20 +315,25 @@ export default function Tables() {
                             </div>
 
                             {/* Status Badge - Positioned in top right */}
+
                             <div className="absolute right-5 top-3">
                                 <div className="inline-grid *:[grid-area:1/1]">
-                                    <div className="status status-success animate-ping"></div>
-                                    <div className="status status-success"></div>
+                                    <div className={`status ${
+                                        table.status === 'EMPTY' ? 'status-success' : 'status-error'
+                                    } animate-ping`}></div>
+                                    <div className={`status ${
+                                        table.status === 'EMPTY' ? 'status-success' : 'status-error'
+                                    }`}></div>
                                 </div>
                             </div>
 
                             {/* Table Info */}
                             <div className="mt-8">
                                 <p className="text-xl font-medium text-neutral-900 mb-2">
-                                    {table.tableNumber}
+                                    {table.name}
                                 </p>
                                 <p className="text-sm text-gray-600">
-                                    4 kişilik
+                                    {table.capacity ? table.capacity : "*"} kişilik
                                 </p>
                             </div>
                         </div>
