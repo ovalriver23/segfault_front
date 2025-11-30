@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import * as z from "zod"
 
@@ -75,19 +75,43 @@ export default function Menu() {
     // Debounce timer for availability toggle
     const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
 
+    // Refs to store alert timeout IDs for cleanup
+    const successAlertTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const errorAlertTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Cleanup effect for alert timeouts on unmount
+    useEffect(() => {
+        return () => {
+            if (successAlertTimeoutRef.current) {
+                clearTimeout(successAlertTimeoutRef.current)
+            }
+            if (errorAlertTimeoutRef.current) {
+                clearTimeout(errorAlertTimeoutRef.current)
+            }
+        }
+    }, [])
+
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
+        // Clear any existing timeout
+        if (successAlertTimeoutRef.current) {
+            clearTimeout(successAlertTimeoutRef.current)
+        }
         setAlertMessage(message)
         setShowAlert(true)
-        setTimeout(() => {
+        successAlertTimeoutRef.current = setTimeout(() => {
             setShowAlert(false)
         }, 4000)
     }
 
     const showErrorAlert = (message: string) => {
+        // Clear any existing timeout
+        if (errorAlertTimeoutRef.current) {
+            clearTimeout(errorAlertTimeoutRef.current)
+        }
         setErrorMessage(message)
         setShowError(true)
-        setTimeout(() => {
+        errorAlertTimeoutRef.current = setTimeout(() => {
             setShowError(false)
         }, 4000)
     }
