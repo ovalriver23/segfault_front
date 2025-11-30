@@ -9,24 +9,34 @@ interface CategoryItem {
     menuItems: any[];
     restaurantId: string;
 }
+
 interface MenuItem {
-    id: number,
-    name: string,
-    description: string
-    price: number,
-    available:boolean,
-    category: CategoryItem
+    id: number;
+    name: string;
+    description: string | null;
+    price: number;
+    available: boolean;
+    imageUrl: string | null;
+    style: string | null;
+}
+
+interface CategoryWithItems {
+    categoryId: number;
+    categoryName: string;
+    items: MenuItem[];
 }
 
 export default function Menu() {
     const [categories, setCategories] = useState<CategoryItem[]>([])
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+    const [menuItemsByCategory, setMenuItemsByCategory] = useState<CategoryWithItems[]>([])
     const [categoryForm, setCategoryForm] = useState("")
     const [categoryFormError, setCategoryFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [isLoadingItems, setIsLoadingItems] = useState(false)
     const [fetchError, setFetchError] = useState("")
+    const [fetchItemsError, setFetchItemsError] = useState("")
     
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
@@ -37,6 +47,15 @@ export default function Menu() {
     const [alertMessage, setAlertMessage] = useState('')
     const [showAlert, setShowAlert] = useState(false)
     
+    // Menu item form state
+    const [menuItemForm, setMenuItemForm] = useState({
+        categoryId: '',
+        name: '',
+        description: '',
+        price: ''
+    })
+    const [menuItemFormError, setMenuItemFormError] = useState('')
+    
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
         setAlertMessage(message)
@@ -46,40 +65,71 @@ export default function Menu() {
         }, 4000)
     }
     
+    // Get all menu items flattened
+    const allMenuItems = menuItemsByCategory.flatMap(cat => 
+        cat.items.map(item => ({ ...item, categoryId: cat.categoryId, categoryName: cat.categoryName }))
+    );
+    
     // Filter menu items based on selected category
     const filteredMenuItems = selectedCategory
-        ? menuItems.filter(item => item.category.id === selectedCategory)
-        : menuItems
+        ? allMenuItems.filter(item => item.categoryId === selectedCategory)
+        : allMenuItems
 
-    // Fetch tables on component mount
-        useEffect(() => {
-                fetchCategories();
-        }, []);
+    // Fetch categories and menu items on component mount
+    useEffect(() => {
+        fetchCategories();
+        fetchMenuItems();
+    }, []);
     
-        const fetchCategories = async () => {
-            try {
-                setIsLoading(true);
-                setFetchError('');
-                const response = await fetch('/api/dashboard/menu/category', {
-                    method: 'GET',
-                    credentials: 'include',
-                });
-    
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.message || 'Kategoriler yüklenirken bir hata oluştu';
-                    setFetchError(errorMessage);
-                    return;
-                }
-    
-                const categories: CategoryItem[] = await response.json();
-                setCategories(categories);
-            } catch (error) {
-                setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
-            } finally {
-                setIsLoading(false);
+    const fetchCategories = async () => {
+        try {
+            setIsLoading(true);
+            setFetchError('');
+            const response = await fetch('/api/dashboard/menu/category', {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Kategoriler yüklenirken bir hata oluştu';
+                setFetchError(errorMessage);
+                return;
             }
-        };
+
+            const categories: CategoryItem[] = await response.json();
+            setCategories(categories);
+        } catch (error) {
+            setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchMenuItems = async () => {
+        try {
+            setIsLoadingItems(true);
+            setFetchItemsError('');
+            const response = await fetch('/api/dashboard/menu/item', {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Menü öğeleri yüklenirken bir hata oluştu';
+                setFetchItemsError(errorMessage);
+                return;
+            }
+
+            const items: CategoryWithItems[] = await response.json();
+            setMenuItemsByCategory(items);
+        } catch (error) {
+            setFetchItemsError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
+        } finally {
+            setIsLoadingItems(false);
+        }
+    };
 
 
 
@@ -92,6 +142,13 @@ export default function Menu() {
         (document.getElementById('Add_Category') as HTMLDialogElement)?.showModal();
     };
     const openMenuModal = () => {
+        setMenuItemForm({
+            categoryId: '',
+            name: '',
+            description: '',
+            price: ''
+        });
+        setMenuItemFormError('');
         (document.getElementById('Add_Menu') as HTMLDialogElement)?.showModal();
     };
 
@@ -102,6 +159,13 @@ export default function Menu() {
 
     const closeMenuModal = () => {
         (document.getElementById('Add_Menu') as HTMLDialogElement)?.close();
+        setMenuItemForm({
+            categoryId: '',
+            name: '',
+            description: '',
+            price: ''
+        });
+        setMenuItemFormError('');
     };
 
     const openEditCategoryModal = (category: CategoryItem) => {
@@ -258,6 +322,68 @@ export default function Menu() {
         }
     };
 
+    const handleAddMenuItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        // Validate required fields
+        if (!menuItemForm.categoryId) {
+            setMenuItemFormError('Kategori seçimi gereklidir');
+            return;
+        }
+
+        const trimmedName = menuItemForm.name.trim();
+        if (!trimmedName) {
+            setMenuItemFormError('Ürün adı gereklidir');
+            return;
+        }
+
+        const price = parseFloat(menuItemForm.price);
+        if (isNaN(price) || price <= 0) {
+            setMenuItemFormError('Geçerli bir fiyat giriniz');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setMenuItemFormError('');
+
+        try {
+            const response = await fetch('/api/dashboard/menu/item', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: trimmedName,
+                    description: menuItemForm.description.trim() || undefined,
+                    price: price,
+                    categoryId: parseInt(menuItemForm.categoryId),
+                    imageUrl: null,
+                    style: 'NONE'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Ürün eklenirken bir hata oluştu';
+                setMenuItemFormError(errorMessage);
+                return;
+            }
+
+            // Success - refresh menu items or add to list
+            showSuccessAlert('Ürün başarıyla eklendi');
+            closeMenuModal();
+            
+            // Refresh menu items list
+            fetchMenuItems();
+        } catch (error) {
+            setMenuItemFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -363,17 +489,22 @@ export default function Menu() {
             {/* Adding Menu Item Modal */}
             <dialog id="Add_Menu" className="modal">
                 <div className="modal-box bg-white rounded-xl shadow-xl p-6">
-                    <form >
+                    <form onSubmit={handleAddMenuItem}>
                         {/* Modal Header */}
-                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Ürün Ekle</h3>
 
                         {/* Input Field */}
                         <div className="mb-6">
                             <label htmlFor="category_choose" className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori
                             </label>
-                            <select id="category_choose" defaultValue="" className="select bg-background-500 text-text-400 border-gray-300 mb-4">
-                                <option value="" disabled={true}>Kategori Seç</option>
+                            <select 
+                                id="category_choose" 
+                                value={menuItemForm.categoryId}
+                                onChange={(e) => setMenuItemForm(prev => ({...prev, categoryId: e.target.value}))}
+                                className="select bg-background-500 text-text-400 border-gray-300 mb-4 w-full"
+                            >
+                                <option value="">Kategori Seç</option>
                                 {categories.map((category) => (
                                     <option key={category.id} value={category.id}>
                                         {category.name}
@@ -386,6 +517,8 @@ export default function Menu() {
                             <input
                                 type="text"
                                 placeholder="Ürün adını giriniz"
+                                value={menuItemForm.name}
+                                onChange={(e) => setMenuItemForm(prev => ({...prev, name: e.target.value}))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
                             />
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -395,6 +528,8 @@ export default function Menu() {
                                 maxLength={255}
                                 type="text"
                                 placeholder="Ürün açıklamasını giriniz"
+                                value={menuItemForm.description}
+                                onChange={(e) => setMenuItemForm(prev => ({...prev, description: e.target.value}))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
                             />
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -402,10 +537,16 @@ export default function Menu() {
                             </label>
                             <input
                                 type="number"
+                                step="0.01"
+                                min="0"
                                 placeholder="Ürün Fiyatını giriniz"
+                                value={menuItemForm.price}
+                                onChange={(e) => setMenuItemForm(prev => ({...prev, price: e.target.value}))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
-
+                            {menuItemFormError && (
+                                <p className="text-sm text-red-600 mt-2">{menuItemFormError}</p>
+                            )}
                         </div>
 
                         {/* Modal Action Buttons */}
@@ -415,6 +556,7 @@ export default function Menu() {
                                 <button
                                     onClick={closeMenuModal}
                                     type="button"
+                                    disabled={isSubmitting}
                                     className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
                                 >
                                     İptal
@@ -422,16 +564,17 @@ export default function Menu() {
                                 {/* Add Button */}
                                 <button
                                     type="submit"
+                                    disabled={isSubmitting}
                                     className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Ekle
+                                    {isSubmitting ? 'Ekleniyor...' : 'Ekle'}
                                 </button>
                             </div>
                         </div>
                     </form>
                 </div>
                 <form method="dialog" className="modal-backdrop">
-                    <button >close</button>
+                    <button>close</button>
                 </form>
             </dialog>
 
@@ -560,12 +703,12 @@ export default function Menu() {
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
-                                        Tümü ({menuItems.length})
+                                        Tümü ({allMenuItems.length})
                                     </button>
                                 </div>
                                 {categories.map((category) => {
-                                    const count = menuItems.filter(
-                                        item => item.category.id === category.id
+                                    const count = allMenuItems.filter(
+                                        item => item.categoryId === category.id
                                     ).length;
                                     return (
                                         <div key={category.id} className="carousel-item">
@@ -604,94 +747,113 @@ export default function Menu() {
 
                     {/* Menu Items Table */}
                     <div className="overflow-x-auto">
-                        <table className="table w-full ">
-                            {/* Table Head */}
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="text-[0.625rem] font-semibold text-gray-600 uppercase">Ürün Adı</th>
-                                    <th className="text-[0.625rem] font-semibold text-gray-600 uppercase">Kategori</th>
-                                    <th className="text-[0.625rem] font-semibold text-gray-600 uppercase">Fiyat</th>
-                                    <th className="text-[0.625rem] font-semibold text-gray-600 uppercase">Mevcut</th>
-                                    <th className="text-[0.625rem] font-semibold text-gray-600 uppercase pl-11">İşlemler</th>
-                                </tr>
-                            </thead>
-                            {/* Table Body */}
-                            <tbody>
-                                {filteredMenuItems && filteredMenuItems.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="text-xs text-gray-900 font-medium">{item.name}</td>
-                                        <td>
-                                            <span className="badge badge-xs bg-orange-100 text-orange-600 border-none font-medium">
-                                                {item.category.name}
-                                            </span>
-                                        </td>
-                                        <td className="text-xs text-gray-900 font-medium">{item.price}</td>
-                                        <td>
-                                            <input
-                                                type="checkbox"
-                                                className="toggle toggle-xs border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
-                                                defaultChecked={item.available}
-                                            />
-                                        </td>
-                                        <td>
-                                            <div className="flex gap-1.5">
-                                                {/* Info Button */}
-                                                <button className="btn btn-ghost btn-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200">
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        strokeWidth={1.5}
-                                                        stroke="currentColor"
-                                                        className="w-3 h-3"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                                {/* Edit Button */}
-                                                <button className="btn btn-ghost btn-xs text-gray-600 hover:text-green-600 hover:bg-green-50 hover:border-green-200">
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        strokeWidth={1.5}
-                                                        stroke="currentColor"
-                                                        className="w-3 h-3"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                                {/* Delete Button */}
-                                                <button className="btn btn-ghost btn-xs text-red-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200">
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        strokeWidth={1.5}
-                                                        stroke="currentColor"
-                                                        className="w-3 h-3"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
+                        {isLoadingItems ? (
+                            <div className="flex flex-col gap-2 py-4">
+                                <div className="skeleton h-12 w-full bg-gray-200"></div>
+                                <div className="skeleton h-12 w-full bg-gray-200"></div>
+                                <div className="skeleton h-12 w-full bg-gray-200"></div>
+                            </div>
+                        ) : fetchItemsError ? (
+                            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-sm">{fetchItemsError}</span>
+                            </div>
+                        ) : filteredMenuItems.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <p>Henüz menü öğesi bulunmamaktadır.</p>
+                            </div>
+                        ) : (
+                            <table className="table table-lg  ">
+                                {/* Table Head */}
+                                <thead>
+                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                        <th className="text-[0.78rem] font-semibold text-gray-600 uppercase">Ürün Adı</th>
+                                        <th className="text-[0.78rem] font-semibold text-gray-600 uppercase">Kategori</th>
+                                        <th className="text-[0.78rem] font-semibold text-gray-600 uppercase">Fiyat</th>
+                                        <th className="text-[0.78rem] font-semibold text-gray-600 uppercase">Mevcut</th>
+                                        <th className="text-[0.78rem] font-semibold text-gray-600 uppercase pl-11">İşlemler</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                {/* Table Body */}
+                                <tbody>
+                                    {filteredMenuItems.map((item) => (
+                                        <tr key={item.id} className="hover:bg-gray-50">
+                                            <td className="text-[0.9375rem] text-gray-900 font-medium">{item.name}</td>
+                                            <td>
+                                                <span className="badge badge-sm bg-orange-100 text-orange-600 border-none font-medium">
+                                                    {item.categoryName}
+                                                </span>
+                                            </td>
+                                            <td className="text-[0.9375rem] text-gray-900 font-medium">₺{item.price.toFixed(2)}</td>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    className="toggle toggle-sm border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
+                                                    defaultChecked={item.available}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="flex gap-1.5">
+                                                    {/* Info Button */}
+                                                    <button className="btn btn-ghost btn-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            strokeWidth={1.5}
+                                                            stroke="currentColor"
+                                                            className="w-3.75 h-3.75"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                    {/* Edit Button */}
+                                                    <button className="btn btn-ghost btn-sm text-gray-600 hover:text-green-600 hover:bg-green-50 hover:border-green-200">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            strokeWidth={1.5}
+                                                            stroke="currentColor"
+                                                            className="w-3.75 h-3.75"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                    {/* Delete Button */}
+                                                    <button className="btn btn-ghost btn-sm text-red-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            strokeWidth={1.5}
+                                                            stroke="currentColor"
+                                                            className="w-3.75 h-3.75"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
             </div>
