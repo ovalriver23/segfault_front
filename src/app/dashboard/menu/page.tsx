@@ -667,7 +667,7 @@ export default function Menu() {
                         Ekle
                     </button>
                     <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-1 w-64 p-3 shadow-lg">
-                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py" onClick={openCategoryModal} >Kategori</button></li>
+                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openCategoryModal} >Kategori</button></li>
                         <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openMenuModal}>Menü Öğesi</button></li>
                     </ul>
                 </div>
