@@ -253,7 +253,7 @@ export default function Menu() {
 
         const trimmedName = categoryForm.trim();
         if (!trimmedName) {
-            setCategoryFormError('Masa adı gereklidir');
+            setCategoryFormError('Kategori adı gereklidir');
             return;
         }
 
