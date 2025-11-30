@@ -33,9 +33,9 @@ export default function Navbar() {
       }`}
     >
       <div className="flex-1">
-        <a className="btn btn-ghost text-xl text-accent-500 hover:shadow-none hover:bg-background-500 hover:border-background-500">
-          Qrinyo
-        </a>
+        <Link href='/' className="btn btn-ghost text-xl text-accent-500 hover:shadow-none hover:bg-background-500 hover:border-background-500">
+          EasyOrder
+        </Link>
       </div>
       <div className="flex-none">
         <Link href="/log-in">

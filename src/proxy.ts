@@ -4,7 +4,7 @@ import { decodeJwt } from 'jose'
  
 // 1. Specify protected and public routes
 const protectedRoutes = ['/dashboard','/dashboard/staff','/dashboard/menu','/dashboard/settings','/dashboard/tables','/dashboard/stats']
-const publicRoutes = ['/log-in', '/sign-up', '/']
+const publicRoutes = ['/log-in', '/sign-up', '/', '/LearnMore']
  
 export default async function proxy(req: NextRequest) {
   // 2. Check if the current route is protected or public

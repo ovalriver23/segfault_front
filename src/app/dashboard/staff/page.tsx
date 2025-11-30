@@ -463,7 +463,7 @@ export default function StaffPage() {
                   {/* Staff Header */}
                   <div className="flex items-start gap-3 mb-4">
                     <div className="avatar placeholder">
-                      <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
+                      <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center shrink-0">
                         {staff.avatar ? (
                           <img src={staff.avatar} alt={staff.username} className="rounded-full w-12 h-12 object-cover" />
                         ) : (
