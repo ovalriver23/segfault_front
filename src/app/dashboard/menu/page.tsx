@@ -37,16 +37,18 @@ export default function Menu() {
     const [isLoadingItems, setIsLoadingItems] = useState(false)
     const [fetchError, setFetchError] = useState("")
     const [fetchItemsError, setFetchItemsError] = useState("")
-    
+
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
     const [editCategoryName, setEditCategoryName] = useState('')
     const [editCategoryError, setEditCategoryError] = useState('')
-    
+
     // Alert state
     const [alertMessage, setAlertMessage] = useState('')
     const [showAlert, setShowAlert] = useState(false)
-    
+    const [errorMessage, setErrorMessage] = useState('')
+    const [showError, setShowError] = useState(false)
+
     // Menu item form state
     const [menuItemForm, setMenuItemForm] = useState({
         categoryId: '',
@@ -55,7 +57,20 @@ export default function Menu() {
         price: ''
     })
     const [menuItemFormError, setMenuItemFormError] = useState('')
-    
+
+    // Edit menu item state
+    const [editingMenuItem, setEditingMenuItem] = useState<MenuItem & { categoryId: number } | null>(null)
+    const [editMenuItemForm, setEditMenuItemForm] = useState({
+        categoryId: '',
+        name: '',
+        description: '',
+        price: ''
+    })
+    const [editMenuItemError, setEditMenuItemError] = useState('')
+
+    // Debounce timer for availability toggle
+    const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
+
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
         setAlertMessage(message)
@@ -64,12 +79,20 @@ export default function Menu() {
             setShowAlert(false)
         }, 4000)
     }
-    
+
+    const showErrorAlert = (message: string) => {
+        setErrorMessage(message)
+        setShowError(true)
+        setTimeout(() => {
+            setShowError(false)
+        }, 4000)
+    }
+
     // Get all menu items flattened
-    const allMenuItems = menuItemsByCategory.flatMap(cat => 
+    const allMenuItems = menuItemsByCategory.flatMap(cat =>
         cat.items.map(item => ({ ...item, categoryId: cat.categoryId, categoryName: cat.categoryName }))
     );
-    
+
     // Filter menu items based on selected category
     const filteredMenuItems = selectedCategory
         ? allMenuItems.filter(item => item.categoryId === selectedCategory)
@@ -80,7 +103,7 @@ export default function Menu() {
         fetchCategories();
         fetchMenuItems();
     }, []);
-    
+
     const fetchCategories = async () => {
         try {
             setIsLoading(true);
@@ -182,11 +205,35 @@ export default function Menu() {
         setEditCategoryError('');
     };
 
+    const openEditMenuItemModal = (item: MenuItem & { categoryId: number, categoryName: string }) => {
+        setEditingMenuItem(item);
+        setEditMenuItemForm({
+            categoryId: '', // Not used in edit, but kept for form consistency
+            name: item.name,
+            description: item.description || '',
+            price: item.price.toString()
+        });
+        setEditMenuItemError('');
+        (document.getElementById('Edit_Menu_Item') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeEditMenuItemModal = () => {
+        (document.getElementById('Edit_Menu_Item') as HTMLDialogElement)?.close();
+        setEditingMenuItem(null);
+        setEditMenuItemForm({
+            categoryId: '',
+            name: '',
+            description: '',
+            price: ''
+        });
+        setEditMenuItemError('');
+    };
+
 
     // Add table handler
     const handleAddCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const trimmedName = categoryForm.trim();
         if (!trimmedName) {
             setCategoryFormError('Masa adı gereklidir');
@@ -234,7 +281,7 @@ export default function Menu() {
 
     const handleEditCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!editingCategory) return;
 
         const trimmedName = editCategoryName.trim();
@@ -265,7 +312,7 @@ export default function Menu() {
             }
 
             // Success - update category in the list
-            setCategories(prev => prev.map(cat => 
+            setCategories(prev => prev.map(cat =>
                 cat.id === editingCategory.id ? {
                     ...cat,
                     name: data.name
@@ -307,7 +354,7 @@ export default function Menu() {
 
             // Success - remove category from the list
             setCategories(prev => prev.filter(cat => cat.id !== editingCategory.id));
-            
+
             // Clear selected category if it was deleted
             if (selectedCategory === editingCategory.id) {
                 setSelectedCategory(null);
@@ -324,7 +371,7 @@ export default function Menu() {
 
     const handleAddMenuItem = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Validate required fields
         if (!menuItemForm.categoryId) {
             setMenuItemFormError('Kategori seçimi gereklidir');
@@ -374,11 +421,183 @@ export default function Menu() {
             // Success - refresh menu items or add to list
             showSuccessAlert('Ürün başarıyla eklendi');
             closeMenuModal();
-            
+
             // Refresh menu items list
             fetchMenuItems();
         } catch (error) {
             setMenuItemFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle availability toggle with debouncing
+    const handleAvailabilityToggle = async (itemId: number, currentAvailable: boolean) => {
+        const newAvailable = !currentAvailable;
+
+        // Clear existing timer for this item
+        if (debounceTimers[itemId]) {
+            clearTimeout(debounceTimers[itemId]);
+        }
+
+        // Optimistically update the UI
+        setMenuItemsByCategory(prev =>
+            prev.map(cat => ({
+                ...cat,
+                items: cat.items.map(item =>
+                    item.id === itemId ? { ...item, available: newAvailable } : item
+                )
+            }))
+        );
+
+        // Set new debounced timer
+        const timer = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ available: newAvailable })
+                });
+
+                if (!response.ok) {
+                    // Revert on error
+                    setMenuItemsByCategory(prev =>
+                        prev.map(cat => ({
+                            ...cat,
+                            items: cat.items.map(item =>
+                                item.id === itemId ? { ...item, available: currentAvailable } : item
+                            )
+                        }))
+                    );
+
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.message || 'Durum güncellenirken hata oluştu';
+                    showErrorAlert(errorMessage);
+                } else {
+                    showSuccessAlert(newAvailable ? 'Ürün stokta olarak işaretlendi' : 'Ürün tükendi olarak işaretlendi');
+                }
+            } catch (error) {
+                // Revert on error
+                setMenuItemsByCategory(prev =>
+                    prev.map(cat => ({
+                        ...cat,
+                        items: cat.items.map(item =>
+                            item.id === itemId ? { ...item, available: currentAvailable } : item
+                        )
+                    }))
+                );
+                showErrorAlert('Bağlantı hatası oluştu');
+            } finally {
+                // Clean up the timer from state
+                setDebounceTimers(prev => {
+                    const newTimers = { ...prev };
+                    delete newTimers[itemId];
+                    return newTimers;
+                });
+            }
+        }, 800); // 800ms debounce
+
+        // Store the timer
+        setDebounceTimers(prev => ({
+            ...prev,
+            [itemId]: timer
+        }));
+    };
+
+    // Handle edit menu item
+    const handleEditMenuItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!editingMenuItem) return;
+
+        // Validate required fields
+        const trimmedName = editMenuItemForm.name.trim();
+        if (!trimmedName) {
+            setEditMenuItemError('Ürün adı gereklidir');
+            return;
+        }
+
+        const price = parseFloat(editMenuItemForm.price);
+        if (isNaN(price) || price <= 0) {
+            setEditMenuItemError('Geçerli bir fiyat giriniz');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setEditMenuItemError('');
+
+        try {
+            const response = await fetch(`/api/dashboard/menu/item?id=${editingMenuItem.id}`, {
+                method: 'PUT',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: trimmedName,
+                    description: editMenuItemForm.description.trim() || undefined,
+                    price: price,
+                    imageUrl: editingMenuItem.imageUrl,
+                    style: editingMenuItem.style || 'NONE',
+                    available: editingMenuItem.available
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Ürün güncellenirken bir hata oluştu';
+                setEditMenuItemError(errorMessage);
+                return;
+            }
+
+            // Success - refresh menu items
+            showSuccessAlert('Ürün başarıyla güncellendi');
+            closeEditMenuItemModal();
+            fetchMenuItems();
+        } catch (error) {
+            setEditMenuItemError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle delete menu item
+    const handleDeleteMenuItem = async (itemId: number, itemName: string) => {
+        if (!confirm(`"${itemName}" ürününü silmek istediğinizden emin misiniz?`)) {
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Ürün silinirken bir hata oluştu';
+                showErrorAlert(errorMessage);
+                return;
+            }
+
+            // Success - remove item from the list
+            setMenuItemsByCategory(prev =>
+                prev.map(cat => ({
+                    ...cat,
+                    items: cat.items.filter(item => item.id !== itemId)
+                }))
+            );
+
+            showSuccessAlert('Ürün başarıyla silindi');
+        } catch (error) {
+            showErrorAlert('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
         }
@@ -498,10 +717,10 @@ export default function Menu() {
                             <label htmlFor="category_choose" className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori
                             </label>
-                            <select 
-                                id="category_choose" 
+                            <select
+                                id="category_choose"
                                 value={menuItemForm.categoryId}
-                                onChange={(e) => setMenuItemForm(prev => ({...prev, categoryId: e.target.value}))}
+                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, categoryId: e.target.value }))}
                                 className="select bg-background-500 text-text-400 border-gray-300 mb-4 w-full"
                             >
                                 <option value="">Kategori Seç</option>
@@ -518,7 +737,7 @@ export default function Menu() {
                                 type="text"
                                 placeholder="Ürün adını giriniz"
                                 value={menuItemForm.name}
-                                onChange={(e) => setMenuItemForm(prev => ({...prev, name: e.target.value}))}
+                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
                             />
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -529,7 +748,7 @@ export default function Menu() {
                                 type="text"
                                 placeholder="Ürün açıklamasını giriniz"
                                 value={menuItemForm.description}
-                                onChange={(e) => setMenuItemForm(prev => ({...prev, description: e.target.value}))}
+                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
                             />
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -541,7 +760,7 @@ export default function Menu() {
                                 min="0"
                                 placeholder="Ürün Fiyatını giriniz"
                                 value={menuItemForm.price}
-                                onChange={(e) => setMenuItemForm(prev => ({...prev, price: e.target.value}))}
+                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
                             {menuItemFormError && (
@@ -579,6 +798,84 @@ export default function Menu() {
             </dialog>
 
 
+            {/* Edit Menu Item Modal */}
+            <dialog id="Edit_Menu_Item" className="modal">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                    <form onSubmit={handleEditMenuItem}>
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Ürün Düzenle</h3>
+
+                        {/* Input Fields */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Ürün adı
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Ürün adını giriniz"
+                                value={editMenuItemForm.name}
+                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
+                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Ürün Açıklaması
+                            </label>
+                            <input
+                                maxLength={255}
+                                type="text"
+                                placeholder="Ürün açıklamasını giriniz"
+                                value={editMenuItemForm.description}
+                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
+                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Fiyat
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ürün Fiyatını giriniz"
+                                value={editMenuItemForm.price}
+                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                            {editMenuItemError && (
+                                <p className="text-sm text-red-600 mt-2">{editMenuItemError}</p>
+                            )}
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="modal-action mt-8">
+                            <div className="flex justify-end items-center w-full">
+                                <div className="flex items-end justify-end gap-3">
+                                    {/* Cancel Button */}
+                                    <button
+                                        type="button"
+                                        onClick={closeEditMenuItemModal}
+                                        disabled={isSubmitting}
+                                        className="btn bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                    >
+                                        İptal
+                                    </button>
+                                    {/* Update Button */}
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeEditMenuItemModal}>close</button>
+                </form>
+            </dialog>
+
             {/* Edit Category Modal */}
             <dialog id="Edit_Category" className="modal">
                 <div className="modal-box bg-white rounded-xl shadow-xl p-6">
@@ -608,21 +905,21 @@ export default function Menu() {
                             <div className="flex justify-between items-center w-full">
                                 {/* Delete Button */}
                                 <div className="tooltip tooltip-right" data-tip="Kategoriyi Sil">
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleDeleteCategory}
                                         disabled={isSubmitting}
                                         className="btn btn-sm p-2 h-10 min-h-10 w-10 bg-red-600 hover:bg-red-700 border-none rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="text-white">
-                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z"/>
+                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z" />
                                         </svg>
                                     </button>
                                 </div>
-                                
+
                                 <div className="flex gap-3">
                                     {/* Cancel Button */}
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={closeEditCategoryModal}
                                         disabled={isSubmitting}
@@ -631,7 +928,7 @@ export default function Menu() {
                                         İptal
                                     </button>
                                     {/* Update Button */}
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={isSubmitting}
                                         className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -654,7 +951,7 @@ export default function Menu() {
                 {/* Left Side - Phone Mockup */}
                 <div className="flex flex-col items-center gap-2">
                     {/* Phone Mockup */}
-                    <div className="mockup-phone border-primary scale-70 -mt-38">
+                    <div className="mockup-phone border-primary scale-80 -mt-24">
                         <div className="camera"></div>
                         <div className="display">
                             <div className="artboard artboard-demo phone-1 bg-white">
@@ -697,11 +994,10 @@ export default function Menu() {
                                 <div className="carousel-item">
                                     <button
                                         onClick={() => setSelectedCategory(null)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                                            selectedCategory === null
-                                                ? 'bg-[#e63997] text-white'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedCategory === null
+                                            ? 'bg-[#e63997] text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
                                     >
                                         Tümü ({allMenuItems.length})
                                     </button>
@@ -715,7 +1011,7 @@ export default function Menu() {
                                             <div className="indicator group">
                                                 {/* Edit Button Indicator */}
                                                 <div className="indicator-item indicator-top mt-1 indicator-end opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                    <button 
+                                                    <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             openEditCategoryModal(category);
@@ -729,11 +1025,10 @@ export default function Menu() {
                                                 </div>
                                                 <button
                                                     onClick={() => setSelectedCategory(category.id)}
-                                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                                                        selectedCategory === category.id
-                                                            ? 'bg-[#e63997] text-white'
-                                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                    }`}
+                                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${selectedCategory === category.id
+                                                        ? 'bg-[#e63997] text-white'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                        }`}
                                                 >
                                                     {category.name} ({count})
                                                 </button>
@@ -791,7 +1086,8 @@ export default function Menu() {
                                                 <input
                                                     type="checkbox"
                                                     className="toggle toggle-sm border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
-                                                    defaultChecked={item.available}
+                                                    checked={item.available}
+                                                    onChange={() => handleAvailabilityToggle(item.id, item.available)}
                                                 />
                                             </td>
                                             <td>
@@ -814,7 +1110,9 @@ export default function Menu() {
                                                         </svg>
                                                     </button>
                                                     {/* Edit Button */}
-                                                    <button className="btn btn-ghost btn-sm text-gray-600 hover:text-green-600 hover:bg-green-50 hover:border-green-200">
+                                                    <button
+                                                        onClick={() => openEditMenuItemModal(item)}
+                                                        className="btn btn-ghost btn-sm text-gray-600 hover:text-green-600 hover:bg-green-50 hover:border-green-200">
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
                                                             fill="none"
@@ -831,7 +1129,11 @@ export default function Menu() {
                                                         </svg>
                                                     </button>
                                                     {/* Delete Button */}
-                                                    <button className="btn btn-ghost btn-sm text-red-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200">
+                                                    <button
+                                                        onClick={() => handleDeleteMenuItem(item.id, item.name)}
+                                                        disabled={isSubmitting}
+                                                        className="btn btn-ghost btn-sm text-red-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
                                                             fill="none"
@@ -876,6 +1178,28 @@ export default function Menu() {
                             />
                         </svg>
                         <span>{alertMessage}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Alert Toast */}
+            {showError && (
+                <div className="toast toast-end toast-bottom z-50">
+                    <div className="alert alert-error shadow-lg">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6 shrink-0 stroke-current"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        <span>{errorMessage}</span>
                     </div>
                 </div>
             )}
