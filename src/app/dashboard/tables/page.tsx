@@ -19,6 +19,7 @@ export default function Tables() {
     const [tableList, setTableList] = useState<Table[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [tableName, setTableName] = useState('');
+    const [tableCapacity, setTableCapacity] = useState<string>('4');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
     const [fetchError, setFetchError] = useState('');
@@ -64,6 +65,7 @@ export default function Tables() {
     // Modal handlers
     const openModal = () => {
         setTableName('');
+        setTableCapacity('4');
         setFormError('');
         (document.getElementById('Add_Table') as HTMLDialogElement)?.showModal();
     };
@@ -71,6 +73,7 @@ export default function Tables() {
     const closeModal = () => {
         (document.getElementById('Add_Table') as HTMLDialogElement)?.close();
         setTableName('');
+        setTableCapacity('4');
         setFormError('');
     };
 
@@ -84,6 +87,12 @@ export default function Tables() {
             return;
         }
 
+        const capacity = parseInt(tableCapacity);
+        if (!tableCapacity || isNaN(capacity) || capacity < 1) {
+            setFormError('Kapasite en az 1 olmalıdır');
+            return;
+        }
+
         setIsSubmitting(true);
         setFormError('');
 
@@ -94,7 +103,10 @@ export default function Tables() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ tableNumber: trimmedName })
+                body: JSON.stringify({ 
+                    name: trimmedName,
+                    capacity: capacity 
+                })
             });
 
             const data = await response.json();
@@ -109,10 +121,10 @@ export default function Tables() {
             // Success - append new table to the list
             setTableList(prev => [...prev, {
                 id: data.id,
-                name: data.tableName,
+                name: data.name,
                 qrToken: data.qrToken,
                 capacity: data.capacity,
-                status: data.tableStatus,
+                status: data.status,
                 restaurantId: data.restaurantId
             }]);
 
@@ -168,8 +180,8 @@ export default function Tables() {
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
                         
-                        {/* Input Field */}
-                        <div className="mb-6">
+                        {/* Table Name Input Field */}
+                        <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Masa Adı
                             </label>
@@ -178,6 +190,21 @@ export default function Tables() {
                                 placeholder="Masa adını giriniz"
                                 value={tableName}
                                 onChange={(e) => setTableName(e.target.value)}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                        </div>
+
+                        {/* Capacity Input Field */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kapasite
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="Kişi sayısı"
+                                min="1"
+                                value={tableCapacity}
+                                onChange={(e) => setTableCapacity(e.target.value)}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
                             {formError && (

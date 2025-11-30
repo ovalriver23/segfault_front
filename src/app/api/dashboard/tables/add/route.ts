@@ -4,13 +4,17 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 
 interface AddTableReqBody {
-    tableNumber: string
+    name: string
+    capacity: number
 }
 
 interface AddTableResBody {
-    id: number
-    tableNumber: string
-    restaurantId: number
+    id: string
+    name: string
+    qrToken: string
+    capacity: number
+    status: string
+    restaurantId: string
 }
 
 export async function POST(request: NextRequest) {
@@ -18,7 +22,8 @@ export async function POST(request: NextRequest) {
         const body: AddTableReqBody = await request.json();
 
         const requiredFields: (keyof AddTableReqBody)[] = [
-            'tableNumber'
+            'name',
+            'capacity'
         ];
 
         const missingFields = requiredFields.filter(field => !body[field]);
@@ -48,7 +53,8 @@ export async function POST(request: NextRequest) {
             method: 'POST',
             headers,
             body: JSON.stringify({
-                tableNumber: body.tableNumber
+                name: body.name,
+                capacity: body.capacity
             })
         })
 
@@ -70,9 +76,10 @@ export async function POST(request: NextRequest) {
 
         // Handle 400 error from backend (table already exists)
         if (backendResponse.status === 400) {
+            const errorMessage = 'error' in responseData ? responseData.error : 'Böyle bir masa zaten var.';
             return NextResponse.json(
                 {
-                    message: 'Böyle bir masa zaten var.',
+                    message: errorMessage,
                     error: 'TABLE_ALREADY_EXISTS'
                 },
                 { status: 400 }
