@@ -41,8 +41,6 @@ export async function GET(request:NextRequest) {
         }
 
         const tables: getTableResBody[] = await backendResponse.json();
-        //console.log(tables)
-
         return NextResponse.json(tables, { status: 200 });
 
     } catch (error) {
