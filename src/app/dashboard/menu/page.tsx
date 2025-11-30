@@ -27,6 +27,25 @@ export default function Menu() {
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [fetchError, setFetchError] = useState("")
+    
+    // Edit category state
+    const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
+    const [editCategoryName, setEditCategoryName] = useState('')
+    const [editCategoryError, setEditCategoryError] = useState('')
+    
+    // Alert state
+    const [alertMessage, setAlertMessage] = useState('')
+    const [showAlert, setShowAlert] = useState(false)
+    
+    // Show alert with auto-hide
+    const showSuccessAlert = (message: string) => {
+        setAlertMessage(message)
+        setShowAlert(true)
+        setTimeout(() => {
+            setShowAlert(false)
+        }, 4000)
+    }
+    
     // Filter menu items based on selected category
     const filteredMenuItems = selectedCategory
         ? menuItems.filter(item => item.category.id === selectedCategory)
@@ -54,10 +73,8 @@ export default function Menu() {
                 }
     
                 const categories: CategoryItem[] = await response.json();
-                console.log(categories)
                 setCategories(categories);
             } catch (error) {
-                console.error('Error fetching tables:', error);
                 setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
             } finally {
                 setIsLoading(false);
@@ -85,6 +102,20 @@ export default function Menu() {
 
     const closeMenuModal = () => {
         (document.getElementById('Add_Menu') as HTMLDialogElement)?.close();
+    };
+
+    const openEditCategoryModal = (category: CategoryItem) => {
+        setEditingCategory(category);
+        setEditCategoryName(category.name);
+        setEditCategoryError('');
+        (document.getElementById('Edit_Category') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeEditCategoryModal = () => {
+        (document.getElementById('Edit_Category') as HTMLDialogElement)?.close();
+        setEditingCategory(null);
+        setEditCategoryName('');
+        setEditCategoryError('');
     };
 
 
@@ -128,10 +159,100 @@ export default function Menu() {
                 restaurantId: data.restaurantId || ''
             }]);
 
+            showSuccessAlert('Kategori başarıyla eklendi');
             closeCategoryModal();
         } catch (error) {
-            console.error('Error adding table:', error);
             setCategoryFormError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleEditCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!editingCategory) return;
+
+        const trimmedName = editCategoryName.trim();
+        if (!trimmedName) {
+            setEditCategoryError('Kategori adı gereklidir');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setEditCategoryError('');
+
+        try {
+            const response = await fetch(`/api/dashboard/menu/category?id=${editingCategory.id}`, {
+                method: 'PUT',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: trimmedName })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Kategori güncellenirken bir hata oluştu';
+                setEditCategoryError(errorMessage);
+                return;
+            }
+
+            // Success - update category in the list
+            setCategories(prev => prev.map(cat => 
+                cat.id === editingCategory.id ? {
+                    ...cat,
+                    name: data.name
+                } : cat
+            ));
+
+            showSuccessAlert('Kategori başarıyla güncellendi');
+            closeEditCategoryModal();
+        } catch (error) {
+            setEditCategoryError('Bağlantı hatası. Lütfen tekrar deneyin.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteCategory = async () => {
+        if (!editingCategory) return;
+
+        if (!confirm(`"${editingCategory.name}" kategorisini silmek istediğinizden emin misiniz? İçindeki tüm ürünler de silinecektir.`)) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        setEditCategoryError('');
+
+        try {
+            const response = await fetch(`/api/dashboard/menu/category?id=${editingCategory.id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage = data.message || 'Kategori silinirken bir hata oluştu';
+                setEditCategoryError(errorMessage);
+                return;
+            }
+
+            // Success - remove category from the list
+            setCategories(prev => prev.filter(cat => cat.id !== editingCategory.id));
+            
+            // Clear selected category if it was deleted
+            if (selectedCategory === editingCategory.id) {
+                setSelectedCategory(null);
+            }
+
+            showSuccessAlert('Kategori başarıyla silindi');
+            closeEditCategoryModal();
+        } catch (error) {
+            setEditCategoryError('Bağlantı hatası. Lütfen tekrar deneyin.');
         } finally {
             setIsSubmitting(false);
         }
@@ -315,6 +436,75 @@ export default function Menu() {
             </dialog>
 
 
+            {/* Edit Category Modal */}
+            <dialog id="Edit_Category" className="modal">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                    <form onSubmit={handleEditCategory}>
+                        {/* Modal Header */}
+                        <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Düzenle</h3>
+
+                        {/* Input Field */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Adı
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Kategori adını giriniz"
+                                value={editCategoryName}
+                                onChange={(e) => setEditCategoryName(e.target.value)}
+                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                            />
+                            {editCategoryError && (
+                                <p className="text-sm text-red-600 mt-2">{editCategoryError}</p>
+                            )}
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="modal-action mt-8">
+                            <div className="flex justify-between items-center w-full">
+                                {/* Delete Button */}
+                                <div className="tooltip tooltip-right" data-tip="Kategoriyi Sil">
+                                    <button 
+                                        type="button"
+                                        onClick={handleDeleteCategory}
+                                        disabled={isSubmitting}
+                                        className="btn btn-sm p-2 h-10 min-h-10 w-10 bg-red-600 hover:bg-red-700 border-none rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="text-white">
+                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    {/* Cancel Button */}
+                                    <button 
+                                        type="button"
+                                        onClick={closeEditCategoryModal}
+                                        disabled={isSubmitting}
+                                        className="btn bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                    >
+                                        İptal
+                                    </button>
+                                    {/* Update Button */}
+                                    <button 
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeEditCategoryModal}>close</button>
+                </form>
+            </dialog>
+
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-[40%_60%] gap-6 mr-6">
@@ -379,16 +569,32 @@ export default function Menu() {
                                     ).length;
                                     return (
                                         <div key={category.id} className="carousel-item">
-                                            <button
-                                                onClick={() => setSelectedCategory(category.id)}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                                                    selectedCategory === category.id
-                                                        ? 'bg-[#e63997] text-white'
-                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                            >
-                                                {category.name} ({count})
-                                            </button>
+                                            <div className="indicator group">
+                                                {/* Edit Button Indicator */}
+                                                <div className="indicator-item indicator-top mt-1 indicator-end opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openEditCategoryModal(category);
+                                                        }}
+                                                        className="btn btn-xs p-1 h-6 min-h-6 w-6 bg-white hover:bg-gray-50 border border-gray-300 rounded-full shadow-sm"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" className="text-gray-700">
+                                                            <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83l3.75 3.75z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    onClick={() => setSelectedCategory(category.id)}
+                                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                                                        selectedCategory === category.id
+                                                            ? 'bg-[#e63997] text-white'
+                                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    {category.name} ({count})
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -489,6 +695,28 @@ export default function Menu() {
                     </div>
                 </div>
             </div>
+
+            {/* Success Alert Toast */}
+            {showAlert && (
+                <div className="toast toast-end toast-bottom z-50">
+                    <div className="alert alert-success shadow-lg">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6 shrink-0 stroke-current"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        <span>{alertMessage}</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
