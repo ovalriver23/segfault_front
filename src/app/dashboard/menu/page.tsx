@@ -75,6 +75,12 @@ export default function Menu() {
     // Debounce timer for availability toggle
     const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
 
+    // Cleanup debounce timers on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(debounceTimers).forEach(timer => clearTimeout(timer));
+        };
+    }, [debounceTimers]);
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
         setAlertMessage(message)
