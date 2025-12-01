@@ -1,7 +1,7 @@
 // src/app/menu/page.tsx
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image"; // Resimleriniz hazır olduğunda bu component'i kullanacaksınız
 
 // --- SAHTE VERİ (Mock Data) ---
@@ -143,7 +143,7 @@ function CategoryFilter({
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center flex-shrink-0 w-20 ${
+        className={`flex flex-col items-center shrink-0 w-20 ${
           selectedCategory !== "All" ? "opacity-70" : ""
         }`}
       >
@@ -164,7 +164,7 @@ function CategoryFilter({
         <button
           key={cat.name}
           onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center flex-shrink-0 w-20 ${
+          className={`flex flex-col items-center shrink-0 w-20 ${
             selectedCategory !== cat.name ? "opacity-70" : ""
           }`}
         >
@@ -227,11 +227,47 @@ export default function MenuPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isSearchVisible, setIsSearchVisible] = useState(true);
+  const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   const menuData = MOCK_MENU;
 
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Scroll Handler for Search and Category Filter Visibility ---
+  useEffect(() => {
+    const handleScroll = () => {
+      const main = mainContainerRef.current;
+      if (!main) return;
+
+      const currentScrollY = main.scrollTop;
+      const scrollDifference = currentScrollY - lastScrollY;
+      
+      // Always show when near the top
+      if (currentScrollY < 50) {
+        setIsSearchVisible(true);
+        setIsCategoryFilterVisible(true);
+      }
+      // Show search and category filter when scrolling up significantly, hide when scrolling down
+      else if (scrollDifference < -30) { // Scrolled up at least 30px
+        setIsSearchVisible(true);
+        setIsCategoryFilterVisible(true);
+      } else if (scrollDifference > 30 && currentScrollY > 100) { // Scrolled down at least 30px
+        setIsSearchVisible(false);
+        setIsCategoryFilterVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    const main = mainContainerRef.current;
+    if (main) {
+      main.addEventListener('scroll', handleScroll, { passive: true });
+      return () => main.removeEventListener('scroll', handleScroll);
+    }
+  }, [lastScrollY]);
 
   // --- Sepet İşlemleri ---
   const handleAddToCart = (product: Product) => {
@@ -344,8 +380,10 @@ export default function MenuPage() {
       <main className="px-6">
         
         {/* Arama Çubuğu */}
-        <div className="sticky top-[88px] bg-white pt-2 pb-4 z-10 h-[80px]">
-          <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none">
+        <div className={`sticky top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
+          isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        }`}>
+          <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 16 16"
@@ -369,7 +407,9 @@ export default function MenuPage() {
         </div>
 
         {/* Kategori Filtresi */}
-        <div className="sticky top-[168px] bg-white pt-2 pb-1 z-10 h-[124px]">
+        <div className={`sticky top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
+          isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        }`}>
           <CategoryFilter
             categories={categoriesForFilter}
             selectedCategory={selectedCategory}
