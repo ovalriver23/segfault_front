@@ -650,7 +650,7 @@ export default function Menu() {
 
                 {/* Add Button */}
                 <div className="dropdown dropdown-end">
-                    <button tabIndex={0} role="button" className="btn shadow-2xs h-10 min-h-10 w-[130px] bg-[#e63997] hover:bg-[#d12e86] border-[#d1d5dc] text-black font-bold text-[18.549px] rounded-md gap-2">
+                    <button tabIndex={0} role="button" className="btn btn-primary bg-secondary-500 hover:bg-secondary-600 border-none ml-2 rounded-3xl text-white gap-2">
                         <svg
                             width="19"
                             height="19"
