@@ -3,7 +3,8 @@
 'use client';
 
 import { UUID } from 'crypto';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
 
 interface Table {
     id: UUID;
@@ -31,9 +32,22 @@ export default function Tables() {
     const [editTableStatus, setEditTableStatus] = useState<string>('EMPTY');
     const [editFormError, setEditFormError] = useState('');
 
+    // PDF generation state
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const pdfDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
     // Fetch tables on component mount
     useEffect(() => {
             fetchTables();
+    }, []);
+
+    // Cleanup debounce timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (pdfDebounceTimeout.current) {
+                clearTimeout(pdfDebounceTimeout.current);
+            }
+        };
     }, []);
 
     const fetchTables = async () => {
@@ -266,6 +280,144 @@ export default function Tables() {
         }
     };
 
+    // Generate PDF with QR codes
+    const handleGeneratePDF = () => {
+        // Clear existing timeout
+        if (pdfDebounceTimeout.current) {
+            clearTimeout(pdfDebounceTimeout.current);
+        }
+
+        // Set new timeout for debouncing (500ms)
+        pdfDebounceTimeout.current = setTimeout(async () => {
+            if (tableList.length === 0) {
+                alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
+                return;
+            }
+
+            if (isGeneratingPDF) {
+                return;
+            }
+
+            setIsGeneratingPDF(true);
+
+            try {
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 20;
+                const qrSize = 60;
+                const spacing = 15;
+                const cols = 2;
+                const itemWidth = (pageWidth - (2 * margin) - spacing) / cols;
+                const itemHeight = qrSize + 25;
+
+                let currentX = margin;
+                let currentY = margin;
+                let itemsOnPage = 0;
+                const itemsPerPage = Math.floor((pageHeight - 2 * margin) / (itemHeight + spacing)) * cols;
+
+                // Add title to first page
+                pdf.setFontSize(20);
+                pdf.setFont('helvetica', 'bold');
+                // Use text rendering mode for better UTF-8 support
+                const title = 'Masa QR Kodlari';
+                pdf.text(title, pageWidth / 2, currentY, { align: 'center' });
+                currentY += 15;
+
+                for (let i = 0; i < tableList.length; i++) {
+                    const table = tableList[i];
+
+                    // Check if we need a new page
+                    if (itemsOnPage > 0 && itemsOnPage % itemsPerPage === 0) {
+                        pdf.addPage();
+                        currentY = margin;
+                        currentX = margin;
+                        itemsOnPage = 0;
+                    }
+
+                    // Fetch QR code image
+                    try {
+                        const response = await fetch(`/api/dashboard/qr?tableId=${table.id}&size=300`);
+                        
+                        if (!response.ok) {
+                            console.error(`Failed to fetch QR code for table ${table.name}`);
+                            continue;
+                        }
+
+                        const blob = await response.blob();
+                        const imageDataUrl = await new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(blob);
+                        });
+
+                        // Calculate position
+                        const col = itemsOnPage % cols;
+                        const row = Math.floor(itemsOnPage / cols);
+                        currentX = margin + col * (itemWidth + spacing);
+                        currentY = margin + 15 + row * (itemHeight + spacing);
+
+                        // Draw border
+                        pdf.setDrawColor(200);
+                        pdf.setLineWidth(0.5);
+                        pdf.rect(currentX, currentY, itemWidth, itemHeight);
+
+                        // Add table name - convert Turkish chars
+                        pdf.setFontSize(12);
+                        pdf.setFont('helvetica', 'bold');
+                        const textY = currentY + 8;
+                        // Convert Turkish characters for PDF compatibility
+                        const tableName = table.name
+                            .replace(/İ/g, 'I')
+                            .replace(/ı/g, 'i')
+                            .replace(/Ş/g, 'S')
+                            .replace(/ş/g, 's')
+                            .replace(/Ğ/g, 'G')
+                            .replace(/ğ/g, 'g')
+                            .replace(/Ü/g, 'U')
+                            .replace(/ü/g, 'u')
+                            .replace(/Ö/g, 'O')
+                            .replace(/ö/g, 'o')
+                            .replace(/Ç/g, 'C')
+                            .replace(/ç/g, 'c');
+                        pdf.text(tableName, currentX + itemWidth / 2, textY, { align: 'center' });
+
+                        // Add QR code
+                        const qrX = currentX + (itemWidth - qrSize) / 2;
+                        const qrY = currentY + 12;
+                        pdf.addImage(imageDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+                        // Add capacity info - convert Turkish chars
+                        pdf.setFontSize(9);
+                        pdf.setFont('helvetica', 'normal');
+                        const capacityY = qrY + qrSize + 5;
+                        const capacityText = `Kapasite: ${table.capacity} kisi`;
+                        pdf.text(capacityText, currentX + itemWidth / 2, capacityY, { align: 'center' });
+
+                        itemsOnPage++;
+                    } catch (error) {
+                        console.error(`Error processing QR code for table ${table.name}:`, error);
+                    }
+                }
+
+                // Save PDF
+                const timestamp = new Date().toISOString().split('T')[0];
+                pdf.save(`masa-qr-kodlari-${timestamp}.pdf`);
+
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('PDF oluşturulurken bir hata oluştu.');
+            } finally {
+                setIsGeneratingPDF(false);
+            }
+        }, 800);
+    };
+
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
             {/* Header */}
@@ -273,30 +425,54 @@ export default function Tables() {
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-semibold text-neutral-900">Masalar</h1>
 
-                {/* Add Dropdown */}
-                <div className="dropdown dropdown-end">
-                    <button tabIndex={0} role="button" className="btn shadow-2xs h-10 min-h-10 w-[130px] bg-[#e63997] hover:bg-[#d12e86] border-[#d1d5dc] text-black font-bold text-[18.549px] rounded-md gap-2">
-                        <svg
-                            width="19"
-                            height="19"
-                            viewBox="0 0 13 13"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-[18.547px] h-[18.547px]"
-                        >
-                            <path
-                                d="M7.214 5.786V1.143H5.786V5.786H1.143V7.214H5.786V11.857H7.214V7.214H11.857V5.786H7.214Z"
-                                fill="currentColor"
-                            />
-                        </svg>
-                        Ekle
+                <div className="flex gap-3">
+                    {/* QR Code Button */}
+                    <button
+                        onClick={handleGeneratePDF}
+                        disabled={isGeneratingPDF || tableList.length === 0}
+                        className="btn btn-primary bg-orange-500 hover:bg-orange-600 border-none text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingPDF ? (
+                            <>
+                                <span className="loading loading-spinner loading-sm"></span>
+                                Oluşturuluyor...
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
+                                    <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
+                                </svg>
+                                QR Kodları
+                            </>
+                        )}
                     </button>
-                    <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-1 w-64 p-3 shadow-lg">
-                        <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py" onClick={openModal}>Masa Ekle</button></li>
-                        {/*Need API support for this 
-                       <li><a className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3">Toplu Masa Ekle</a></li>
-    */}
-                    </ul>
+
+                    {/* Add Dropdown */}
+                    <div className="dropdown dropdown-end">
+                        <button tabIndex={0} role="button" className="btn btn-primary bg-secondary-500 hover:bg-secondary-600 border-none ml-2 rounded-3xl text-white gap-2">
+                            <svg
+                                width="19"
+                                height="19"
+                                viewBox="0 0 13 13"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-[18.547px] h-[18.547px]"
+                            >
+                                <path
+                                    d="M7.214 5.786V1.143H5.786V5.786H1.143V7.214H5.786V11.857H7.214V7.214H11.857V5.786H7.214Z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                            Ekle
+                        </button>
+                        <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-1 w-64 p-3 shadow-lg">
+                            <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py" onClick={openModal}>Masa Ekle</button></li>
+                            {/*Need API support for this 
+                           <li><a className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3">Toplu Masa Ekle</a></li>
+        */}
+                        </ul>
+                    </div>
                 </div>
 
             </div>

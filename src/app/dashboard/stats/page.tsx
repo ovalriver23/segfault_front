@@ -260,7 +260,7 @@ export default function StatsPage() {
       {/* Bu kısmı dinamik veri geldiğinde güncelleyeceğiz */}
       <div className="text-center py-10">
         <h2 className="text-lg font-semibold">Dinamik Veri Bekleniyor</h2>
-        <p className="text-gray-500">Lütfen endpoint'leri sağlayın.</p>
+        <p className="text-gray-500">Lütfen endpoint&apos;leri sağlayın.</p>
       </div>
     </div>
   );
