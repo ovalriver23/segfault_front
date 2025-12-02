@@ -12,7 +12,14 @@ export async function GET(request: NextRequest) {
         // Get tableId and size from query parameters
         const searchParams = request.nextUrl.searchParams;
         const tableId = searchParams.get('tableId');
-        const size = searchParams.get('size') || '300';
+        const sizeParam = searchParams.get('size') || '300';
+        const size = parseInt(sizeParam, 10);
+        if (isNaN(size) || size < 100 || size > 1000) {
+            return NextResponse.json(
+                { error: 'Size must be a number between 100 and 1000' },
+                { status: 400 }
+            );
+        }
 
         if (!tableId) {
             return NextResponse.json(
