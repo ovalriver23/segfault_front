@@ -377,10 +377,10 @@ export default function MenuPage() {
       </header>
 
       {/* Ana İçerik Alanı */}
-      <main className="px-6">
+      <main className="px-2">
         
         {/* Arama Çubuğu */}
-        <div className={`sticky top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
+        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
           isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
         }`}>
           <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
@@ -407,7 +407,7 @@ export default function MenuPage() {
         </div>
 
         {/* Kategori Filtresi */}
-        <div className={`sticky top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
+        <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
           isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
         }`}>
           <CategoryFilter
@@ -418,7 +418,7 @@ export default function MenuPage() {
         </div>
 
         {/* Menü Bölümleri */}
-        <div className="space-y-8 pt-4">
+        <div className="space-y-8 pt-4 px-4">
           {filteredMenu.map((section) => (
             <section
               key={section.category}
