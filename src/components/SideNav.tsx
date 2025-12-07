@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -14,6 +14,16 @@ const imgStats = "/images/admin/stats-navbar.svg";
 const imgStaff = "/images/admin/staff-navbar.svg";
 const imgSettings = "/images/admin/options-navbar.svg";
 const imgAvatar = "/images/admin/avatar-navbar.png";
+
+// Navigation menu items configuration
+const navItems = [
+  { id: 'general', label: 'Genel', icon: imgHome, href: '/dashboard' },
+  { id: 'tables', label: 'Masalar', icon: imgTable, href: '/dashboard/tables' },
+  { id: 'menu', label: 'Menü', icon: imgMenu, href: '/dashboard/menu' },
+  { id: 'stats', label: 'İstatistik', icon: imgStats, href: '/dashboard/stats' },
+  { id: 'staff', label: 'Personel', icon: imgStaff, href: '/dashboard/staff' },
+  { id: 'settings', label: 'Ayarlar', icon: imgSettings, href: '/dashboard/settings' },
+];
 
 // Component props interface
 interface SideNavProps {
@@ -36,21 +46,11 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
   const pathname = usePathname(); // Get current URL path
   const { user, loading, error, logout } = useAuth();
 
-  // Navigation menu items configuration
-  const navItems = [
-    { id: 'general', label: 'Genel', icon: imgHome, href: '/dashboard' },
-    { id: 'tables', label: 'Masalar', icon: imgTable, href: '/dashboard/tables' },
-    { id: 'menu', label: 'Menü', icon: imgMenu, href: '/dashboard/menu' },
-    { id: 'stats', label: 'İstatistik', icon: imgStats, href: '/dashboard/stats' },
-    { id: 'staff', label: 'Personel', icon: imgStaff, href: '/dashboard/staff' },
-    { id: 'settings', label: 'Ayarlar', icon: imgSettings, href: '/dashboard/settings' },
-  ];
-
   /**
    * Determine active tab from current pathname
    * This ensures the correct tab is highlighted even after page refresh
    */
-  const getActiveTabFromPath = (path: string) => {
+  const getActiveTabFromPath = useCallback((path: string) => {
     // Exact match for dashboard home
     if (path === '/dashboard') return 'general';
     
@@ -60,7 +60,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
     );
     
     return activeItem ? activeItem.id : 'general';
-  };
+  }, []);
 
   // Track active navigation item - initialize from URL
   const [active, setActive] = useState(() => getActiveTabFromPath(pathname));
@@ -69,7 +69,7 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
   useEffect(() => {
     const newActive = getActiveTabFromPath(pathname);
     setActive(newActive);
-  }, [pathname]);
+  }, [pathname, getActiveTabFromPath]);
 
   // Handle navigation item click
   const handleLinkClick = (itemId: string) => {

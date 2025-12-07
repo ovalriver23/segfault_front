@@ -463,9 +463,9 @@ export default function StaffPage() {
                   {/* Staff Header */}
                   <div className="flex items-start gap-3 mb-4">
                     <div className="avatar placeholder">
-                      <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
+                      <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center shrink-0">
                         {staff.avatar ? (
-                          <img src={staff.avatar} alt={staff.username} className="rounded-full w-12 h-12 object-cover" />
+                          <Image src={staff.avatar} alt={staff.username} width={48} height={48} className="rounded-full w-12 h-12 object-cover" />
                         ) : (
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />

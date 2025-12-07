@@ -2,6 +2,7 @@
 
 import { useState, createContext, useContext } from 'react';
 import SideNav from '../../components/SideNav';
+import { AuthProvider } from '../lib/context/AuthContext';
 
 const PageTitleContext = createContext<{
   pageTitle: string;
@@ -31,6 +32,7 @@ export default function DashboardLayout({
 
   return (
     <PageTitleContext.Provider value={{ pageTitle, setPageTitle }}>
+      <AuthProvider>
       <div className="flex h-screen bg-gray-50 overflow-hidden">
         {/* Sidebar */}
         <SideNav 
@@ -64,6 +66,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      </AuthProvider>
     </PageTitleContext.Provider>
   );
 }
