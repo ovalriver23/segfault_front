@@ -1,51 +1,11 @@
 // src/app/menu/page.tsx
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
-import Image from "next/image"; // Resimleriniz hazır olduğunda bu component'i kullanacaksınız
-
-// --- SAHTE VERİ (Mock Data) ---
-const MOCK_MENU = [
-  {
-    category: "Burger",
-    categoryImageUrl: "/images/cat-burger.png",
-    items: [
-      { id: "1", name: "Cheeseburger", price: 120, imageUrl: "/images/burger.png" },
-      { id: "2", name: "BBQ Burger", price: 135, imageUrl: "/images/burger.png" },
-    ],
-  },
-  {
-    category: "Wings",
-    categoryImageUrl: "/images/cat-wings.png",
-    items: [
-      { id: "3", name: "Acılı Kanat", price: 95, imageUrl: "/images/wings.png" },
-      { id: "4", name: "BBQ Kanat", price: 100, imageUrl: "/images/wings.png" },
-    ],
-  },
-  {
-    category: "Pizza",
-    categoryImageUrl: "/images/cat-pizza.png",
-    items: [
-      { id: "5", name: "Pepperoni Pizza", price: 150, imageUrl: "/images/pizza.png" },
-    ],
-  },
-  {
-    category: "Kahve",
-    categoryImageUrl: "/images/cat-coffee.png",
-    items: [
-      { id: "6", name: "Cappuccino", price: 90, imageUrl: "/images/cappuccino.png" },
-      { id: "7", name: "Latte", price: 60, imageUrl: "/images/latte.png" },
-    ],
-  },
-  {
-    category: "Salata",
-    categoryImageUrl: "/images/cat-salad.png",
-    items: [
-      { id: "8", name: "Sezar Salata", price: 150, imageUrl: "/images/salata.png" },
-      { id: "9", name: "Akdeniz Salata", price: 140, imageUrl: "/images/salata.png" },
-    ],
-  },
-];
+import { useState, useMemo, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { getUserLocation, LocationCoordinates, GeolocationError } from "../lib/utils/geolocation";
+import { scanTable, TableScanResponse, TableScanError } from "../lib/services/tableService";
 
 // --- Arayüz Tipleri ---
 type Product = {
@@ -82,7 +42,6 @@ function ProductCard({
   return (
     <div className="card bg-pink-100/50 shadow-sm rounded-2xl p-4 flex flex-col items-center">
       <figure className="mb-2">
-        {/* <Image src={product.imageUrl} alt={product.name} width={120} height={120} className="rounded-xl" /> */}
         <div className="w-28 h-28 bg-gray-200 rounded-xl flex items-center justify-center">
           <span className="text-gray-400 text-xs">Resim</span>
         </div>
@@ -139,7 +98,6 @@ function CategoryFilter({
 }) {
   return (
     <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
-      {/* "All" butonu */}
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
@@ -149,8 +107,8 @@ function CategoryFilter({
       >
         <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
             selectedCategory === "All" 
-              ? "bg-[#FF9F5A]"   // Aktif renk (Sizin renginiz)
-              : "bg-orange-200" // Pasif renk
+              ? "bg-[#FF9F5A]"
+              : "bg-orange-200"
           }`}>
            <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
              <span className="text-gray-400 text-xs">Resim</span>
@@ -159,7 +117,6 @@ function CategoryFilter({
         <span className="font-semibold text-gray-800">All</span>
       </button>
 
-      {/* Dinamik kategoriler */}
       {categories.map((cat) => (
         <button
           key={cat.name}
@@ -171,8 +128,8 @@ function CategoryFilter({
           <div
             className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
               selectedCategory === cat.name
-                ? "bg-[#FF9F5A]"   // Aktif renk (Sizin renginiz)
-                : "bg-orange-200" // Pasif renk
+                ? "bg-[#FF9F5A]"
+                : "bg-orange-200"
             }`}
           >
             <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -186,7 +143,7 @@ function CategoryFilter({
   );
 }
 
-// 3. Sepet Özeti (GÜNCELLENDİ: Dış 'fixed' wrapper kaldırıldı)
+// 3. Sepet Özeti
 function CartSummary({
   itemCount,
   totalPrice,
@@ -195,7 +152,6 @@ function CartSummary({
   totalPrice: number;
 }) {
   return (
-    // 'fixed' wrapper buradan kaldırıldı. Pozisyonlamayı ana component yapacak.
     <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg">
       <div>
         <span className="font-semibold">{itemCount} Items</span>
@@ -221,9 +177,10 @@ function CartSummary({
   );
 }
 
-
-// --- ANA SAYFA BİLEŞENİ ---
-export default function MenuPage() {
+// --- İÇ SAYFA BİLEŞENİ (useSearchParams kullanan) ---
+function MenuPageContent() {
+  const searchParams = useSearchParams();
+  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -231,10 +188,60 @@ export default function MenuPage() {
   const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  const menuData = MOCK_MENU;
+  // Geolocation & Table Scan State
+  const [userLocation, setUserLocation] = useState<LocationCoordinates | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [menuData, setMenuData] = useState<TableScanResponse | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // Get QR token from URL parameters
+  const qrToken = searchParams.get('token');
+
+  // Capture geolocation when component mounts
+  useEffect(() => {
+    const captureLocation = async () => {
+      if (!qrToken) {
+        return;
+      }
+
+      setIsLoadingLocation(true);
+      
+      try {
+        const location = await getUserLocation();
+        setUserLocation(location);
+
+        const tableData = await scanTable(qrToken, location);
+        setMenuData(tableData);
+        
+      } catch (error) {
+        const err = error as GeolocationError | TableScanError;
+        
+        if ('code' in err) {
+          // Geolocation error
+          setLocationError(err.message);
+        } else {
+          // Table scan error
+          
+          // TEMPORARY: Skip distance validation if restaurant location is not set
+          // Remove this block once backend sets restaurant coordinates
+          if (err.error && (err.error.includes('null') || err.error.includes('doubleValue'))) {
+            setScanError('Restaurant location not configured. Contact the restaurant to set up geolocation verification.');
+            return;
+          }
+          
+          setScanError(err.error);
+        }
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    };
+
+    captureLocation();
+  }, [qrToken]);
 
   // --- Scroll Handler for Search and Category Filter Visibility ---
   useEffect(() => {
@@ -245,16 +252,13 @@ export default function MenuPage() {
       const currentScrollY = main.scrollTop;
       const scrollDifference = currentScrollY - lastScrollY;
       
-      // Always show when near the top
       if (currentScrollY < 50) {
         setIsSearchVisible(true);
         setIsCategoryFilterVisible(true);
-      }
-      // Show search and category filter when scrolling up significantly, hide when scrolling down
-      else if (scrollDifference < -30) { // Scrolled up at least 30px
+      } else if (scrollDifference < -30) {
         setIsSearchVisible(true);
         setIsCategoryFilterVisible(true);
-      } else if (scrollDifference > 30 && currentScrollY > 100) { // Scrolled down at least 30px
+      } else if (scrollDifference > 30 && currentScrollY > 100) {
         setIsSearchVisible(false);
         setIsCategoryFilterVisible(false);
       }
@@ -273,11 +277,10 @@ export default function MenuPage() {
   const handleAddToCart = (product: Product) => {
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
+  
   const handleUpdateQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      setCart((prevCart) =>
-        prevCart.filter((item) => item.id !== productId)
-      );
+      setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
     } else {
       setCart((prevCart) =>
         prevCart.map((item) =>
@@ -293,7 +296,9 @@ export default function MenuPage() {
     const main = mainContainerRef.current;
     if (!main) return;
 
-    const firstCategoryName = menuData[0]?.category;
+    const transformedMenu = menuData ? transformMenuData(menuData.menu) : [];
+    const firstCategoryName = transformedMenu[0]?.category;
+    
     if (categoryName === "All" || categoryName === firstCategoryName) {
       main.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -310,9 +315,27 @@ export default function MenuPage() {
     }
   };
 
+  // Transform backend menu data to match our frontend structure
+  const transformMenuData = (backendMenu: TableScanResponse['menu']): MenuSection[] => {
+    return backendMenu.map(category => ({
+      category: category.name,
+      categoryImageUrl: "/images/cat-default.png",
+      items: category.menuItems
+        .filter(item => item.available)
+        .map(item => ({
+          id: item.id.toString(),
+          name: item.name,
+          price: item.price,
+          imageUrl: item.imageUrl || "/images/default-food.png"
+        }))
+    })).filter(section => section.items.length > 0);
+  };
+
   // Kategori Filtresi için Veri Türetme
   const categoriesForFilter = useMemo((): CategoryFilterItem[] => {
-    return menuData.map(section => ({
+    if (!menuData) return [];
+    const transformed = transformMenuData(menuData.menu);
+    return transformed.map(section => ({
       name: section.category,
       imageUrl: section.categoryImageUrl
     }));
@@ -320,9 +343,12 @@ export default function MenuPage() {
 
   // Sadece arama sorgusuna göre filtreler
   const filteredMenu = useMemo(() => {
+    if (!menuData) return [];
+    const transformed = transformMenuData(menuData.menu);
+    
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
-      return menuData
+      return transformed
         .map((section) => ({
           ...section,
           items: section.items.filter((item) =>
@@ -331,7 +357,7 @@ export default function MenuPage() {
         }))
         .filter((section) => section.items.length > 0);
     }
-    return menuData;
+    return transformed;
   }, [searchQuery, menuData]);
 
   // Sepet Özeti
@@ -348,19 +374,92 @@ export default function MenuPage() {
     return new Map(cart.map((item) => [item.id, item]));
   }, [cart]);
 
+  // Show loading state while capturing location
+  if (isLoadingLocation) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+          <p className="text-gray-600 text-lg">Konum alınıyor...</p>
+          <p className="text-gray-400 text-sm mt-2">Lütfen konum erişimine izin verin</p>
+        </div>
+      </div>
+    );
+  }
 
-  // --- RENDER BÖLÜMÜ (GÜNCELLENDİ) ---
+  // Show error if geolocation failed
+  if (locationError) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="text-red-500 text-6xl mb-4">📍</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Konum Erişimi Gerekli</h2>
+          <p className="text-gray-600 mb-4">{locationError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="btn btn-primary"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if table scan failed
+  if (scanError) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Masa Doğrulama Hatası</h2>
+          <p className="text-gray-600 mb-4">{scanError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="btn btn-primary"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show prompt if no QR token
+  if (!qrToken) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="text-gray-400 text-6xl mb-4">🔍</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">QR Kod Gerekli</h2>
+          <p className="text-gray-600">Lütfen masa üzerindeki QR kodu okutun</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show prompt if menu not loaded yet
+  if (!menuData) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+          <p className="text-gray-600 text-lg">Menü yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER BÖLÜMÜ ---
   return (
     <div 
       ref={mainContainerRef}
-      // pb-32'yi pb-4'e düşürdük, böylece altta gereksiz boşluk kalmaz
       className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth"
     >
-      {/* YAPIŞKAN BAŞLIKLAR: */}
       <header className="p-6 flex justify-between items-center sticky top-0 bg-white z-10 h-[88px] border-b border-gray-100">
         <h1 className="text-4xl font-bold text-gray-900">Menü</h1>
         <div className="flex items-center space-x-1 text-gray-600 font-semibold">
-          <span>Burger King</span>
+          <span className="text-sm">{menuData.restaurantName}</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -376,10 +475,7 @@ export default function MenuPage() {
         </div>
       </header>
 
-      {/* Ana İçerik Alanı */}
       <main className="px-2">
-        
-        {/* Arama Çubuğu */}
         <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
           isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
         }`}>
@@ -406,7 +502,6 @@ export default function MenuPage() {
           </label>
         </div>
 
-        {/* Kategori Filtresi */}
         <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
           isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
         }`}>
@@ -417,7 +512,6 @@ export default function MenuPage() {
           />
         </div>
 
-        {/* Menü Bölümleri */}
         <div className="space-y-8 pt-4 px-4">
           {filteredMenu.map((section) => (
             <section
@@ -445,10 +539,7 @@ export default function MenuPage() {
         </div>
       </main>
 
-      {/* Sepet Özeti (Footer) (GÜNCELLENDİ) */}
       {cartSummary.itemCount > 0 && (
-        // Bu wrapper, sepeti ana kapsayıcıya göre konumlandırır ve
-        // yatay padding (px-6) vererek içerikle hizalar.
         <div className="sticky bottom-4 px-6 z-10">
           <CartSummary
             itemCount={cartSummary.itemCount}
@@ -457,5 +548,18 @@ export default function MenuPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// --- ANA SAYFA BİLEŞENİ (Suspense wrapper) ---
+export default function MenuPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
+        <div className="loading loading-spinner loading-lg text-primary"></div>
+      </div>
+    }>
+      <MenuPageContent />
+    </Suspense>
   );
 }
