@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import MenuView, { type ApiResponse } from "@/components/MenuView";
 
 interface CategoryItem {
     id: number;
@@ -73,6 +74,43 @@ export default function Menu() {
 
     // Debounce timer for availability toggle
     const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
+
+    // Menu preview visibility state
+    const [showPreview, setShowPreview] = useState(true)
+
+    // Transform menuItemsByCategory into MenuView API format
+    const menuPreviewData: ApiResponse = useMemo(() => {
+        return {
+            table: {
+                id: "preview-table",
+                name: "Önizleme",
+                qrToken: "preview-token",
+                capacity: 4,
+                status: "available",
+                restaurantId: "preview-restaurant"
+            },
+            restaurantName: "En İyi Restoran",
+            restaurantLocation: "Preview Location",
+            restaurantLatitude: 0,
+            restaurantLongitude: 0,
+            menu: menuItemsByCategory.map(cat => ({
+                id: cat.categoryId,
+                name: cat.categoryName,
+                menuItems: cat.items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    description: item.description,
+                    price: item.price,
+                    imageUrl: item.imageUrl,
+                    style: item.style,
+                    available: item.available,
+                    categoryId: cat.categoryId,
+                    categoryName: cat.categoryName
+                })),
+                restaurantId: "preview-restaurant"
+            }))
+        };
+    }, [menuItemsByCategory]);
 
     // Cleanup debounce timers on unmount
     useEffect(() => {
@@ -630,23 +668,7 @@ export default function Menu() {
         <div className="bg-gray-50 min-h-screen">
             {/* Header */}
             <div className="flex justify-between items-center mb-12">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-semibold text-neutral-900">Menü</h1>
-
-                    {/* Phone Mockup Toggle */}
-                    <div className="flex items-center gap-3 pl-24">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-                            <path fill="#000000" fillRule="evenodd" d="M1.606 6.08a1 1 0 0 1 1.313.526L2 7l.92-.394v-.001l.003.009l.021.045l.094.194c.086.172.219.424.4.729a13.4 13.4 0 0 0 1.67 2.237a12 12 0 0 0 .59.592C7.18 11.8 9.251 13 12 13a8.7 8.7 0 0 0 3.22-.602c1.227-.483 2.254-1.21 3.096-1.998a13 13 0 0 0 2.733-3.725l.027-.058l.005-.011a1 1 0 0 1 1.838.788L22 7l.92.394l-.003.005l-.004.008l-.011.026l-.04.087a14 14 0 0 1-.741 1.348a15.4 15.4 0 0 1-1.711 2.256l.797.797a1 1 0 0 1-1.414 1.415l-.84-.84a12 12 0 0 1-1.897 1.256l.782 1.202a1 1 0 1 1-1.676 1.091l-.986-1.514c-.679.208-1.404.355-2.176.424V16.5a1 1 0 0 1-2 0v-1.544c-.775-.07-1.5-.217-2.177-.425l-.985 1.514a1 1 0 0 1-1.676-1.09l.782-1.203c-.7-.37-1.332-.8-1.897-1.257l-.84.84a1 1 0 0 1-1.414-1.414l.797-.797a15.4 15.4 0 0 1-1.87-2.519a14 14 0 0 1-.591-1.107l-.033-.072l-.01-.021l-.002-.007l-.001-.002v-.001C1.08 7.395 1.08 7.394 2 7l-.919.395a1 1 0 0 1 .525-1.314" clipRule="evenodd" />
-                        </svg>
-                        <input type="checkbox" className="toggle toggle-md border-gray-500 bg-background-500 text-gray-500 checked:border-primary-500 checked:bg-primary-400 checked:text-primary-800" defaultChecked />
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20">
-                            <g fill="#000000">
-                                <path fillRule="evenodd" d="M10 16c4.658 0 8.5-2.161 8.5-5S14.658 6 10 6s-8.5 2.161-8.5 5s3.842 5 8.5 5m0-9c4.179 0 7.5 1.868 7.5 4s-3.321 4-7.5 4s-7.5-1.868-7.5-4S5.821 7 10 7" clipRule="evenodd" />
-                                <path d="M9.5 3.5a.5.5 0 0 1 1 0v3a.5.5 0 0 1-1 0zm4.01.402a.5.5 0 0 1 .98.196l-.5 2.5a.5.5 0 0 1-.98-.196zm-7.02 0a.5.5 0 0 0-.98.196l.5 2.5a.5.5 0 0 0 .98-.196zM2.429 5.243a.5.5 0 0 0-.858.514l1.5 2.5a.5.5 0 0 0 .858-.514zm15.142 0a.5.5 0 1 1 .858.514l-1.5 2.5a.5.5 0 1 1-.858-.514zM13 10.5a3 3 0 1 1-6 0a3 3 0 0 1 6 0" />
-                            </g>
-                        </svg>
-                    </div>
-                </div>
+                <h1 className="text-2xl font-semibold text-neutral-900">Menü</h1>
 
                 {/* Add Button */}
                 <div className="dropdown dropdown-end">
@@ -830,8 +852,8 @@ export default function Menu() {
                         {/* Item Image */}
                         {viewingMenuItem.imageUrl ? (
                             <div className="mb-6 rounded-lg overflow-hidden bg-gray-100 relative h-64">
-                                <Image 
-                                    src={viewingMenuItem.imageUrl} 
+                                <Image
+                                    src={viewingMenuItem.imageUrl}
                                     alt={viewingMenuItem.name}
                                     fill
                                     className="object-cover"
@@ -1074,21 +1096,36 @@ export default function Menu() {
 
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-[40%_60%] gap-6 mr-6">
-                {/* Left Side - Phone Mockup */}
-                <div className="flex flex-col items-center gap-2">
-                    {/* Phone Mockup */}
-                    <div className="mockup-phone border-primary scale-80 -mt-24">
-                        <div className="camera"></div>
-                        <div className="display">
-                            <div className="artboard artboard-demo phone-1 bg-white">
-                                {/* Phone content would go here */}
-                                <div className="flex items-center justify-center h-full text-gray-400">
-                                    <p>Menü Önizleme</p>
-                                </div>
+            <div className={`grid grid-cols-1 ${showPreview ? 'lg:grid-cols-[40%_60%]' : ''} gap-6 mr-6 -mt-6`}>
+                {/* Left Side - Phone Mockup with Toggle */}
+                <div className="flex flex-col items-center gap-1 sticky top-4">
+                    {/* Phone Mockup Preview Toggle - Always Visible */}
+                    <div className="hidden md:flex md:items-center md:gap-3 md:mb-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+                            <path fill="#000000" fillRule="evenodd" d="M1.606 6.08a1 1 0 0 1 1.313.526L2 7l.92-.394v-.001l.003.009l.021.045l.094.194c.086.172.219.424.4.729a13.4 13.4 0 0 0 1.67 2.237a12 12 0 0 0 .59.592C7.18 11.8 9.251 13 12 13a8.7 8.7 0 0 0 3.22-.602c1.227-.483 2.254-1.21 3.096-1.998a13 13 0 0 0 2.733-3.725l.027-.058l.005-.011a1 1 0 0 1 1.838.788L22 7l.92.394l-.003.005l-.004.008l-.011.026l-.04.087a14 14 0 0 1-.741 1.348a15.4 15.4 0 0 1-1.711 2.256l.797.797a1 1 0 0 1-1.414 1.415l-.84-.84a12 12 0 0 1-1.897 1.256l.782 1.202a1 1 0 1 1-1.676 1.091l-.986-1.514c-.679.208-1.404.355-2.176.424V16.5a1 1 0 0 1-2 0v-1.544c-.775-.07-1.5-.217-2.177-.425l-.985 1.514a1 1 0 0 1-1.676-1.09l.782-1.203c-.7-.37-1.332-.8-1.897-1.257l-.84.84a1 1 0 0 1-1.414-1.414l.797-.797a15.4 15.4 0 0 1-1.87-2.519a14 14 0 0 1-.591-1.107l-.033-.072l-.01-.021l-.002-.007l-.001-.002v-.001C1.08 7.395 1.08 7.394 2 7l-.919.395a1 1 0 0 1 .525-1.314" clipRule="evenodd" />
+                        </svg>
+                        <input
+                            type="checkbox"
+                            className="toggle toggle-md border-gray-500 bg-background-500 text-gray-500 checked:border-primary-500 checked:bg-primary-400 checked:text-primary-800"
+                            checked={showPreview}
+                            onChange={(e) => setShowPreview(e.target.checked)}
+                        />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20">
+                            <g fill="#000000">
+                                <path fillRule="evenodd" d="M10 16c4.658 0 8.5-2.161 8.5-5S14.658 6 10 6s-8.5 2.161-8.5 5s3.842 5 8.5 5m0-9c4.179 0 7.5 1.868 7.5 4s-3.321 4-7.5 4s-7.5-1.868-7.5-4S5.821 7 10 7" clipRule="evenodd" />
+                                <path d="M9.5 3.5a.5.5 0 0 1 1 0v3a.5.5 0 0 1-1 0zm4.01.402a.5.5 0 0 1 .98.196l-.5 2.5a.5.5 0 0 1-.98-.196zm-7.02 0a.5.5 0 0 0-.98.196l.5 2.5a.5.5 0 0 0 .98-.196zM2.429 5.243a.5.5 0 0 0-.858.514l1.5 2.5a.5.5 0 0 0 .858-.514zm15.142 0a.5.5 0 1 1 .858.514l-1.5 2.5a.5.5 0 1 1-.858-.514zM13 10.5a3 3 0 1 1-6 0a3 3 0 0 1 6 0" />
+                            </g>
+                        </svg>
+                    </div>
+
+                    {/* Phone Mockup - Conditionally Rendered */}
+                    {showPreview && (
+                        <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-visible">
+                            <div className="mockup-phone-display overflow-y-auto ">
+                                   <MenuView apiData={menuPreviewData} />
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Right Side - Menu Management */}
@@ -1220,7 +1257,7 @@ export default function Menu() {
                                             <td>
                                                 <div className="flex gap-1.5">
                                                     {/* Info Button */}
-                                                    <button 
+                                                    <button
                                                         onClick={() => openViewMenuItemModal(item)}
                                                         className="btn btn-ghost btn-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200">
                                                         <svg
