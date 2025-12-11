@@ -56,6 +56,7 @@ export default function StaffPage() {
     email: '',
     phoneNumber: '',
     password: '',
+    confirmPassword: '',
     gender: 'MALE', 
   });
 
@@ -102,21 +103,30 @@ export default function StaffPage() {
   };
 
   const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
     try {
-      // DÜZELTME: 'simpleStaffSchema' yerine yukarıda tanımladığımız 'staffSchema' kullanıldı
       staffSchema.parse(formData);
-      setErrors({});
-      return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
           if (err.path[0]) newErrors[err.path[0] as string] = err.message;
         });
-        setErrors(newErrors);
       }
-      return false;
     }
+    
+    // Şifre eşleşme kontrolü - Zod'dan bağımsız olarak her zaman kontrol edilir
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Şifreler eşleşmiyor!';
+    }
+    
+    // Şifre tekrar boş mu kontrolü
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Şifre tekrarı zorunludur';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,7 +172,7 @@ export default function StaffPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setFormData({
-      username: '', firstName: '', lastName: '', email: '', phoneNumber: '', password: '', gender: 'MALE',
+      username: '', firstName: '', lastName: '', email: '', phoneNumber: '', password: '', confirmPassword: '', gender: 'MALE',
     });
     setErrors({});
     setApiError(null);
@@ -265,71 +275,182 @@ export default function StaffPage() {
         </div>
       </div>
 
-      {/* MODAL KISIMLARI (Basitleştirildi) */}
+      {/* MODAL KISIMLARI */}
       {isModalOpen && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-white rounded-3xl max-w-2xl p-8">
-            <button onClick={handleCloseModal} className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4">✕</button>
-            <h3 className="font-bold text-2xl text-[#683817] mb-6">Yeni Personel</h3>
+          <div className="modal-box bg-white rounded-2xl max-w-3xl w-[95%] p-0 max-h-[95vh] overflow-y-auto">
+            {/* Header - Pembe çizgi eklendi */}
+            <div className="p-6 border-b-2 border-[#E11383]">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold text-xl text-gray-800">Yeni Personel Ekle</h3>
+                <button onClick={handleCloseModal} className="btn btn-sm btn-circle btn-ghost text-gray-500 hover:bg-gray-100 hover:text-gray-700">✕</button>
+              </div>
+            </div>
             
-            {apiError && <div className="alert alert-error text-white mb-4 text-sm">{apiError}</div>}
+            {apiError && <div className="alert alert-error text-white mx-6 mt-4 text-sm">{apiError}</div>}
             
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="label font-bold text-gray-700">İsim</label>
-                        <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" />
-                        {errors.firstName && <span className="text-error text-xs">{errors.firstName}</span>}
-                    </div>
-                    <div>
-                        <label className="label font-bold text-gray-700">Soyisim</label>
-                        <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" />
-                        {errors.lastName && <span className="text-error text-xs">{errors.lastName}</span>}
-                    </div>
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
+              
+              {/* Profil Fotoğrafı Bölümü */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-4">Profil Fotoğrafı</h4>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-pink-100 flex items-center justify-center border-[3px] border-[#E11383]">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#E11383]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <button type="button" className="btn btn-sm bg-[#E11383] hover:bg-[#d11279] text-white border-none rounded-lg px-4">
+                      Dosya Seç
+                    </button>
+                    <p className="text-xs text-[#E11383] mt-1">JPG, PNG veya GIF (MAX. 2MB)</p>
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="label font-bold text-gray-700">Kullanıcı Adı</label>
-                        <input type="text" name="username" value={formData.username} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" />
-                        {errors.username && <span className="text-error text-xs">{errors.username}</span>}
-                    </div>
-                    <div>
-                        <label className="label font-bold text-gray-700">Cinsiyet</label>
-                        <select name="gender" value={formData.gender} onChange={handleInputChange} className="select select-bordered w-full bg-gray-50 rounded-xl">
-                            <option value="MALE">Erkek</option>
-                            <option value="FEMALE">Kadın</option>
-                            <option value="OTHER">Diğer</option>
-                        </select>
-                        {errors.gender && <span className="text-error text-xs">{errors.gender}</span>}
-                    </div>
-                </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="label font-bold text-gray-700">Email</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" />
-                        {errors.email && <span className="text-error text-xs">{errors.email}</span>}
-                    </div>
-                    <div>
-                        <label className="label font-bold text-gray-700">Telefon</label>
-                        <input type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" placeholder="5xxxxxxxxx" />
-                        {errors.phoneNumber && <span className="text-error text-xs">{errors.phoneNumber}</span>}
-                    </div>
+              {/* Kişisel Bilgiler Bölümü */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-4">Kişisel Bilgiler</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">İsim</label>
+                    <input 
+                      type="text" 
+                      name="firstName" 
+                      value={formData.firstName} 
+                      onChange={handleInputChange} 
+                      placeholder="örn. Ahmet"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.firstName && <span className="text-error text-xs">{errors.firstName}</span>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Soyisim</label>
+                    <input 
+                      type="text" 
+                      name="lastName" 
+                      value={formData.lastName} 
+                      onChange={handleInputChange} 
+                      placeholder="örn. Yılmaz"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.lastName && <span className="text-error text-xs">{errors.lastName}</span>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Cinsiyet</label>
+                    <select 
+                      name="gender" 
+                      value={formData.gender} 
+                      onChange={handleInputChange} 
+                      className="select select-bordered w-full bg-white rounded-lg text-gray-900 focus:border-[#E11383] focus:outline-none"
+                    >
+                      <option value="" disabled>Cinsiyet seçiniz</option>
+                      <option value="MALE">Erkek</option>
+                      <option value="FEMALE">Kadın</option>
+                      <option value="OTHER">Diğer</option>
+                    </select>
+                    {errors.gender && <span className="text-error text-xs">{errors.gender}</span>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Kullanıcı Adı</label>
+                    <input 
+                      type="text" 
+                      name="username" 
+                      value={formData.username} 
+                      onChange={handleInputChange} 
+                      placeholder="örn. ahmetyilmaz"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.username && <span className="text-error text-xs">{errors.username}</span>}
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                    <label className="label font-bold text-gray-700">Şifre</label>
-                    <input type="password" name="password" value={formData.password} onChange={handleInputChange} className="input input-bordered w-full bg-gray-50 rounded-xl" />
+              {/* İletişim Bilgileri Bölümü */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-4">İletişim Bilgileri</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Telefon Numarası</label>
+                    <input 
+                      type="tel" 
+                      name="phoneNumber" 
+                      value={formData.phoneNumber} 
+                      onChange={handleInputChange} 
+                      placeholder="0555 123 45 67"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.phoneNumber && <span className="text-error text-xs">{errors.phoneNumber}</span>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">E-posta Adresi</label>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      placeholder="ornek@email.com"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.email && <span className="text-error text-xs">{errors.email}</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Güvenlik Bölümü */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <h4 className="font-semibold text-gray-700 mb-4">Güvenlik</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre</label>
+                    <input 
+                      type="password" 
+                      name="password" 
+                      value={formData.password} 
+                      onChange={handleInputChange} 
+                      placeholder="••••••••"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
                     {errors.password && <span className="text-error text-xs">{errors.password}</span>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre Tekrar</label>
+                    <input 
+                      type="password" 
+                      name="confirmPassword" 
+                      value={formData.confirmPassword} 
+                      onChange={handleInputChange} 
+                      placeholder="••••••••"
+                      className="input input-bordered w-full bg-white rounded-lg text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                    />
+                    {errors.confirmPassword && <span className="text-error text-xs">{errors.confirmPassword}</span>}
+                  </div>
                 </div>
+              </div>
 
-                <div className="modal-action">
-                    <button type="button" onClick={handleCloseModal} className="btn btn-ghost">İptal</button>
-                    <button type="submit" disabled={isSubmitting} className="btn bg-[#E11383] text-white border-none rounded-xl">Kaydet</button>
-                </div>
+              {/* Butonlar */}
+              <div className="flex justify-end gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={handleCloseModal} 
+                  className="btn bg-white border-2 border-[#E11383] text-[#E11383] hover:bg-pink-50 hover:border-[#E11383] rounded-lg px-6"
+                >
+                  İptal
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="btn bg-[#E11383] hover:bg-[#d11279] text-white border-none rounded-lg px-6"
+                >
+                  {isSubmitting ? <span className="loading loading-spinner loading-sm"></span> : '✓ Personeli Kaydet'}
+                </button>
+              </div>
             </form>
           </div>
+          <form method="dialog" className="modal-backdrop bg-black/30">
+            <button onClick={handleCloseModal}>close</button>
+          </form>
         </dialog>
       )}
     </div>
