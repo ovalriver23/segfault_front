@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
 
 interface LogoutResponse {
   message?: string;
