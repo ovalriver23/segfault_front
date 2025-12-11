@@ -1,12 +1,16 @@
+import { UUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 
 interface getTableResBody {
-    id: number;
-    tableNumber: string;
-    restaurantId: number;
+    id: UUID;
+    tableName: string;
+    qrToken: UUID;
+    capacity: number;
+    tableStatus: string;
+    restaurantId: UUID;
 }
 
 
@@ -37,7 +41,6 @@ export async function GET(request:NextRequest) {
         }
 
         const tables: getTableResBody[] = await backendResponse.json();
-
         return NextResponse.json(tables, { status: 200 });
 
     } catch (error) {
