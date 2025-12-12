@@ -255,7 +255,8 @@ export default function StaffPage() {
                 <tr className="border-b border-gray-100 bg-gray-50/50">
                   <th className="py-4 pl-6 text-gray-600 font-semibold">Personel</th>
                   <th className="py-4 text-gray-600 font-semibold">İletişim</th>
-                  <th className="py-4 text-gray-600 font-semibold">Rol</th>
+                  {/* DEĞİŞİKLİK: Rol -> Cinsiyet */}
+                  <th className="py-4 text-gray-600 font-semibold">Cinsiyet</th>
                   <th className="py-4 pr-6 text-center text-gray-600 font-semibold">İşlemler</th>
                 </tr>
               </thead>
@@ -286,10 +287,10 @@ export default function StaffPage() {
                         <div className="text-gray-700 font-medium">{staff.phoneNumber}</div>
                         <div className="text-gray-500 text-xs">{staff.email}</div>
                       </td>
-                      {/* Rol / Cinsiyet */}
+                      {/* DEĞİŞİKLİK: Cinsiyet renkleri standart kahverengi tonuna çekildi */}
                       <td className="py-4">
-                        <span className="badge bg-purple-50 text-purple-600 border-none px-3 py-2 font-medium">
-                            Garson
+                        <span className="badge border-none px-3 py-2 font-medium bg-[#fde6d1] text-[#683817]">
+                            {staff.gender === 'MALE' ? 'Erkek' : staff.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
                         </span>
                       </td>
                       {/* İşlemler - İkon Seti */}
