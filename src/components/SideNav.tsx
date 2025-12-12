@@ -143,7 +143,8 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
         <div className="flex flex-row items-center justify-start px-7 pt-2 md:pt-4 pb-3">
           <Link
             href="/dashboard"
-            className="text-2xl md:text-3xl font-black text-black hover:text-gray-800 transition-colors"
+            // DEĞİŞİKLİK: 'font-bold' yerine 'font-semibold' yapıldı.
+            className="text-3xl md:text-3xl font-medium text-black hover:text-gray-800 transition-colors tracking-tight"
             style={{ fontFamily: 'Pontano Sans, sans-serif' }}
             onClick={() => handleLinkClick('general')}
           >
