@@ -1,7 +1,7 @@
 // src/app/api/public/table/scan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr/';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('🔄 Forwarding table scan request to backend:', {
+            url: `${BACKEND_API_URL}/api/public/table/scan`,
             qrToken: body.qrToken,
             userLatitude: body.userLatitude,
             userLongitude: body.userLongitude

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Backend API base URL from environment variables
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 interface ResponseDataType {
     id: number;
