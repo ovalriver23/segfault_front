@@ -47,7 +47,7 @@ export default function WaiterLayout({
                 {pathname === '/waiter/tables' && <rect x="3" y="10" width="18" height="2" fill="#683817" className="mt-1" />} 
               </svg>
               {pathname === '/waiter/tables' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500 rounded-full mt-1"></div>
               )}
             </Link>
 
@@ -70,7 +70,7 @@ export default function WaiterLayout({
                 <path d="M12 3v3" strokeWidth="2"/>
               </svg>
                {pathname === '/waiter/notifications' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500rounded-full mt-1"></div>
               )}
             </Link>
 
@@ -91,7 +91,7 @@ export default function WaiterLayout({
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
               {pathname === '/waiter/profile' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500 rounded-full mt-1"></div>
               )}
             </Link>
 

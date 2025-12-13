@@ -79,11 +79,11 @@ export default function WaiterLogin() {
       {/* Form */}
       <form onSubmit={handleLogin} className="w-[327px] mx-auto mt-[37px] flex flex-col gap-4">
         {/* Username Field */}
-        <div className="flex flex-col gap-[2px]">
+        <div className="flex flex-col gap-0.5">
           <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px]">
             Kullanıcı Adı
           </label>
-          <div className="h-[46px] px-[14px] bg-white border border-[#F8A45A] rounded-[10px] shadow-[0_1px_2px_0_rgba(228,229,231,0.24)] flex items-center">
+          <div className="h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] shadow-[0_1px_2px_0_rgba(228,229,231,0.24)] flex items-center">
             <input
               type="text"
               value={username}
@@ -96,23 +96,23 @@ export default function WaiterLogin() {
         </div>
 
         {/* Password Field */}
-        <div className="flex flex-col gap-[2px]">
+        <div className="flex flex-col gap-0.5">
           <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px]">
             Parola
           </label>
-          <div className="h-[46px] px-[14px] bg-white border border-[#F8A45A] rounded-[10px] shadow-[0_1px_2px_0_rgba(228,229,231,0.24)] flex items-center gap-[10px]">
+          <div className="h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] shadow-[0_1px_2px_0_rgba(228,229,231,0.24)] flex items-center gap-2.5">
             <input
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="*******"
-              className="flex-1 bg-transparent text-[14px] font-medium text-[#1A1C1E] tracking-[-0.14px] leading-[19.6px] outline-none [&::placeholder]:translate-y-[2px]"
+              className="flex-1 bg-transparent text-[14px] font-medium text-[#1A1C1E] tracking-[-0.14px] leading-[19.6px] outline-none placeholder:translate-y-0.5"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="w-4 h-4 flex-shrink-0"
+              className="w-4 h-4 shrink-0"
             >
               {showPassword ? (
                 // Eye (Visible) - Show this when password is visible
@@ -146,7 +146,7 @@ export default function WaiterLogin() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full h-[48px] bg-[#EB5FAB] rounded-[10px] shadow-[0_0_0_0_#51072F] flex items-center justify-center mt-4 hover:bg-[#d54f9a] transition-colors disabled:opacity-50"
+          className="w-full h-12 bg-[#EB5FAB] rounded-[10px] shadow-[0_0_0_0_#51072F] flex items-center justify-center mt-4 hover:bg-[#d54f9a] transition-colors disabled:opacity-50"
         >
           <span className="text-[14px] font-medium text-white tracking-[-0.14px] leading-[19.6px]">
             {isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
@@ -155,7 +155,7 @@ export default function WaiterLogin() {
       </form>
 
       {/* Help Text */}
-      <p className="text-[14px] font-medium text-black/60 tracking-[-0.14px] leading-[19.6px] text-center w-[327px] mx-auto mt-[14px]">
+      <p className="text-[14px] font-medium text-black/60 tracking-[-0.14px] leading-[19.6px] text-center w-[327px] mx-auto mt-3.5">
         Yardım mı lazım? Yönetici ile iletişime geçin
       </p>
     </div>

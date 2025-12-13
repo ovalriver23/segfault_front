@@ -30,7 +30,7 @@ export default function WaiterTablesPage() {
             <div
               key={table.id}
               className={`
-                relative p-5 rounded-[2rem] h-32 flex flex-col justify-between transition-all
+                relative p-5 rounded-4xl h-32 flex flex-col justify-between transition-all
                 ${isOccupied 
                   ? 'bg-white border-2 border-[#ff9ec6] shadow-sm' // Pembe kenarlık (Görseldeki gibi)
                   : 'bg-[#f0f0f0] border border-transparent'      // Gri arka plan
@@ -55,7 +55,7 @@ export default function WaiterTablesPage() {
 
                 {/* Eğer masada uyarı varsa zil ikonu göster */}
                 {table.hasAlert && (
-                  <div className="text-[#e11383]">
+                  <div className="text-secondary-500">
                     <svg 
                       width="20" 
                       height="20" 
