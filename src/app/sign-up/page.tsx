@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import * as z from "zod";
+import { getUserLocation } from "../lib/utils/geolocation";
+
+const LocationPicker = dynamic(() => import("../../components/LocationPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-80 rounded-xl overflow-hidden border-2 border-dashed border-[#F8645A] flex items-center justify-center text-text-300 text-sm">
+      Loading map…
+    </div>
+  ),
+});
 
 // Zod schema for form validation
 const signUpSchema = z.object({
@@ -15,6 +26,20 @@ const signUpSchema = z.object({
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
       "Password must contain uppercase, lowercase, number, and special character"),
   confirmPassword: z.string().min(8, "Please confirm your password"),
+  latitude: z.preprocess(
+    (val) => val === "" || val === undefined || val === null ? undefined : Number(val),
+    z.number({ error: "Latitude is required" })
+      .refine((val) => !Number.isNaN(val), { message: "Latitude is required" })
+      .min(-90, "Latitude must be at least -90")
+      .max(90, "Latitude cannot exceed 90"),
+  ),
+  longitude: z.preprocess(
+    (val) => val === "" || val === undefined || val === null ? undefined : Number(val),
+    z.number({ error: "Longitude is required" })
+      .refine((val) => !Number.isNaN(val), { message: "Longitude is required" })
+      .min(-180, "Longitude must be at least -180")
+      .max(180, "Longitude cannot exceed 180"),
+  ),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -33,12 +58,35 @@ const SignUpPage = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [latitude, setLatitude] = useState<string>("");
+  const [longitude, setLongitude] = useState<string>("");
 
   // UI state
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [touchedFields, setTouchedFields] = useState<Set<keyof SignUpFormData>>(new Set());
+
+  // Handle location selection from map
+  const handleLocationSelect = (lat: string, lng: string) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    setTouchedFields(prev => new Set(prev).add("latitude").add("longitude"));
+    validateFieldWithValue("latitude", lat);
+    validateFieldWithValue("longitude", lng);
+  };
+
+  const handleUseCurrentLocation = async () => {
+    try {
+      const coords = await getUserLocation();
+      handleLocationSelect(coords.latitude.toFixed(6), coords.longitude.toFixed(6));
+    } catch (error) {
+      const message = error && typeof error === "object" && "message" in error
+        ? (error as { message?: string }).message
+        : "Unable to fetch your location";
+      setErrors(prev => ({ ...prev, general: message || "Unable to fetch your location" }));
+    }
+  };
 
   // Mark field as touched on blur
   const handleBlur = (field: keyof SignUpFormData) => {
@@ -67,6 +115,8 @@ const SignUpPage = () => {
         email,
         password,
         confirmPassword,
+        latitude,
+        longitude,
         [field]: value, // Override with new value
       };
 
@@ -101,6 +151,8 @@ const SignUpPage = () => {
         email,
         password,
         confirmPassword,
+        latitude,
+        longitude,
       };
 
       // Validate the entire form to get all errors
@@ -136,6 +188,8 @@ const SignUpPage = () => {
       email,
       password,
       confirmPassword,
+      latitude,
+      longitude,
     };
 
     // Validate all fields
@@ -168,6 +222,8 @@ const SignUpPage = () => {
           password: password,
           restaurantName: restaurantName,
           restaurantLocation: restaurantLocation,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
         }),
       });
 
@@ -190,6 +246,8 @@ const SignUpPage = () => {
       setEmail("");
       setPassword("");
       setConfirmPassword("");
+      setLatitude("");
+      setLongitude("");
 
       // Show success message
       setShowSuccess(true);
@@ -222,7 +280,7 @@ const SignUpPage = () => {
         background: "linear-gradient(135deg, #f8a45a 0%, #fbd0a9 35%, #ee46a2 100%)",
       }}
     >
-      <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl p-8 md:p-12">
+      <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl p-8 md:p-12 my-4">
         <h1 className="text-2xl md:text-3xl mb-2 font-bold text-center text-text-500">
           Create your account
         </h1>
@@ -378,6 +436,37 @@ const SignUpPage = () => {
             {errors.confirmPassword && touchedFields.has('confirmPassword') && (
               <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
             )}
+          </div>
+          <div className="my-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-lg font-semibold text-text-500">Pin your restaurant location</p>
+                <p className="text-sm text-text-300">Click on the map or use your current location.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                className="px-3 py-2 text-sm font-semibold text-white bg-[#F8645A] rounded-lg hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading}
+              >
+                Use my location
+              </button>
+            </div>
+            <LocationPicker
+              latitude={latitude}
+              longitude={longitude}
+              onChange={handleLocationSelect}
+            />
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+                {errors.latitude && touchedFields.has("latitude") && (
+                  <p className="mt-1 text-sm text-red-600">{errors.latitude}</p>
+                )}
+              
+                {errors.longitude && touchedFields.has("longitude") && (
+                  <p className="mt-1 text-sm text-red-600">{errors.longitude}</p>
+                )}
+            </div>
           </div>
           <button
             type="submit"
