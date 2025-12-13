@@ -99,56 +99,80 @@ function ProductCard({
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
 }) {
+  // Check if product is popular (you can adjust this logic based on your data)
+  const isPopular = product.style === 'popular' || false; // Modify based on your actual data structure
+
   return (
-    <div className="card shadow-sm rounded-2xl p-4 flex flex-col items-center w-full" style={{ backgroundColor: '#fbd2e1' }}>
-      <figure className="mb-2">
+    <div className="relative bg-white rounded-2xl shadow-md overflow-hidden w-full">
+      {/* Popular Badge */}
+      {isPopular && (
+        <div className="absolute top-2 right-2 bg-[#E8C5B8] text-gray-800 px-3 py-1 rounded-full text-xs font-medium z-10">
+          Popüler
+        </div>
+      )}
+      
+      {/* Product Image */}
+      <div className="w-full h-32 relative overflow-hidden">
         <Image 
           src={product.imageUrl || "/images/cappucino.png"} 
           alt={product.name} 
-          width={115} 
-          height={115} 
-          className="rounded-xl" 
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 50vw, 25vw"
         />
-      </figure>
-      <div className="card-body p-0 text-center w-full">
-        <h2 className="font-bold text-gray-800 text-lg">{product.name}</h2>
-        <p className="text-2xl font-bold text-[#FF9F5A] mb-3">{product.price} ₺</p>
-        {!product.available ? (
-          <div className="text-red-500 text-sm font-semibold">Tükendi</div>
-        ) : (
-          <div className="card-actions justify-center w-full">
-            {!itemInCart ? (
-              <button
-                onClick={() => onAddToCart(product)}
-                className="btn btn-circle btn-sm bg-white border-[#FF9F5A] text-[#FF9F5A] hover:bg-[#FF9F5A] hover:text-white"
-              >
-                <span className="text-xl font-light">+</span>
-              </button>
-            ) : (
-              <div className="join bg-white rounded-full shadow-sm">
+      </div>
+
+      {/* Product Info */}
+      <div className="p-3 pb-3">
+        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2">
+          {product.name}
+        </h3>
+        
+        {/* Price and Action */}
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-lg font-bold text-gray-900">
+            {product.price} TL
+          </span>
+          
+          {!product.available ? (
+            <div className="text-red-500 text-xs font-semibold">
+              Tükendi
+            </div>
+          ) : (
+            <>
+              {!itemInCart ? (
                 <button
-                  onClick={() =>
-                    onUpdateQuantity(product.id, itemInCart.quantity - 1)
-                  }
-                  className="btn join-item btn-sm bg-white border-none text-[#FF9F5A]"
+                  onClick={() => onAddToCart(product)}
+                  className="w-8 h-8 bg-pink-500 hover:bg-pink-600 rounded-xl flex items-center justify-center transition-colors shadow-md"
                 >
-                  <span className="text-xl font-light">−</span>
+                  <span className="text-2xl text-white font-light">+</span>
                 </button>
-                <span className="join-item px-3 flex items-center bg-white text-gray-800 font-bold">
-                  {itemInCart.quantity}
-                </span>
-                <button
-                  onClick={() =>
-                    onUpdateQuantity(product.id, itemInCart.quantity + 1)
-                  }
-                  className="btn join-item btn-sm bg-white border-none text-[#FF9F5A]"
-                >
-                  <span className="text-xl font-light">+</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              ) : (
+                <div className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8">
+                  <button
+                    onClick={() =>
+                      onUpdateQuantity(product.id, itemInCart.quantity - 1)
+                    }
+                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                  >
+                    <span className="text-lg font-light">−</span>
+                  </button>
+                  <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
+                    {itemInCart.quantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      onUpdateQuantity(product.id, itemInCart.quantity + 1)
+                    }
+                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                  >
+                    <span className="text-lg font-light">+</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -469,16 +493,15 @@ export default function MenuView({ apiData }: MenuViewProps) {
                   {section.categoryName}
                 </h2>
               </div>
-              <div className="carousel rounded-box w-full gap-2">
+              <div className="grid grid-cols-2 gap-4 w-full">
                 {section.items.map((product) => (
-                  <div key={product.id} className="carousel-item w-1/2">
-                    <ProductCard
-                      product={product}
-                      itemInCart={cartMap.get(product.id)}
-                      onAddToCart={handleAddToCart}
-                      onUpdateQuantity={handleUpdateQuantity}
-                    />
-                  </div>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    itemInCart={cartMap.get(product.id)}
+                    onAddToCart={handleAddToCart}
+                    onUpdateQuantity={handleUpdateQuantity}
+                  />
                 ))}
               </div>
             </section>
@@ -488,7 +511,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
       {/* Sepet Özeti (Footer) */}
       {cartSummary.itemCount > 0 && (
-        <div className="sticky bottom-4 px-6 z-10">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full">
           <CartSummary
             itemCount={cartSummary.itemCount}
             totalPrice={cartSummary.totalPrice}

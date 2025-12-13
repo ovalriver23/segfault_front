@@ -44,24 +44,20 @@ export const getUserLocation = (): Promise<LocationCoordinates> => {
             },
             (error) => {
                 // Handle different error types
-                let errorMessage = 'Failed to get location';
+                let errorMessage = 'Konum alınamadı';
                 
                 switch (error.code) {
                     case error.PERMISSION_DENIED:
-                        errorMessage = 'User denied the request for Geolocation';
+                        errorMessage = 'Konum izni reddedildi. Lütfen tarayıcı ayarlarından konum iznini açın.';
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Location information is unavailable';
+                        errorMessage = 'Konum bilgisi alınamıyor. GPS açık olduğundan emin olun.';
                         break;
                     case error.TIMEOUT:
-                        errorMessage = 'The request to get user location timed out';
+                        errorMessage = 'Konum alınırken zaman aşımı oluştu. Lütfen tekrar deneyin.';
                         break;
                 }
                 
-                console.error('❌ Geolocation Error:', {
-                    code: error.code,
-                    message: errorMessage
-                });
                 
                 reject({
                     code: error.code,
@@ -70,7 +66,7 @@ export const getUserLocation = (): Promise<LocationCoordinates> => {
             },
             {
                 enableHighAccuracy: true, // Request high accuracy
-                timeout: 10000, // 10 second timeout
+                timeout: 15000, // 15 second timeout (longer for mobile)
                 maximumAge: 0 // Don't use cached position
             }
         );
@@ -97,7 +93,6 @@ export const watchUserLocation = (
                 longitude: position.coords.longitude
             };
             
-            console.log('📍 Location Update:', coordinates);
             onSuccess(coordinates);
         },
         (error) => {
@@ -106,7 +101,6 @@ export const watchUserLocation = (
                 message: error.message
             };
             
-            console.error('❌ Watch Location Error:', geolocationError);
             if (onError) {
                 onError(geolocationError);
             }
@@ -125,7 +119,6 @@ export const watchUserLocation = (
 export const clearLocationWatch = (watchId: number): void => {
     if (navigator.geolocation) {
         navigator.geolocation.clearWatch(watchId);
-        console.log('🛑 Location watch cleared');
     }
 };
 
