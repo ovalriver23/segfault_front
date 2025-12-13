@@ -1120,8 +1120,8 @@ export default function Menu() {
 
                     {/* Phone Mockup - Conditionally Rendered */}
                     {showPreview && (
-                        <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-visible">
-                            <div className="mockup-phone-display overflow-y-auto ">
+                        <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-hidden">
+                            <div className="mockup-phone-display overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                    <MenuView apiData={menuPreviewData} />
                             </div>
                         </div>

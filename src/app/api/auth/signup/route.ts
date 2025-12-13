@@ -10,6 +10,8 @@ interface SignUpRequestBody {
   password: string;
   restaurantName: string;
   restaurantLocation: string;
+  latitude: number;
+  longitude: number;
 }
 
 // Type definition for backend response
@@ -32,10 +34,18 @@ export async function POST(request: NextRequest) {
       'email',
       'password',
       'restaurantName',
-      'restaurantLocation'
+      'restaurantLocation',
+      'latitude',
+      'longitude'
     ];
 
-    const missingFields = requiredFields.filter(field => !body[field]);
+    const missingFields = requiredFields.filter((field) => {
+      const value = body[field];
+      if (typeof value === 'number') {
+        return Number.isNaN(value);
+      }
+      return value === undefined || value === null || String(value).trim() === '';
+    });
 
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -59,6 +69,8 @@ export async function POST(request: NextRequest) {
         password: body.password,
         restaurantName: body.restaurantName,
         restaurantLocation: body.restaurantLocation,
+        latitude: body.latitude,
+        longitude: body.longitude,
       }),
       credentials: 'include', // Important for handling cookies
     });
