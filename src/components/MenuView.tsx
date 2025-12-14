@@ -479,7 +479,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
         </div>
 
         {/* Menü Bölümleri */}
-        <div className="space-y-8 pt-4 px-4">
+        <div className="space-y-8 pt-4 px-4 pb-32">
           {filteredMenu.map((section) => (
             <section
               key={section.categoryId}
