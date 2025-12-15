@@ -20,6 +20,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   getBasket,
   addItemToBasket,
@@ -105,17 +106,37 @@ function ProductCard({
   itemInCart,
   onAddToCart,
   onUpdateQuantity,
+  qrToken,
 }: {
   product: Product;
   itemInCart?: CartItem;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
+  qrToken: string;
 }) {
+  const router = useRouter();
   // Check if product is popular (you can adjust this logic based on your data)
   const isPopular = product.style === 'popular' || false; // Modify based on your actual data structure
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    
+    // Store product data in sessionStorage
+    sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
+    
+    // Navigate to detail page
+    router.push(`/table/${qrToken}/item/${product.id}`);
+  };
+
   return (
-    <div className="relative bg-white rounded-2xl shadow-md overflow-hidden w-full">
+    <div 
+      onClick={handleCardClick}
+      className="relative bg-white rounded-2xl shadow-md overflow-hidden w-full cursor-pointer hover:shadow-lg transition-shadow"
+    >
       {/* Popular Badge */}
       {isPopular && (
         <div className="absolute top-2 right-2 bg-[#E8C5B8] text-gray-800 px-3 py-1 rounded-full text-xs font-medium z-10">
@@ -158,28 +179,53 @@ function ProductCard({
             <>
               {!itemInCart ? (
                 <button
-                  onClick={() => onAddToCart(product)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(product);
+                  }}
                   className="w-8 h-8 bg-pink-500 hover:bg-pink-600 rounded-xl flex items-center justify-center transition-colors shadow-md"
                 >
                   <span className="text-2xl text-white font-light">+</span>
                 </button>
               ) : (
-                <div className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8">
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
+                >
                   <button
-                    onClick={() =>
-                      onUpdateQuantity(product.id, itemInCart.quantity - 1)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateQuantity(product.id, itemInCart.quantity - 1);
+                    }}
                     className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
                   >
-                    <span className="text-2xl font-light">−</span>
+                    {itemInCart.quantity === 1 ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    ) : (
+                      <span className="text-2xl font-light">−</span>
+                    )}
                   </button>
                   <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
                     {itemInCart.quantity}
                   </span>
                   <button
-                    onClick={() =>
-                      onUpdateQuantity(product.id, itemInCart.quantity + 1)
-                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateQuantity(product.id, itemInCart.quantity + 1);
+                    }}
                     className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
                   >
                     <span className="text-2xl font-light">+</span>
@@ -603,6 +649,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
                     itemInCart={cartMap.get(product.id)}
                     onAddToCart={handleAddToCart}
                     onUpdateQuantity={handleUpdateQuantity}
+                    qrToken={qrToken}
                   />
                 ))}
               </div>
