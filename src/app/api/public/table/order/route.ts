@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000';
 
 /**
  * POST /api/public/order
