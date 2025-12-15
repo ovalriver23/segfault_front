@@ -20,6 +20,18 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
+import {
+  getBasket,
+  addItemToBasket,
+  updateItemQuantity as updateBasketItemQuantity,
+  updateItemNote,
+  updateGeneralNote,
+  clearBasket,
+  prepareOrderRequest,
+  type Basket,
+  type BasketItem
+} from "../lib/services/basketService";
+import CartModal from "./CartModal";
 
 // --- API Response Types (Based on Section 9.3) ---
 export type MenuItem = {
@@ -155,7 +167,7 @@ function ProductCard({
                     }
                     className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
                   >
-                    <span className="text-lg font-light">−</span>
+                    <span className="text-2xl font-light">−</span>
                   </button>
                   <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
                     {itemInCart.quantity}
@@ -166,7 +178,7 @@ function ProductCard({
                     }
                     className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
                   >
-                    <span className="text-lg font-light">+</span>
+                    <span className="text-2xl font-light">+</span>
                   </button>
                 </div>
               )}
@@ -208,7 +220,7 @@ function CategoryFilter({
         >
            <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
         </div>
-        <span className="font-semibold text-gray-800 text-sm">All</span>
+        <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
 
       {/* Dinamik kategoriler */}
@@ -241,24 +253,29 @@ function CategoryFilter({
 function CartSummary({
   itemCount,
   totalPrice,
+  onClick,
 }: {
   itemCount: number;
   totalPrice: number;
+  onClick: () => void;
 }) {
   return (
-    <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg">
-      <div>
+    <button 
+      onClick={onClick}
+      className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
+    >
+      <div className="text-left">
         <span className="font-semibold">{itemCount} Items</span>
-        <p className="text-lg font-bold">Total: {totalPrice} tl</p>
+        <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
       </div>
-      <button className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
+      <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={3}
           stroke="currentColor"
-          className="w-6 h-6"
+          className="w-6 h-6 rotate-180"
         >
           <path
             strokeLinecap="round"
@@ -266,8 +283,8 @@ function CartSummary({
             d="M19.5 8.25l-7.5 7.5-7.5-7.5"
           />
         </svg>
-      </button>
-    </div>
+      </div>
+    </button>
   );
 }
 
@@ -277,7 +294,9 @@ export interface MenuViewProps {
 }
 
 export default function MenuView({ apiData }: MenuViewProps) {
+  const qrToken = apiData.table.qrToken;
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [generalNote, setGeneralNote] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSearchVisible, setIsSearchVisible] = useState(true);
@@ -295,6 +314,31 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Load basket from localStorage on mount ---
+  useEffect(() => {
+    const basket = getBasket(qrToken);
+    setGeneralNote(basket.generalNote || "");
+    
+    // Convert basket items to cart items with product details
+    const cartItems: CartItem[] = basket.items
+      .map((basketItem: BasketItem) => {
+        // Find the product in the menu
+        for (const category of apiData.menu) {
+          const product = category.menuItems.find(item => item.id === basketItem.menuItemId);
+          if (product) {
+            return {
+              ...product,
+              quantity: basketItem.quantity
+            };
+          }
+        }
+        return null;
+      })
+      .filter((item): item is CartItem => item !== null);
+    
+    setCart(cartItems);
+  }, [qrToken, apiData.menu]);
 
   // --- Scroll Handler for Search and Category Filter Visibility ---
   useEffect(() => {
@@ -331,9 +375,18 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // --- Sepet İşlemleri ---
   const handleAddToCart = (product: Product) => {
+    // Update localStorage
+    addItemToBasket(qrToken, product.id, 1);
+    
+    // Update local state
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
+  
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
+    // Update localStorage
+    updateBasketItemQuantity(qrToken, productId, newQuantity);
+    
+    // Update local state
     if (newQuantity <= 0) {
       setCart((prevCart) =>
         prevCart.filter((item) => item.id !== productId)
@@ -345,6 +398,41 @@ export default function MenuView({ apiData }: MenuViewProps) {
         )
       );
     }
+  };
+
+  const handleUpdateGeneralNote = (note: string) => {
+    setGeneralNote(note);
+  };
+
+  const handleSubmitOrder = async () => {
+    const orderData = prepareOrderRequest(qrToken);
+    console.log("Submitting order:", orderData);
+    
+    // TODO: Send order to backend API
+    // Example:
+    // try {
+    //   const response = await fetch('/api/orders', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(orderData)
+    //   });
+    //   if (response.ok) {
+    //     clearBasket(qrToken);
+    //     setCart([]);
+    //     setGeneralNote("");
+    //     setIsCartModalOpen(false);
+    //     // Show success message
+    //   }
+    // } catch (error) {
+    //   console.error('Order failed:', error);
+    // }
+    
+    alert("Sipariş hazırlandı! Backend entegrasyonu için API çağrısı eklenecek.");
+  };
+
+  const handleOpenCart = () => {
+    const modal = document.getElementById('cart_modal') as HTMLDialogElement;
+    modal?.showModal();
   };
 
   // --- Doğru Kaydırma Mantığı ---
@@ -417,6 +505,9 @@ export default function MenuView({ apiData }: MenuViewProps) {
       {/* YAPIŞKAN BAŞLIKLAR: */}
       <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
         <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
+        
+        
+        
         <div className="flex flex-col items-end text-right">
           <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
             <span>{apiData.restaurantName}</span>
@@ -510,14 +601,28 @@ export default function MenuView({ apiData }: MenuViewProps) {
       </main>
 
       {/* Sepet Özeti (Footer) */}
-      {cartSummary.itemCount > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full">
-          <CartSummary
-            itemCount={cartSummary.itemCount}
-            totalPrice={cartSummary.totalPrice}
-          />
-        </div>
-      )}
+      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${
+        cartSummary.itemCount > 0 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-20 pointer-events-none'
+      }`}>
+        <CartSummary
+          itemCount={cartSummary.itemCount}
+          totalPrice={cartSummary.totalPrice}
+          onClick={handleOpenCart}
+        />
+      </div>
+
+      {/* Cart Modal */}
+      <CartModal
+        modalId="cart_modal"
+        qrToken={qrToken}
+        items={cart}
+        generalNote={generalNote}
+        onUpdateQuantity={handleUpdateQuantity}
+        onUpdateGeneralNote={handleUpdateGeneralNote}
+        onSubmitOrder={handleSubmitOrder}
+      />
     </div>
   );
 }
