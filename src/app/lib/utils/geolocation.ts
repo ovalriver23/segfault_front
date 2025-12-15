@@ -32,14 +32,6 @@ export const getUserLocation = (): Promise<LocationCoordinates> => {
                     longitude: position.coords.longitude
                 };
                 
-                // Log to console as requested
-                console.log('📍 User Location Captured:', {
-                    latitude: coordinates.latitude,
-                    longitude: coordinates.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: new Date(position.timestamp).toISOString()
-                });
-                
                 resolve(coordinates);
             },
             (error) => {
@@ -82,7 +74,6 @@ export const watchUserLocation = (
     onError?: (error: GeolocationError) => void
 ): number | null => {
     if (!navigator.geolocation) {
-        console.error('Geolocation is not supported');
         return null;
     }
 

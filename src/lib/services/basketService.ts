@@ -63,7 +63,6 @@ export const getBasket = (qrToken: string): Basket => {
 
     return basket;
   } catch (error) {
-    console.error('Error reading basket from localStorage:', error);
     return { qrToken, items: [], generalNote: '' };
   }
 };
@@ -77,7 +76,6 @@ export const saveBasket = (basket: Basket): void => {
   try {
     localStorage.setItem(BASKET_STORAGE_KEY, JSON.stringify(basket));
   } catch (error) {
-    console.error('Error saving basket to localStorage:', error);
   }
 };
 
@@ -195,7 +193,6 @@ export const clearBasket = (qrToken: string): void => {
   try {
     localStorage.removeItem(BASKET_STORAGE_KEY);
   } catch (error) {
-    console.error('Error clearing basket:', error);
   }
 };
 

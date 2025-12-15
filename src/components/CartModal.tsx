@@ -101,7 +101,6 @@ export default function CartModal({
   const handleOrder = () => {
     // Prepare order data
     const orderData = prepareOrderRequest(qrToken);
-    console.log("Order data:", orderData);
     
     // Call the parent's submit handler
     onSubmitOrder();

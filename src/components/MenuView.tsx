@@ -433,7 +433,6 @@ export default function MenuView({ apiData }: MenuViewProps) {
         alert(`❌ ${data.error || 'Sipariş gönderilemedi'}`);
       }
     } catch (error) {
-      console.error('Order failed:', error);
       alert('❌ Sipariş gönderilemedi. Lütfen tekrar deneyin.');
     }
   };
