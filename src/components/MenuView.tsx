@@ -126,28 +126,32 @@ function ProductCard({
       {/* Product Image */}
       <div className="w-full h-32 relative overflow-hidden">
         <Image 
-          src={product.imageUrl || "/images/cappucino.png"} 
+          src={product.imageUrl || "/images/cappucino.webp"} 
           alt={product.name} 
           fill
           className="object-cover"
           sizes="(max-width: 768px) 50vw, 25vw"
+          loading="eager"
         />
       </div>
 
       {/* Product Info */}
       <div className="p-3 pb-3">
-        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2">
+        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
           {product.name}
         </h3>
         
         {/* Price and Action */}
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-lg font-bold text-gray-900">
-            {product.price} TL
-          </span>
+        <div className="flex justify-between items-center">
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-gray-900">
+              {product.price}
+            </span>
+            <span className="text-xs font-medium text-gray-500">TL</span>
+          </div>
           
           {!product.available ? (
-            <div className="text-red-500 text-xs font-semibold">
+            <div className="text-red-500 text-xs font-medium px-2 py-1 bg-red-50 rounded-md">
               Tükendi
             </div>
           ) : (
