@@ -406,28 +406,36 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   const handleSubmitOrder = async () => {
     const orderData = prepareOrderRequest(qrToken);
-    console.log("Submitting order:", orderData);
     
-    // TODO: Send order to backend API
-    // Example:
-    // try {
-    //   const response = await fetch('/api/orders', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(orderData)
-    //   });
-    //   if (response.ok) {
-    //     clearBasket(qrToken);
-    //     setCart([]);
-    //     setGeneralNote("");
-    //     setIsCartModalOpen(false);
-    //     // Show success message
-    //   }
-    // } catch (error) {
-    //   console.error('Order failed:', error);
-    // }
-    
-    alert("Sipariş hazırlandı! Backend entegrasyonu için API çağrısı eklenecek.");
+    try {
+      const response = await fetch('/api/public/table/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Clear basket and reset state
+        clearBasket(qrToken);
+        setCart([]);
+        setGeneralNote("");
+        
+        // Close modal
+        const modal = document.getElementById('cart_modal') as HTMLDialogElement;
+        modal?.close();
+        //showing with alert will be changed at next improvements.
+        // Show success message
+        alert(`✅ ${data.message || 'Sipariş başarıyla alındı'}\nSipariş No: ${data.orderId}`);
+      } else {
+        // Show error message from backend
+        alert(`❌ ${data.error || 'Sipariş gönderilemedi'}`);
+      }
+    } catch (error) {
+      console.error('Order failed:', error);
+      alert('❌ Sipariş gönderilemedi. Lütfen tekrar deneyin.');
+    }
   };
 
   const handleOpenCart = () => {
