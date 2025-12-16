@@ -125,6 +125,11 @@ function ProductCard({
       return;
     }
     
+    // Don't navigate if product is not available
+    if (!product.available) {
+      return;
+    }
+    
     // Store product data in sessionStorage
     sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
     
@@ -135,7 +140,9 @@ function ProductCard({
   return (
     <div 
       onClick={handleCardClick}
-      className="relative bg-white rounded-2xl shadow-md overflow-hidden w-full cursor-pointer hover:shadow-lg transition-shadow"
+      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${
+        product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
+      }`}
     >
       {/* Popular Badge */}
       {isPopular && (
@@ -539,6 +546,46 @@ export default function MenuView({ apiData }: MenuViewProps) {
     return menuData;
   }, [searchQuery, menuData]);
 
+  // --- Intersection Observer for Auto-updating Category on Scroll ---
+  useEffect(() => {
+    const main = mainContainerRef.current;
+    if (!main) return;
+
+    const observerOptions = {
+      root: main,
+      rootMargin: '-100px 0px -60% 0px', // Trigger when section is in the upper 40% of the viewport
+      threshold: 0
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      // Filter only intersecting entries and sort by position in viewport
+      const visibleEntries = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => {
+          return a.boundingClientRect.top - b.boundingClientRect.top;
+        });
+
+      // Select the topmost visible section
+      if (visibleEntries.length > 0) {
+        const categoryName = visibleEntries[0].target.getAttribute('data-category');
+        if (categoryName) {
+          setSelectedCategory(categoryName);
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all sections
+    Object.values(sectionRefs.current).forEach(section => {
+      if (section) {
+        observer.observe(section);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [filteredMenu]);
+
   // Sepet Özeti
   const cartSummary = useMemo(() => {
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -631,6 +678,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
           {filteredMenu.map((section) => (
             <section
               key={section.categoryId}
+              data-category={section.categoryName}
               ref={(el) => {
                 sectionRefs.current[section.categoryName] = el;
               }}
