@@ -7,7 +7,7 @@ const pontanoSans = Pontano_Sans({
 });
 
 export const metadata = {
-  title: "Qrinyo",
+  title: "EasyOrder",
   description: "A new way of ordering from qr menu",
 };
 
