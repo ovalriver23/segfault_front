@@ -326,6 +326,9 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
   // --- Cart Operations (Preview only - no persistence) ---
   const handleAddToCart = (product: Product) => {
+    if (!product.available) {
+      return;
+    }
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
   
