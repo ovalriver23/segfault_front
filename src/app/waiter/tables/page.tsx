@@ -34,7 +34,7 @@ export default function WaiterTablesPage() {
             errorMsg.includes("şifrenizi değiştirmeniz") || 
             errorMsg.includes("password")
         )) {
-            router.push('/waiter/change-password');
+            router.push('/waiter/change-password?reason=forced');
             return; 
         }
 
@@ -114,7 +114,10 @@ export default function WaiterTablesPage() {
         <div className="bg-white border border-[#34C759] rounded-lg p-3 shadow-sm flex flex-col justify-between h-20">
           <div className="flex justify-between items-start">
             <span className="text-[11px] text-gray-500 font-medium">Müsait</span>
-            <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_4px_#34C759]"></div>
+            <div className="inline-grid *:[grid-area:1/1]">
+              <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_4px_#34C759] animate-ping opacity-75"></div>
+              <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_4px_#34C759]"></div>
+            </div>
           </div>
           <span className="text-2xl font-normal text-[#34C759]">{availableTables}</span>
         </div>
@@ -123,7 +126,10 @@ export default function WaiterTablesPage() {
         <div className="bg-white border border-[#F73753] rounded-lg p-3 shadow-sm flex flex-col justify-between h-20">
           <div className="flex justify-between items-start">
             <span className="text-[11px] text-gray-500 font-medium">Dolu</span>
-            <div className="w-2 h-2 rounded-full bg-[#F73753] shadow-[0_0_4px_#F73753]"></div>
+            <div className="inline-grid *:[grid-area:1/1]">
+              <div className="w-2 h-2 rounded-full bg-[#F73753] shadow-[0_0_4px_#F73753] animate-ping opacity-75"></div>
+              <div className="w-2 h-2 rounded-full bg-[#F73753] shadow-[0_0_4px_#F73753]"></div>
+            </div>
           </div>
           <span className="text-2xl font-normal text-[#F73753]">{occupiedTables}</span>
         </div>
@@ -153,7 +159,12 @@ export default function WaiterTablesPage() {
                 `}
               >
                 {/* Sağ Üstteki Nokta */}
-                <div className={`absolute top-4 right-4 w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
+                <div className="absolute top-4 right-4">
+                    <div className="inline-grid *:[grid-area:1/1]">
+                        <div className={`w-2.5 h-2.5 rounded-full ${dotColor} animate-ping opacity-75`}></div>
+                        <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
+                    </div>
+                </div>
 
                 {/* Masa Adı */}
                 <div className="mb-1">

@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isForced = searchParams.get('reason') === 'forced';
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -76,9 +79,11 @@ export default function ChangePasswordPage() {
         Şifre Değişikliği
       </h1>
       
-      <p className="text-center text-gray-500 text-sm mb-8 px-4">
-        Güvenliğiniz için lütfen yöneticinizden aldığınız geçici şifreyi değiştiriniz.
-      </p>
+      {isForced && (
+        <p className="text-center text-gray-500 text-sm mb-8 px-4">
+          Güvenliğiniz için lütfen yöneticinizden aldığınız geçici şifreyi değiştiriniz.
+        </p>
+      )}
 
       {error && <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-4 text-center">{error}</div>}
       {success && <div className="bg-green-50 text-green-600 text-sm p-3 rounded-lg mb-4 text-center">{success}</div>}
