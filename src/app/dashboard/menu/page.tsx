@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
-import MenuView, { type ApiResponse } from "@/components/MenuView";
+import MenuPreview from "@/components/MenuPreview";
+import type { ApiResponse } from "@/components/MenuView";
 
 interface CategoryItem {
     id: number;
@@ -558,7 +559,7 @@ export default function Menu() {
                     return newTimers;
                 });
             }
-        }, 800); // 800ms debounce
+        }, 500); // 500ms debounce
 
         // Store the timer
         setDebounceTimers(prev => ({
@@ -1098,7 +1099,7 @@ export default function Menu() {
             {/* Main Content Grid */}
             <div className={`grid grid-cols-1 ${showPreview ? 'lg:grid-cols-[40%_60%]' : ''} gap-6 mr-6 -mt-6`}>
                 {/* Left Side - Phone Mockup with Toggle */}
-                <div className="flex flex-col items-center gap-1 sticky top-4">
+                <div className="flex flex-col items-center gap-1 lg:sticky lg:top-4 z-10">
                     {/* Phone Mockup Preview Toggle - Always Visible */}
                     <div className="hidden md:flex md:items-center md:gap-3 md:mb-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -1121,15 +1122,15 @@ export default function Menu() {
                     {/* Phone Mockup - Conditionally Rendered */}
                     {showPreview && (
                         <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-hidden">
-                            <div className="mockup-phone-display overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                   <MenuView apiData={menuPreviewData} />
+                            <div className="mockup-phone-display h-full overflow-hidden">
+                                   <MenuPreview apiData={menuPreviewData} />
                             </div>
                         </div>
                     )}
                 </div>
 
                 {/* Right Side - Menu Management */}
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4.5">
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4.5 relative z-20">
 
 
                     {/* Section Header */}
