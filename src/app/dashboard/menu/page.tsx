@@ -1215,7 +1215,12 @@ export default function Menu() {
                                             <td className="text-[0.9375rem] text-gray-900 font-medium">₺{item.price.toFixed(2)}</td>
                                             <td>
                                                 {loadingAvailability.has(item.id) ? (
-                                                    <span className="loading loading-spinner loading-sm text-secondary-500"></span>
+                                                    <span
+                                                        className="loading loading-spinner loading-sm text-secondary-500"
+                                                        role="status"
+                                                        aria-live="polite"
+                                                        aria-label="Updating availability status"
+                                                    ></span>
                                                 ) : (
                                                     <input
                                                         type="checkbox"
