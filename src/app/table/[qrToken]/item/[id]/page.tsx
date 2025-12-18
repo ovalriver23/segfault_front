@@ -164,7 +164,7 @@ export default function MenuItemDetailPage() {
 
           {/* Description */}
           <p className="text-black text-[13px] font-normal leading-[19.5px] mb-[37px]">
-            {menuItem.description || "Zengin espresso ve kadifemsi süt köpüğüyle hazırlanan klasik İtalyan kahvesi. Her yudumda lezzet garantisi."}
+            {menuItem.description||""}
           </p>
 
           {/* Spacer */}
