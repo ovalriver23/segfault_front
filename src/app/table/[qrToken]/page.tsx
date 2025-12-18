@@ -40,12 +40,40 @@ export default function TableMenuPage() {
         const err = error as GeolocationError | TableScanError;
         
         if ('code' in err) {
-          // Geolocation error
-          if (err.code === 1) {
-            // Permission denied - show permission request screen
-            setNeedsPermission(true);
+          const isFallbackEnabled =
+            typeof process !== "undefined" &&
+            process.env.NEXT_PUBLIC_ENABLE_GEOLOCATION_FALLBACK === "true";
+
+          if (isFallbackEnabled) {
+            // Geolocation error - try with fallback location (development/testing only)
+            console.warn('Geolocation failed, attempting with fallback location:', err.message);
+            try {
+              // Use fallback coordinates (0,0) only when explicitly enabled via env flag
+              const fallbackLocation: LocationCoordinates = { latitude: 0, longitude: 0 };
+              const tableData = await scanTable(qrToken, fallbackLocation);
+              setMenuData(tableData);
+              setUserLocation(fallbackLocation);
+            } catch (fallbackError) {
+              const fallbackErr = fallbackError as TableScanError;
+              if (err.code === 1) {
+                // Permission denied - show permission request screen
+                setNeedsPermission(true);
+              } else {
+                setLocationError(err.message);
+              }
+              // Also show scan error if fallback failed
+              if (fallbackErr.error) {
+                setScanError(fallbackErr.error);
+              }
+            }
           } else {
-            setLocationError(err.message);
+            // Fallback disabled (e.g., production): surface geolocation error instead
+            if (err.code === 1) {
+              // Permission denied - show permission request screen
+              setNeedsPermission(true);
+            } else {
+              setLocationError(err.message);
+            }
           }
         } else {
           // Table scan error

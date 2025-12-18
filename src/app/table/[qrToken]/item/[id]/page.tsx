@@ -164,7 +164,7 @@ export default function MenuItemDetailPage() {
 
           {/* Description */}
           <p className="text-black text-[13px] font-normal leading-[19.5px] mb-[37px]">
-            {menuItem.description || "Zengin espresso ve kadifemsi süt köpüğüyle hazırlanan klasik İtalyan kahvesi. Her yudumda lezzet garantisi."}
+            {menuItem.description||""}
           </p>
 
           {/* Spacer */}
@@ -227,13 +227,19 @@ export default function MenuItemDetailPage() {
             </div>
           </div>
 
-          {/* Add to Cart Button */}
-          <button
-            onClick={handleAddToCart}
-            className="w-full bg-[#e7429c] text-white py-4 rounded-3xl text-xl font-normal hover:bg-[#d13888] transition-colors shadow-lg"
-          >
-            Sepete Ekle
-          </button>
+          {/* Add to Cart Button - Only show if item is available */}
+          {menuItem.available ? (
+            <button
+              onClick={handleAddToCart}
+              className="w-full bg-[#e7429c] text-white py-4 rounded-3xl text-xl font-normal hover:bg-[#d13888] transition-colors shadow-lg"
+            >
+              Sepete Ekle
+            </button>
+          ) : (
+            <div className="w-full bg-gray-300 text-gray-600 py-4 rounded-3xl text-xl font-normal text-center">
+              Stokta Yok
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,76 +1,25 @@
 /**
- * MenuView Component - Reusable Restaurant Menu Display
+ * MenuPreview Component - Preview-friendly Restaurant Menu Display
  * 
- * This component displays a restaurant menu with search, category filtering,
- * and shopping cart functionality.
+ * This is a variant of MenuView designed specifically for embedding inside
+ * a phone mockup preview container. Unlike MenuView which uses viewport-based
+ * positioning (h-screen, fixed), this component uses container-relative
+ * positioning to work correctly within a bounded parent element.
  * 
  * Props:
  * - apiData: ApiResponse - The complete API response from /api/public/table/scan
  * 
- * Features:
- * - Sticky header with restaurant name
- * - Search functionality
- * - Category filtering with smooth scroll
- * - Shopping cart with quantity management
- * - Responsive design optimized for mobile
- * - Auto-hide search/filter on scroll
+ * Key differences from MenuView:
+ * - Uses h-full instead of h-screen
+ * - Cart summary uses absolute positioning relative to container instead of fixed
+ * - All scrolling and positioning is relative to the component root
  */
 
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import {
-  getBasket,
-  addItemToBasket,
-  updateItemQuantity as updateBasketItemQuantity,
-  updateItemNote,
-  updateGeneralNote,
-  clearBasket,
-  prepareOrderRequest,
-  type Basket,
-  type BasketItem
-} from "../lib/services/basketService";
-import CartModal from "./CartModal";
-
-// --- API Response Types (Based on Section 9.3) ---
-export type MenuItem = {
-  id: number;
-  name: string;
-  description: string | null;
-  price: number;
-  imageUrl: string | null;
-  style: string | null;
-  available: boolean;
-  categoryId: number;
-  categoryName: string;
-};
-
-export type Category = {
-  id: number;
-  name: string;
-  menuItems: MenuItem[];
-  restaurantId: string;
-};
-
-export type Table = {
-  id: string;
-  name: string;
-  qrToken: string;
-  capacity: number;
-  status: string;
-  restaurantId: string;
-};
-
-export type ApiResponse = {
-  table: Table;
-  restaurantName: string;
-  restaurantLocation: string;
-  restaurantLatitude: number;
-  restaurantLongitude: number;
-  menu: Category[];
-};
+import type { ApiResponse, MenuItem, Category } from "./MenuView";
 
 // --- Internal Types for UI ---
 type Product = {
@@ -98,50 +47,26 @@ type CategoryFilterItem = {
   name: string;
 }
 
-// --- Alt Bileşenler ---
+// --- Sub Components ---
 
-// 1. Ürün Kartı
+// 1. Product Card (Preview version - no navigation)
 function ProductCard({
   product,
   itemInCart,
   onAddToCart,
   onUpdateQuantity,
-  qrToken,
 }: {
   product: Product;
   itemInCart?: CartItem;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
-  qrToken: string;
 }) {
-  const router = useRouter();
-  // Check if product is popular (you can adjust this logic based on your data)
-  const isPopular = product.style === 'popular' || false; // Modify based on your actual data structure
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking on buttons
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) {
-      return;
-    }
-    
-    // Don't navigate if product is not available
-    if (!product.available) {
-      return;
-    }
-    
-    // Store product data in sessionStorage
-    sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
-    
-    // Navigate to detail page
-    router.push(`/table/${qrToken}/item/${product.id}`);
-  };
+  const isPopular = product.style === 'popular' || false;
 
   return (
     <div 
-      onClick={handleCardClick}
-      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${
-        product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
+      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full ${
+        product.available ? '' : 'opacity-75'
       }`}
     >
       {/* Popular Badge */}
@@ -247,7 +172,7 @@ function ProductCard({
   );
 }
 
-// 2. Kategori Filtresi
+// 2. Category Filter
 function CategoryFilter({
   categories,
   selectedCategory,
@@ -259,7 +184,7 @@ function CategoryFilter({
 }) {
   return (
     <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
-      {/* "All" butonu */}
+      {/* "All" button */}
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
@@ -280,7 +205,7 @@ function CategoryFilter({
         <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
 
-      {/* Dinamik kategoriler */}
+      {/* Dynamic categories */}
       {categories.map((cat) => (
         <button
           key={cat.id}
@@ -306,21 +231,16 @@ function CategoryFilter({
   );
 }
 
-// 3. Sepet Özeti
+// 3. Cart Summary (Preview version - relative positioning)
 function CartSummary({
   itemCount,
   totalPrice,
-  onClick,
 }: {
   itemCount: number;
   totalPrice: number;
-  onClick: () => void;
 }) {
   return (
-    <button 
-      onClick={onClick}
-      className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
-    >
+    <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full">
       <div className="text-left">
         <span className="font-semibold">{itemCount} Items</span>
         <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
@@ -341,26 +261,24 @@ function CartSummary({
           />
         </svg>
       </div>
-    </button>
+    </div>
   );
 }
 
-// --- ANA COMPONENT ---
-export interface MenuViewProps {
+// --- MAIN COMPONENT ---
+export interface MenuPreviewProps {
   apiData: ApiResponse;
 }
 
-export default function MenuView({ apiData }: MenuViewProps) {
-  const qrToken = apiData.table.qrToken;
+export default function MenuPreview({ apiData }: MenuPreviewProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [generalNote, setGeneralNote] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSearchVisible, setIsSearchVisible] = useState(true);
   const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // API verisini MenuSection formatına dönüştür
+  // Transform API data to MenuSection format
   const menuData: MenuSection[] = useMemo(() => {
     return apiData.menu.map(category => ({
       categoryId: category.id,
@@ -371,39 +289,15 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const mainContainerRef = useRef<HTMLDivElement>(null);
-
-  // --- Load basket from localStorage on mount ---
-  useEffect(() => {
-    const basket = getBasket(qrToken);
-    setGeneralNote(basket.generalNote || "");
-    
-    // Convert basket items to cart items with product details
-    const cartItems: CartItem[] = basket.items
-      .map((basketItem: BasketItem) => {
-        // Find the product in the menu
-        for (const category of apiData.menu) {
-          const product = category.menuItems.find(item => item.id === basketItem.menuItemId);
-          if (product) {
-            return {
-              ...product,
-              quantity: basketItem.quantity
-            };
-          }
-        }
-        return null;
-      })
-      .filter((item): item is CartItem => item !== null);
-    
-    setCart(cartItems);
-  }, [qrToken, apiData.menu]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // --- Scroll Handler for Search and Category Filter Visibility ---
   useEffect(() => {
     const handleScroll = () => {
-      const main = mainContainerRef.current;
-      if (!main) return;
+      const scrollContainer = scrollContainerRef.current;
+      if (!scrollContainer) return;
 
-      const currentScrollY = main.scrollTop;
+      const currentScrollY = scrollContainer.scrollTop;
       const scrollDifference = currentScrollY - lastScrollY;
       
       // Always show when near the top
@@ -412,10 +306,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
         setIsCategoryFilterVisible(true);
       }
       // Show search and category filter when scrolling up significantly, hide when scrolling down
-      else if (scrollDifference < -30) { // Scrolled up at least 30px
+      else if (scrollDifference < -30) {
         setIsSearchVisible(true);
         setIsCategoryFilterVisible(true);
-      } else if (scrollDifference > 30 && currentScrollY > 100) { // Scrolled down at least 30px
+      } else if (scrollDifference > 30 && currentScrollY > 100) {
         setIsSearchVisible(false);
         setIsCategoryFilterVisible(false);
       }
@@ -423,27 +317,22 @@ export default function MenuView({ apiData }: MenuViewProps) {
       setLastScrollY(currentScrollY);
     };
 
-    const main = mainContainerRef.current;
-    if (main) {
-      main.addEventListener('scroll', handleScroll, { passive: true });
-      return () => main.removeEventListener('scroll', handleScroll);
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
     }
   }, [lastScrollY]);
 
-  // --- Sepet İşlemleri ---
+  // --- Cart Operations (Preview only - no persistence) ---
   const handleAddToCart = (product: Product) => {
-    // Update localStorage
-    addItemToBasket(qrToken, product.id, 1);
-    
-    // Update local state
+    if (!product.available) {
+      return;
+    }
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
   
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
-    // Update localStorage
-    updateBasketItemQuantity(qrToken, productId, newQuantity);
-    
-    // Update local state
     if (newQuantity <= 0) {
       setCart((prevCart) =>
         prevCart.filter((item) => item.id !== productId)
@@ -457,57 +346,15 @@ export default function MenuView({ apiData }: MenuViewProps) {
     }
   };
 
-  const handleUpdateGeneralNote = (note: string) => {
-    setGeneralNote(note);
-  };
-
-  const handleSubmitOrder = async () => {
-    const orderData = prepareOrderRequest(qrToken);
-    
-    try {
-      const response = await fetch('/api/public/table/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Clear basket and reset state
-        clearBasket(qrToken);
-        setCart([]);
-        setGeneralNote("");
-        
-        // Close modal
-        const modal = document.getElementById('cart_modal') as HTMLDialogElement;
-        modal?.close();
-        //showing with alert will be changed at next improvements.
-        // Show success message
-        alert(`✅ ${data.message || 'Sipariş başarıyla alındı'}\nSipariş No: ${data.orderId}`);
-      } else {
-        // Show error message from backend
-        alert(`❌ ${data.error || 'Sipariş gönderilemedi'}`);
-      }
-    } catch (error) {
-      alert('❌ Sipariş gönderilemedi. Lütfen tekrar deneyin.');
-    }
-  };
-
-  const handleOpenCart = () => {
-    const modal = document.getElementById('cart_modal') as HTMLDialogElement;
-    modal?.showModal();
-  };
-
-  // --- Doğru Kaydırma Mantığı ---
+  // --- Scroll to Category ---
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
-    const main = mainContainerRef.current;
-    if (!main) return;
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
 
     const firstCategoryName = menuData[0]?.categoryName;
     if (categoryName === "All" || categoryName === firstCategoryName) {
-      main.scrollTo({ top: 0, behavior: "smooth" });
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -515,14 +362,14 @@ export default function MenuView({ apiData }: MenuViewProps) {
     if (section) {
       const STICKY_OFFSET = 292; 
       const sectionTop = section.getBoundingClientRect().top;
-      const containerTop = main.getBoundingClientRect().top;
-      const currentScrollTop = main.scrollTop;
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const currentScrollTop = scrollContainer.scrollTop;
       const newScrollTop = currentScrollTop + (sectionTop - containerTop) - STICKY_OFFSET;
-      main.scrollTo({ top: newScrollTop, behavior: 'smooth' });
+      scrollContainer.scrollTo({ top: newScrollTop, behavior: 'smooth' });
     }
   };
 
-  // Kategori Filtresi için Veri Türetme
+  // Category Filter Data
   const categoriesForFilter = useMemo((): CategoryFilterItem[] => {
     return menuData.map(section => ({
       id: section.categoryId,
@@ -530,7 +377,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
     }));
   }, [menuData]); 
 
-  // Sadece arama sorgusuna göre filtreler
+  // Filter by search query only
   const filteredMenu = useMemo(() => {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
@@ -548,24 +395,22 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // --- Intersection Observer for Auto-updating Category on Scroll ---
   useEffect(() => {
-    const main = mainContainerRef.current;
-    if (!main) return;
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
 
     const observerOptions = {
-      root: main,
-      rootMargin: '-100px 0px -60% 0px', // Trigger when section is in the upper 40% of the viewport
+      root: scrollContainer,
+      rootMargin: '-100px 0px -60% 0px',
       threshold: 0
     };
 
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      // Filter only intersecting entries and sort by position in viewport
       const visibleEntries = entries
         .filter(entry => entry.isIntersecting)
         .sort((a, b) => {
           return a.boundingClientRect.top - b.boundingClientRect.top;
         });
 
-      // Select the topmost visible section
       if (visibleEntries.length > 0) {
         const categoryName = visibleEntries[0].target.getAttribute('data-category');
         if (categoryName) {
@@ -576,7 +421,6 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
     const observer = new IntersectionObserver(observerCallback, observerOptions);
 
-    // Observe all sections
     Object.values(sectionRefs.current).forEach(section => {
       if (section) {
         observer.observe(section);
@@ -586,7 +430,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
     return () => observer.disconnect();
   }, [filteredMenu]);
 
-  // Sepet Özeti
+  // Cart Summary
   const cartSummary = useMemo(() => {
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce(
@@ -604,110 +448,110 @@ export default function MenuView({ apiData }: MenuViewProps) {
   return (
     <div 
       ref={mainContainerRef}
-      className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth"
+      className="relative flex flex-col bg-white rounded-3xl shadow-2xl h-full w-full overflow-hidden"
     >
-      {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
-        <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
-        
-        
-        
-        <div className="flex flex-col items-end text-right">
-          <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
-            <span>{apiData.restaurantName}</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-5 h-5 text-gray-400"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                clipRule="evenodd"
-              />
-            </svg>
+      {/* Scrollable Content Area */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth pb-24">
+        {/* STICKY HEADERS */}
+        <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
+          <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
+          
+          <div className="flex flex-col items-end text-right">
+            <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
+              <span>{apiData.restaurantName}</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="w-5 h-5 text-gray-400"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
           </div>
-          <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
-        </div>
-      </header>
+        </header>
 
-      {/* Ana İçerik Alanı */}
-      <main className="px-2">
-        
-        {/* Arama Çubuğu */}
-        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
-          isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
-        }`}>
-          <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="w-5 h-5 opacity-70 text-orange-900"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                clipRule="evenodd"
+        {/* Main Content Area */}
+        <main className="px-2">
+          
+          {/* Search Bar */}
+          <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
+            isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          }`}>
+            <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-5 h-5 opacity-70 text-orange-900"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <input
+                type="text"
+                className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f]"
+                placeholder="Ara"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </svg>
-            <input
-              type="text"
-              className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f]"
-              placeholder="Ara"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+            </label>
+          </div>
+
+          {/* Category Filter */}
+          <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
+            isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          }`}>
+            <CategoryFilter
+              categories={categoriesForFilter}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleCategoryClick}
             />
-          </label>
-        </div>
+          </div>
 
-        {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
-          isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
-        }`}>
-          <CategoryFilter
-            categories={categoriesForFilter}
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleCategoryClick}
-          />
-        </div>
+          {/* Menu Sections */}
+          <div className="space-y-8 pt-4 px-4 pb-8">
+            {filteredMenu.map((section) => (
+              <section
+                key={section.categoryId}
+                data-category={section.categoryName}
+                ref={(el) => {
+                  sectionRefs.current[section.categoryName] = el;
+                }}
+              >
+                <div className="relative mb-4">
+                  <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: '#f8a45a' }} />
+                  <h2 className="relative inline-block bg-white pr-4 text-2xl font-normal text-gray-800" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
+                    {section.categoryName}
+                  </h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  {section.items.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      itemInCart={cartMap.get(product.id)}
+                      onAddToCart={handleAddToCart}
+                      onUpdateQuantity={handleUpdateQuantity}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </main>
+      </div>
 
-        {/* Menü Bölümleri */}
-        <div className="space-y-8 pt-4 px-4 pb-32">
-          {filteredMenu.map((section) => (
-            <section
-              key={section.categoryId}
-              data-category={section.categoryName}
-              ref={(el) => {
-                sectionRefs.current[section.categoryName] = el;
-              }}
-            >
-              <div className="relative mb-4">
-                <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: '#f8a45a' }} />
-                <h2 className="relative inline-block bg-white pr-4 text-2xl font-normal text-gray-800" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
-                  {section.categoryName}
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4 w-full">
-                {section.items.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    itemInCart={cartMap.get(product.id)}
-                    onAddToCart={handleAddToCart}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    qrToken={qrToken}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </main>
-
-      {/* Sepet Özeti (Footer) */}
-      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${
+      {/* Cart Summary (Footer) - Absolute positioning relative to container */}
+      <div className={`absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 ease-in-out ${
         cartSummary.itemCount > 0 
           ? 'opacity-100 translate-y-0' 
           : 'opacity-0 translate-y-20 pointer-events-none'
@@ -715,20 +559,8 @@ export default function MenuView({ apiData }: MenuViewProps) {
         <CartSummary
           itemCount={cartSummary.itemCount}
           totalPrice={cartSummary.totalPrice}
-          onClick={handleOpenCart}
         />
       </div>
-
-      {/* Cart Modal */}
-      <CartModal
-        modalId="cart_modal"
-        qrToken={qrToken}
-        items={cart}
-        generalNote={generalNote}
-        onUpdateQuantity={handleUpdateQuantity}
-        onUpdateGeneralNote={handleUpdateGeneralNote}
-        onSubmitOrder={handleSubmitOrder}
-      />
     </div>
   );
 }

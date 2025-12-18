@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Şifre başarıyla güncellendi' }, { status: 200 });
 
   } catch (error) {
-    console.error('Change Password Route Error:', error);
     return NextResponse.json({ message: 'Sunucu hatası oluştu.' }, { status: 500 });
   }
 }
