@@ -1,17 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function WaiterLayout({
+function WaiterLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  // Check if current page is login page or change password page
-  const shouldHideNavbar = pathname === '/waiter/login' || pathname === '/waiter/change-password';
+  // Check if current page is login page or change password page (only if forced)
+  const isForced = searchParams.get('reason') === 'forced';
+  const shouldHideNavbar = pathname === '/waiter/login' || (pathname === '/waiter/change-password' && isForced);
 
   // Aktif ikon rengini belirlemek için yardımcı fonksiyon
   // Eğer path tam eşleşiyorsa koyu renk (#683817), değilse soluk renk (#b09886)
@@ -99,5 +102,17 @@ export default function WaiterLayout({
         </div>
       )}
     </div>
+  );
+}
+
+export default function WaiterLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white"></div>}>
+      <WaiterLayoutContent>{children}</WaiterLayoutContent>
+    </Suspense>
   );
 }
