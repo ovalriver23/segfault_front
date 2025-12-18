@@ -73,8 +73,8 @@ export default function Menu() {
     // View menu item detail state
     const [viewingMenuItem, setViewingMenuItem] = useState<MenuItem & { categoryId: number, categoryName: string } | null>(null)
 
-    // Debounce timer for availability toggle
-    const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
+    // Track which items are currently updating availability
+    const [loadingAvailability, setLoadingAvailability] = useState<Set<number>>(new Set())
 
     // Menu preview visibility state
     const [showPreview, setShowPreview] = useState(true)
@@ -113,12 +113,6 @@ export default function Menu() {
         };
     }, [menuItemsByCategory]);
 
-    // Cleanup debounce timers on unmount
-    useEffect(() => {
-        return () => {
-            Object.values(debounceTimers).forEach(timer => clearTimeout(timer));
-        };
-    }, [debounceTimers]);
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
         setAlertMessage(message)
@@ -492,80 +486,52 @@ export default function Menu() {
         }
     };
 
-    // Handle availability toggle with debouncing
+    // Handle availability toggle with loading state
     const handleAvailabilityToggle = async (itemId: number, currentAvailable: boolean) => {
+        // Prevent multiple clicks while loading
+        if (loadingAvailability.has(itemId)) return;
+
         const newAvailable = !currentAvailable;
 
-        // Clear existing timer for this item
-        if (debounceTimers[itemId]) {
-            clearTimeout(debounceTimers[itemId]);
-        }
+        // Set loading state
+        setLoadingAvailability(prev => new Set(prev).add(itemId));
 
-        // Optimistically update the UI
-        setMenuItemsByCategory(prev =>
-            prev.map(cat => ({
-                ...cat,
-                items: cat.items.map(item =>
-                    item.id === itemId ? { ...item, available: newAvailable } : item
-                )
-            }))
-        );
+        try {
+            const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ available: newAvailable })
+            });
 
-        // Set new debounced timer
-        const timer = setTimeout(async () => {
-            try {
-                const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
-                    method: 'PATCH',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ available: newAvailable })
-                });
-
-                if (!response.ok) {
-                    // Revert on error
-                    setMenuItemsByCategory(prev =>
-                        prev.map(cat => ({
-                            ...cat,
-                            items: cat.items.map(item =>
-                                item.id === itemId ? { ...item, available: currentAvailable } : item
-                            )
-                        }))
-                    );
-
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.message || 'Durum güncellenirken hata oluştu';
-                    showErrorAlert(errorMessage);
-                } else {
-                    showSuccessAlert(newAvailable ? 'Ürün stokta olarak işaretlendi' : 'Ürün tükendi olarak işaretlendi');
-                }
-            } catch (error) {
-                // Revert on error
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Durum güncellenirken hata oluştu';
+                showErrorAlert(errorMessage);
+            } else {
+                // Update UI only after successful response
                 setMenuItemsByCategory(prev =>
                     prev.map(cat => ({
                         ...cat,
                         items: cat.items.map(item =>
-                            item.id === itemId ? { ...item, available: currentAvailable } : item
+                            item.id === itemId ? { ...item, available: newAvailable } : item
                         )
                     }))
                 );
-                showErrorAlert('Bağlantı hatası oluştu');
-            } finally {
-                // Clean up the timer from state
-                setDebounceTimers(prev => {
-                    const newTimers = { ...prev };
-                    delete newTimers[itemId];
-                    return newTimers;
-                });
+                showSuccessAlert(newAvailable ? 'Ürün stokta olarak işaretlendi' : 'Ürün tükendi olarak işaretlendi');
             }
-        }, 500); // 500ms debounce
-
-        // Store the timer
-        setDebounceTimers(prev => ({
-            ...prev,
-            [itemId]: timer
-        }));
+        } catch (error) {
+            showErrorAlert('Bağlantı hatası oluştu');
+        } finally {
+            // Remove loading state
+            setLoadingAvailability(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(itemId);
+                return newSet;
+            });
+        }
     };
 
     // Handle edit menu item
@@ -1248,12 +1214,16 @@ export default function Menu() {
                                             </td>
                                             <td className="text-[0.9375rem] text-gray-900 font-medium">₺{item.price.toFixed(2)}</td>
                                             <td>
-                                                <input
-                                                    type="checkbox"
-                                                    className="toggle toggle-sm border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
-                                                    checked={item.available}
-                                                    onChange={() => handleAvailabilityToggle(item.id, item.available)}
-                                                />
+                                                {loadingAvailability.has(item.id) ? (
+                                                    <span className="loading loading-spinner loading-sm text-secondary-500"></span>
+                                                ) : (
+                                                    <input
+                                                        type="checkbox"
+                                                        className="toggle toggle-sm border-gray-400 text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
+                                                        checked={item.available}
+                                                        onChange={() => handleAvailabilityToggle(item.id, item.available)}
+                                                    />
+                                                )}
                                             </td>
                                             <td>
                                                 <div className="flex gap-1.5">
