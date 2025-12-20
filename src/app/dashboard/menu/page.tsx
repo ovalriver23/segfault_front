@@ -8,6 +8,7 @@ import type { ApiResponse } from "@/components/MenuView";
 interface CategoryItem {
     id: number;
     name: string;
+    imageUrl: string | null;
     menuItems: any[];
     restaurantId: string;
 }
@@ -31,8 +32,9 @@ interface CategoryWithItems {
 export default function Menu() {
     const [categories, setCategories] = useState<CategoryItem[]>([])
     const [menuItemsByCategory, setMenuItemsByCategory] = useState<CategoryWithItems[]>([])
-    const [categoryForm, setCategoryForm] = useState("")
+    const [categoryForm, setCategoryForm] = useState({ name: '', file: null as File | null })
     const [categoryFormError, setCategoryFormError] = useState('');
+    const [categoryImagePreview, setCategoryImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -43,6 +45,8 @@ export default function Menu() {
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
     const [editCategoryName, setEditCategoryName] = useState('')
+    const [editCategoryFile, setEditCategoryFile] = useState<File | null>(null)
+    const [editCategoryImagePreview, setEditCategoryImagePreview] = useState<string | null>(null)
     const [editCategoryError, setEditCategoryError] = useState('')
 
     // Alert state
@@ -104,24 +108,29 @@ export default function Menu() {
             restaurantLocation: "Preview Location",
             restaurantLatitude: 0,
             restaurantLongitude: 0,
-            menu: menuItemsByCategory.map(cat => ({
-                id: cat.categoryId,
-                name: cat.categoryName,
-                menuItems: cat.items.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    description: item.description,
-                    price: item.price,
-                    imageUrl: item.imageUrl,
-                    style: item.style,
-                    available: item.available,
-                    categoryId: cat.categoryId,
-                    categoryName: cat.categoryName
-                })),
-                restaurantId: "preview-restaurant"
-            }))
+            menu: menuItemsByCategory.map(cat => {
+                // Find category imageUrl from categories state
+                const category = categories.find(c => c.id === cat.categoryId);
+                return {
+                    id: cat.categoryId,
+                    name: cat.categoryName,
+                    imageUrl: category?.imageUrl || null,
+                    menuItems: cat.items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        description: item.description,
+                        price: item.price,
+                        imageUrl: item.imageUrl,
+                        style: item.style,
+                        available: item.available,
+                        categoryId: cat.categoryId,
+                        categoryName: cat.categoryName
+                    })),
+                    restaurantId: "preview-restaurant"
+                };
+            })
         };
-    }, [menuItemsByCategory]);
+    }, [menuItemsByCategory, categories]);
 
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
@@ -213,7 +222,9 @@ export default function Menu() {
 
     // Modal handlers
     const openCategoryModal = () => {
-        setCategoryForm('');
+        setCategoryForm({ name: '', file: null });
+        setCategoryFormError('');
+        setCategoryImagePreview(null);
         (document.getElementById('Add_Category') as HTMLDialogElement)?.showModal();
     };
     const openMenuModal = () => {
@@ -234,6 +245,45 @@ export default function Menu() {
 
     const closeCategoryModal = () => {
         (document.getElementById('Add_Category') as HTMLDialogElement)?.close();
+        setCategoryForm({ name: '', file: null });
+        setCategoryFormError('');
+        setCategoryImagePreview(null);
+    };
+
+    // Handle category image change
+    const handleCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setCategoryForm(prev => ({ ...prev, file }));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCategoryImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeCategoryImage = () => {
+        setCategoryForm(prev => ({ ...prev, file: null }));
+        setCategoryImagePreview(null);
+    };
+
+    // Handle edit category image change
+    const handleEditCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setEditCategoryFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditCategoryImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeEditCategoryImage = () => {
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(null);
     };
 
 
@@ -256,6 +306,8 @@ export default function Menu() {
     const openEditCategoryModal = (category: CategoryItem) => {
         setEditingCategory(category);
         setEditCategoryName(category.name);
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(category.imageUrl);
         setEditCategoryError('');
         (document.getElementById('Edit_Category') as HTMLDialogElement)?.showModal();
     };
@@ -264,6 +316,8 @@ export default function Menu() {
         (document.getElementById('Edit_Category') as HTMLDialogElement)?.close();
         setEditingCategory(null);
         setEditCategoryName('');
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(null);
         setEditCategoryError('');
     };
 
@@ -319,7 +373,7 @@ export default function Menu() {
     const handleAddCategory = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const trimmedName = categoryForm.trim();
+        const trimmedName = categoryForm.name.trim();
         if (!trimmedName) {
             setCategoryFormError('Kategori adı gereklidir');
             return;
@@ -329,13 +383,17 @@ export default function Menu() {
         setCategoryFormError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            if (categoryForm.file) {
+                formData.append('file', categoryForm.file);
+            }
+
             const response = await fetch('/api/dashboard/menu/category', {
                 method: 'POST',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name: trimmedName })
+                body: formData
             });
 
             const data = await response.json();
@@ -347,10 +405,11 @@ export default function Menu() {
                 return;
             }
 
-            // Success - append new table to the list
+            // Success - append new category to the list
             setCategories(prev => [...prev, {
                 id: data.id,
                 name: data.name,
+                imageUrl: data.imageUrl || null,
                 menuItems: [],
                 restaurantId: data.restaurantId || ''
             }]);
@@ -379,13 +438,17 @@ export default function Menu() {
         setEditCategoryError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            if (editCategoryFile) {
+                formData.append('file', editCategoryFile);
+            }
+
             const response = await fetch(`/api/dashboard/menu/category?id=${editingCategory.id}`, {
                 method: 'PUT',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name: trimmedName })
+                body: formData
             });
 
             const data = await response.json();
@@ -400,7 +463,8 @@ export default function Menu() {
             setCategories(prev => prev.map(cat =>
                 cat.id === editingCategory.id ? {
                     ...cat,
-                    name: data.name
+                    name: data.name,
+                    imageUrl: data.imageUrl || null
                 } : cat
             ));
 
@@ -775,12 +839,12 @@ export default function Menu() {
 
             {/* Adding CATEGORY Modal */}
             <dialog id="Add_Category" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-md">
                     <form onSubmit={handleAddCategory} >
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Ekle</h3>
 
-                        {/* Input Field */}
+                        {/* Category Name Input Field */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori Adı
@@ -788,14 +852,59 @@ export default function Menu() {
                             <input
                                 type="text"
                                 placeholder="Kategori adını giriniz"
-                                value={categoryForm}
-                                onChange={(e) => setCategoryForm(e.target.value)}
+                                value={categoryForm.name}
+                                onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
-                            {categoryFormError && (
-                                <p className="text-sm text-red-600 mt-2">{categoryFormError}</p>
+                        </div>
+
+                        {/* Category Image Upload */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Görseli (Opsiyonel)
+                            </label>
+                            {categoryImagePreview ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                    <Image
+                                        src={categoryImagePreview}
+                                        alt="Kategori önizleme"
+                                        fill
+                                        className="object-contain p-2"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeCategoryImage}
+                                        className="absolute top-2 right-2 btn btn-sm btn-circle bg-red-500 hover:bg-red-600 border-none text-white"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" className="text-gray-400 mb-2">
+                                                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleCategoryImageChange}
+                                        />
+                                    </label>
+                                </div>
                             )}
                         </div>
+
+                        {/* Error Message */}
+                        {categoryFormError && (
+                            <p className="text-sm text-red-600 mb-4">{categoryFormError}</p>
+                        )}
 
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
@@ -1365,12 +1474,12 @@ export default function Menu() {
 
             {/* Edit Category Modal */}
             <dialog id="Edit_Category" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-md">
                     <form onSubmit={handleEditCategory}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Düzenle</h3>
 
-                        {/* Input Field */}
+                        {/* Category Name Input Field */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori Adı
@@ -1382,10 +1491,55 @@ export default function Menu() {
                                 onChange={(e) => setEditCategoryName(e.target.value)}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
-                            {editCategoryError && (
-                                <p className="text-sm text-red-600 mt-2">{editCategoryError}</p>
+                        </div>
+
+                        {/* Category Image Upload */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Görseli (Opsiyonel)
+                            </label>
+                            {editCategoryImagePreview ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                    <Image
+                                        src={editCategoryImagePreview}
+                                        alt="Kategori önizleme"
+                                        fill
+                                        className="object-contain p-2"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeEditCategoryImage}
+                                        className="absolute top-2 right-2 btn btn-sm btn-circle bg-red-500 hover:bg-red-600 border-none text-white"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" className="text-gray-400 mb-2">
+                                                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleEditCategoryImageChange}
+                                        />
+                                    </label>
+                                </div>
                             )}
                         </div>
+
+                        {/* Error Message */}
+                        {editCategoryError && (
+                            <p className="text-sm text-red-600 mb-4">{editCategoryError}</p>
+                        )}
 
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
