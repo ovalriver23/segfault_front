@@ -12,6 +12,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/cli": "^4.1.16",
     "daisyui": "^5.3.10",
+    "framer-motion": "^12.23.26",
     "jose": "^6.1.2",
     "jspdf": "^3.0.4",
     "leaflet": "^1.9.4",
