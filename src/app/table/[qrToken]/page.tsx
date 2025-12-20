@@ -106,6 +106,7 @@ export default function TableMenuPage() {
       menu: data.menu.map(category => ({
         id: category.id,
         name: category.name,
+        imageUrl: category.imageUrl || null,
         menuItems: category.menuItems,
         restaurantId: category.restaurantId
       }))
