@@ -10,12 +10,12 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-4 py-6">
           {/* Logo/Brand */}
           <div className="text-3xl md:text-4xl font-bold text-accent-500">
-            Qrinyo
+            EasyOrder
           </div>
           
           {/* Navigation Links */}
           <div className="flex flex-col md:flex-row gap-4 md:gap-16 text-center md:text-left">
-            <Link href="#" className="text-accent-500 hover:text-primary-500 transition-colors text-lg">
+            <Link href="/AboutUs" className="text-accent-500 hover:text-primary-500 transition-colors text-lg">
               Hakkımızda
             </Link>
             <Link href="#" className="text-accent-500 hover:text-primary-500 transition-colors text-lg">
@@ -25,7 +25,7 @@ export default function Footer() {
           
           {/* Copyright */}
           <div className="text-text-500 text-base md:text-lg">
-            ©2025 Qrinyo. Tüm haklar saklıdır.
+            ©2025 EasyOrder. Tüm haklar saklıdır.
           </div>
         </div>
       </div>

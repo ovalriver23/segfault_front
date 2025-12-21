@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
-import MenuView, { type ApiResponse } from "@/components/MenuView";
+import MenuPreview from "@/components/MenuPreview";
+import type { ApiResponse } from "@/components/MenuView";
 
 interface CategoryItem {
     id: number;
     name: string;
+    imageUrl: string | null;
     menuItems: any[];
     restaurantId: string;
 }
@@ -30,8 +32,9 @@ interface CategoryWithItems {
 export default function Menu() {
     const [categories, setCategories] = useState<CategoryItem[]>([])
     const [menuItemsByCategory, setMenuItemsByCategory] = useState<CategoryWithItems[]>([])
-    const [categoryForm, setCategoryForm] = useState("")
+    const [categoryForm, setCategoryForm] = useState({ name: '', file: null as File | null })
     const [categoryFormError, setCategoryFormError] = useState('');
+    const [categoryImagePreview, setCategoryImagePreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -42,6 +45,8 @@ export default function Menu() {
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
     const [editCategoryName, setEditCategoryName] = useState('')
+    const [editCategoryFile, setEditCategoryFile] = useState<File | null>(null)
+    const [editCategoryImagePreview, setEditCategoryImagePreview] = useState<string | null>(null)
     const [editCategoryError, setEditCategoryError] = useState('')
 
     // Alert state
@@ -55,25 +60,35 @@ export default function Menu() {
         categoryId: '',
         name: '',
         description: '',
-        price: ''
+        price: '',
+        style: 'NONE',
+        cancellable: false,
+        cancellationDuration: '5',
+        file: null as File | null
     })
     const [menuItemFormError, setMenuItemFormError] = useState('')
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
 
     // Edit menu item state
     const [editingMenuItem, setEditingMenuItem] = useState<MenuItem & { categoryId: number } | null>(null)
     const [editMenuItemForm, setEditMenuItemForm] = useState({
-        categoryId: '',
         name: '',
         description: '',
-        price: ''
+        price: '',
+        style: 'NONE',
+        available: true,
+        cancellable: false,
+        cancellationDuration: '5',
+        file: null as File | null
     })
     const [editMenuItemError, setEditMenuItemError] = useState('')
+    const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
 
     // View menu item detail state
     const [viewingMenuItem, setViewingMenuItem] = useState<MenuItem & { categoryId: number, categoryName: string } | null>(null)
 
-    // Debounce timer for availability toggle
-    const [debounceTimers, setDebounceTimers] = useState<Record<number, NodeJS.Timeout>>({})
+    // Track which items are currently updating availability
+    const [loadingAvailability, setLoadingAvailability] = useState<Set<number>>(new Set())
 
     // Menu preview visibility state
     const [showPreview, setShowPreview] = useState(true)
@@ -93,31 +108,30 @@ export default function Menu() {
             restaurantLocation: "Preview Location",
             restaurantLatitude: 0,
             restaurantLongitude: 0,
-            menu: menuItemsByCategory.map(cat => ({
-                id: cat.categoryId,
-                name: cat.categoryName,
-                menuItems: cat.items.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    description: item.description,
-                    price: item.price,
-                    imageUrl: item.imageUrl,
-                    style: item.style,
-                    available: item.available,
-                    categoryId: cat.categoryId,
-                    categoryName: cat.categoryName
-                })),
-                restaurantId: "preview-restaurant"
-            }))
+            menu: menuItemsByCategory.map(cat => {
+                // Find category imageUrl from categories state
+                const category = categories.find(c => c.id === cat.categoryId);
+                return {
+                    id: cat.categoryId,
+                    name: cat.categoryName,
+                    imageUrl: category?.imageUrl || null,
+                    menuItems: cat.items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        description: item.description,
+                        price: item.price,
+                        imageUrl: item.imageUrl,
+                        style: item.style,
+                        available: item.available,
+                        categoryId: cat.categoryId,
+                        categoryName: cat.categoryName
+                    })),
+                    restaurantId: "preview-restaurant"
+                };
+            })
         };
-    }, [menuItemsByCategory]);
+    }, [menuItemsByCategory, categories]);
 
-    // Cleanup debounce timers on unmount
-    useEffect(() => {
-        return () => {
-            Object.values(debounceTimers).forEach(timer => clearTimeout(timer));
-        };
-    }, [debounceTimers]);
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
         setAlertMessage(message)
@@ -208,7 +222,9 @@ export default function Menu() {
 
     // Modal handlers
     const openCategoryModal = () => {
-        setCategoryForm('');
+        setCategoryForm({ name: '', file: null });
+        setCategoryFormError('');
+        setCategoryImagePreview(null);
         (document.getElementById('Add_Category') as HTMLDialogElement)?.showModal();
     };
     const openMenuModal = () => {
@@ -216,14 +232,58 @@ export default function Menu() {
             categoryId: '',
             name: '',
             description: '',
-            price: ''
+            price: '',
+            style: 'NONE',
+            cancellable: false,
+            cancellationDuration: '5',
+            file: null
         });
         setMenuItemFormError('');
+        setImagePreview(null);
         (document.getElementById('Add_Menu') as HTMLDialogElement)?.showModal();
     };
 
     const closeCategoryModal = () => {
         (document.getElementById('Add_Category') as HTMLDialogElement)?.close();
+        setCategoryForm({ name: '', file: null });
+        setCategoryFormError('');
+        setCategoryImagePreview(null);
+    };
+
+    // Handle category image change
+    const handleCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setCategoryForm(prev => ({ ...prev, file }));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCategoryImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeCategoryImage = () => {
+        setCategoryForm(prev => ({ ...prev, file: null }));
+        setCategoryImagePreview(null);
+    };
+
+    // Handle edit category image change
+    const handleEditCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setEditCategoryFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditCategoryImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeEditCategoryImage = () => {
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(null);
     };
 
 
@@ -233,14 +293,21 @@ export default function Menu() {
             categoryId: '',
             name: '',
             description: '',
-            price: ''
+            price: '',
+            style: 'NONE',
+            cancellable: false,
+            cancellationDuration: '5',
+            file: null
         });
         setMenuItemFormError('');
+        setImagePreview(null);
     };
 
     const openEditCategoryModal = (category: CategoryItem) => {
         setEditingCategory(category);
         setEditCategoryName(category.name);
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(category.imageUrl);
         setEditCategoryError('');
         (document.getElementById('Edit_Category') as HTMLDialogElement)?.showModal();
     };
@@ -249,18 +316,25 @@ export default function Menu() {
         (document.getElementById('Edit_Category') as HTMLDialogElement)?.close();
         setEditingCategory(null);
         setEditCategoryName('');
+        setEditCategoryFile(null);
+        setEditCategoryImagePreview(null);
         setEditCategoryError('');
     };
 
     const openEditMenuItemModal = (item: MenuItem & { categoryId: number, categoryName: string }) => {
         setEditingMenuItem(item);
         setEditMenuItemForm({
-            categoryId: '', // Not used in edit, but kept for form consistency
             name: item.name,
             description: item.description || '',
-            price: item.price.toString()
+            price: item.price.toString(),
+            style: item.style || 'NONE',
+            available: item.available,
+            cancellable: (item as any).cancellable || false,
+            cancellationDuration: (item as any).cancellationDuration?.toString() || '5',
+            file: null
         });
         setEditMenuItemError('');
+        setEditImagePreview(item.imageUrl);
         (document.getElementById('Edit_Menu_Item') as HTMLDialogElement)?.showModal();
     };
 
@@ -268,12 +342,17 @@ export default function Menu() {
         (document.getElementById('Edit_Menu_Item') as HTMLDialogElement)?.close();
         setEditingMenuItem(null);
         setEditMenuItemForm({
-            categoryId: '',
             name: '',
             description: '',
-            price: ''
+            price: '',
+            style: 'NONE',
+            available: true,
+            cancellable: false,
+            cancellationDuration: '5',
+            file: null
         });
         setEditMenuItemError('');
+        setEditImagePreview(null);
     };
 
     const openViewMenuItemModal = (item: MenuItem & { categoryId: number, categoryName: string }) => {
@@ -294,7 +373,7 @@ export default function Menu() {
     const handleAddCategory = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const trimmedName = categoryForm.trim();
+        const trimmedName = categoryForm.name.trim();
         if (!trimmedName) {
             setCategoryFormError('Kategori adı gereklidir');
             return;
@@ -304,13 +383,17 @@ export default function Menu() {
         setCategoryFormError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            if (categoryForm.file) {
+                formData.append('file', categoryForm.file);
+            }
+
             const response = await fetch('/api/dashboard/menu/category', {
                 method: 'POST',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name: trimmedName })
+                body: formData
             });
 
             const data = await response.json();
@@ -322,10 +405,11 @@ export default function Menu() {
                 return;
             }
 
-            // Success - append new table to the list
+            // Success - append new category to the list
             setCategories(prev => [...prev, {
                 id: data.id,
                 name: data.name,
+                imageUrl: data.imageUrl || null,
                 menuItems: [],
                 restaurantId: data.restaurantId || ''
             }]);
@@ -354,13 +438,17 @@ export default function Menu() {
         setEditCategoryError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            if (editCategoryFile) {
+                formData.append('file', editCategoryFile);
+            }
+
             const response = await fetch(`/api/dashboard/menu/category?id=${editingCategory.id}`, {
                 method: 'PUT',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name: trimmedName })
+                body: formData
             });
 
             const data = await response.json();
@@ -375,7 +463,8 @@ export default function Menu() {
             setCategories(prev => prev.map(cat =>
                 cat.id === editingCategory.id ? {
                     ...cat,
-                    name: data.name
+                    name: data.name,
+                    imageUrl: data.imageUrl || null
                 } : cat
             ));
 
@@ -429,6 +518,23 @@ export default function Menu() {
         }
     };
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setMenuItemForm(prev => ({ ...prev, file }));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeImage = () => {
+        setMenuItemForm(prev => ({ ...prev, file: null }));
+        setImagePreview(null);
+    };
+
     const handleAddMenuItem = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -450,24 +556,47 @@ export default function Menu() {
             return;
         }
 
+        // Validate cancellation duration if cancellable is enabled
+        if (menuItemForm.cancellable) {
+            const duration = parseInt(menuItemForm.cancellationDuration);
+            if (isNaN(duration) || duration < 1) {
+                setMenuItemFormError('Geçerli bir iptal süresi giriniz (en az 1 dakika)');
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         setMenuItemFormError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            formData.append('price', price.toString());
+            formData.append('categoryId', menuItemForm.categoryId);
+            
+            if (menuItemForm.description.trim()) {
+                formData.append('description', menuItemForm.description.trim());
+            }
+            
+            if (menuItemForm.style && menuItemForm.style !== 'NONE') {
+                formData.append('style', menuItemForm.style);
+            }
+            
+            formData.append('cancellable', menuItemForm.cancellable.toString());
+            
+            if (menuItemForm.cancellable) {
+                formData.append('cancellationDuration', menuItemForm.cancellationDuration);
+            }
+            
+            if (menuItemForm.file) {
+                formData.append('file', menuItemForm.file);
+            }
+
             const response = await fetch('/api/dashboard/menu/item', {
                 method: 'POST',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: trimmedName,
-                    description: menuItemForm.description.trim() || undefined,
-                    price: price,
-                    categoryId: parseInt(menuItemForm.categoryId),
-                    imageUrl: null,
-                    style: 'NONE'
-                })
+                body: formData
             });
 
             const data = await response.json();
@@ -491,80 +620,70 @@ export default function Menu() {
         }
     };
 
-    // Handle availability toggle with debouncing
+    // Handle availability toggle with loading state
     const handleAvailabilityToggle = async (itemId: number, currentAvailable: boolean) => {
+        // Prevent multiple clicks while loading
+        if (loadingAvailability.has(itemId)) return;
+
         const newAvailable = !currentAvailable;
 
-        // Clear existing timer for this item
-        if (debounceTimers[itemId]) {
-            clearTimeout(debounceTimers[itemId]);
-        }
+        // Set loading state
+        setLoadingAvailability(prev => new Set(prev).add(itemId));
 
-        // Optimistically update the UI
-        setMenuItemsByCategory(prev =>
-            prev.map(cat => ({
-                ...cat,
-                items: cat.items.map(item =>
-                    item.id === itemId ? { ...item, available: newAvailable } : item
-                )
-            }))
-        );
+        try {
+            const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ available: newAvailable })
+            });
 
-        // Set new debounced timer
-        const timer = setTimeout(async () => {
-            try {
-                const response = await fetch(`/api/dashboard/menu/item?id=${itemId}`, {
-                    method: 'PATCH',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ available: newAvailable })
-                });
-
-                if (!response.ok) {
-                    // Revert on error
-                    setMenuItemsByCategory(prev =>
-                        prev.map(cat => ({
-                            ...cat,
-                            items: cat.items.map(item =>
-                                item.id === itemId ? { ...item, available: currentAvailable } : item
-                            )
-                        }))
-                    );
-
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMessage = errorData.message || 'Durum güncellenirken hata oluştu';
-                    showErrorAlert(errorMessage);
-                } else {
-                    showSuccessAlert(newAvailable ? 'Ürün stokta olarak işaretlendi' : 'Ürün tükendi olarak işaretlendi');
-                }
-            } catch (error) {
-                // Revert on error
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Durum güncellenirken hata oluştu';
+                showErrorAlert(errorMessage);
+            } else {
+                // Update UI only after successful response
                 setMenuItemsByCategory(prev =>
                     prev.map(cat => ({
                         ...cat,
                         items: cat.items.map(item =>
-                            item.id === itemId ? { ...item, available: currentAvailable } : item
+                            item.id === itemId ? { ...item, available: newAvailable } : item
                         )
                     }))
                 );
-                showErrorAlert('Bağlantı hatası oluştu');
-            } finally {
-                // Clean up the timer from state
-                setDebounceTimers(prev => {
-                    const newTimers = { ...prev };
-                    delete newTimers[itemId];
-                    return newTimers;
-                });
+                showSuccessAlert(newAvailable ? 'Ürün stokta olarak işaretlendi' : 'Ürün tükendi olarak işaretlendi');
             }
-        }, 800); // 800ms debounce
+        } catch (error) {
+            showErrorAlert('Bağlantı hatası oluştu');
+        } finally {
+            // Remove loading state
+            setLoadingAvailability(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(itemId);
+                return newSet;
+            });
+        }
+    };
 
-        // Store the timer
-        setDebounceTimers(prev => ({
-            ...prev,
-            [itemId]: timer
-        }));
+    // Handle edit image change
+    const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setEditMenuItemForm(prev => ({ ...prev, file }));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removeEditImage = () => {
+        setEditMenuItemForm(prev => ({ ...prev, file: null }));
+        setEditImagePreview(null);
     };
 
     // Handle edit menu item
@@ -586,24 +705,47 @@ export default function Menu() {
             return;
         }
 
+        // Validate cancellation duration if cancellable is enabled
+        if (editMenuItemForm.cancellable) {
+            const duration = parseInt(editMenuItemForm.cancellationDuration);
+            if (isNaN(duration) || duration < 1) {
+                setEditMenuItemError('Geçerli bir iptal süresi giriniz (en az 1 dakika)');
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         setEditMenuItemError('');
 
         try {
+            // Create FormData for multipart/form-data request
+            const formData = new FormData();
+            formData.append('name', trimmedName);
+            formData.append('price', price.toString());
+            formData.append('available', editMenuItemForm.available.toString());
+            
+            if (editMenuItemForm.description.trim()) {
+                formData.append('description', editMenuItemForm.description.trim());
+            }
+            
+            if (editMenuItemForm.style && editMenuItemForm.style !== 'NONE') {
+                formData.append('style', editMenuItemForm.style);
+            }
+            
+            formData.append('cancellable', editMenuItemForm.cancellable.toString());
+            
+            if (editMenuItemForm.cancellable) {
+                formData.append('cancellationDuration', editMenuItemForm.cancellationDuration);
+            }
+            
+            if (editMenuItemForm.file) {
+                formData.append('file', editMenuItemForm.file);
+            }
+
             const response = await fetch(`/api/dashboard/menu/item?id=${editingMenuItem.id}`, {
                 method: 'PUT',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: trimmedName,
-                    description: editMenuItemForm.description.trim() || undefined,
-                    price: price,
-                    imageUrl: editingMenuItem.imageUrl,
-                    style: editingMenuItem.style || 'NONE',
-                    available: editingMenuItem.available
-                })
+                body: formData
             });
 
             const data = await response.json();
@@ -688,7 +830,7 @@ export default function Menu() {
                         </svg>
                         Ekle
                     </button>
-                    <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-1 w-64 p-3 shadow-lg">
+                    <ul tabIndex={0} className="dropdown-content menu bg-white border border-gray-300 rounded-xl mt-1 z-50 w-64 p-3 shadow-lg">
                         <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openCategoryModal} >Kategori</button></li>
                         <li><button className="text-neutral-900 hover:bg-gray-100 rounded-lg text-base py-3" onClick={openMenuModal}>Menü Öğesi</button></li>
                     </ul>
@@ -697,12 +839,12 @@ export default function Menu() {
 
             {/* Adding CATEGORY Modal */}
             <dialog id="Add_Category" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-md">
                     <form onSubmit={handleAddCategory} >
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Ekle</h3>
 
-                        {/* Input Field */}
+                        {/* Category Name Input Field */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori Adı
@@ -710,14 +852,59 @@ export default function Menu() {
                             <input
                                 type="text"
                                 placeholder="Kategori adını giriniz"
-                                value={categoryForm}
-                                onChange={(e) => setCategoryForm(e.target.value)}
+                                value={categoryForm.name}
+                                onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
-                            {categoryFormError && (
-                                <p className="text-sm text-red-600 mt-2">{categoryFormError}</p>
+                        </div>
+
+                        {/* Category Image Upload */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Görseli (Opsiyonel)
+                            </label>
+                            {categoryImagePreview ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                    <Image
+                                        src={categoryImagePreview}
+                                        alt="Kategori önizleme"
+                                        fill
+                                        className="object-contain p-2"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeCategoryImage}
+                                        className="absolute top-2 right-2 btn btn-sm btn-circle bg-red-500 hover:bg-red-600 border-none text-white"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" className="text-gray-400 mb-2">
+                                                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleCategoryImageChange}
+                                        />
+                                    </label>
+                                </div>
                             )}
                         </div>
+
+                        {/* Error Message */}
+                        {categoryFormError && (
+                            <p className="text-sm text-red-600 mb-4">{categoryFormError}</p>
+                        )}
 
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
@@ -751,69 +938,188 @@ export default function Menu() {
 
             {/* Adding Menu Item Modal */}
             <dialog id="Add_Menu" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-2xl">
                     <form onSubmit={handleAddMenuItem}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Ürün Ekle</h3>
 
-                        {/* Input Field */}
-                        <div className="mb-6">
-                            <label htmlFor="category_choose" className="block text-sm font-medium text-gray-700 mb-2">
-                                Kategori
-                            </label>
-                            <select
-                                id="category_choose"
-                                value={menuItemForm.categoryId}
-                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, categoryId: e.target.value }))}
-                                className="select bg-background-500 text-text-400 border-gray-300 mb-4 w-full"
-                            >
-                                <option value="">Kategori Seç</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Ürün adı
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Ürün adını giriniz"
-                                value={menuItemForm.name}
-                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
-                            />
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Ürün Açıklaması
-                            </label>
-                            <input
-                                maxLength={255}
-                                type="text"
-                                placeholder="Ürün açıklamasını giriniz"
-                                value={menuItemForm.description}
-                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
-                            />
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Fiyat
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Ürün Fiyatını giriniz"
-                                value={menuItemForm.price}
-                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
-                            />
+                        {/* Form Fields */}
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            {/* Category Selection */}
+                            <div>
+                                <label htmlFor="category_choose" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Kategori <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    id="category_choose"
+                                    value={menuItemForm.categoryId}
+                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                                    className="select bg-background-500 text-text-400 border-gray-300 w-full"
+                                >
+                                    <option value="">Kategori Seç</option>
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Product Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Adı <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Ürün adını giriniz"
+                                    value={menuItemForm.name}
+                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
+                                    className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Açıklaması
+                                </label>
+                                <textarea
+                                    maxLength={255}
+                                    placeholder="Ürün açıklamasını giriniz"
+                                    value={menuItemForm.description}
+                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
+                                    className="textarea textarea-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 min-h-20"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">{menuItemForm.description.length}/255</p>
+                            </div>
+
+                            {/* Price */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Fiyat <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₺</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        value={menuItemForm.price}
+                                        onChange={(e) => setMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
+                                        className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 pl-8"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Style Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Görünüm Stili
+                                </label>
+                                <select
+                                    value={menuItemForm.style}
+                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, style: e.target.value }))}
+                                    className="select bg-background-500 text-text-400 border-gray-300 w-full"
+                                >
+                                    <option value="NONE">Standart</option>
+                                    <option value="FEATURED">Öne Çıkan</option>
+                                    <option value="NEW">Yeni</option>
+                                    <option value="POPULAR">Popüler</option>
+                                    <option value="SPECIAL">Özel</option>
+                                </select>
+                            </div>
+
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Görseli
+                                </label>
+                                {imagePreview ? (
+                                    <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                        <Image
+                                            src={imagePreview}
+                                            alt="Preview"
+                                            fill
+                                            className="object-contain p-2"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={removeImage}
+                                            className="absolute top-2 right-2 btn btn-circle btn-sm bg-red-500 hover:bg-red-600 border-none text-white"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg className="w-8 h-8 mb-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                            <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP (max. 5MB)</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/png,image/jpeg,image/webp"
+                                            onChange={handleImageChange}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Cancellation Settings */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Sipariş İptali
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-0.5">Müşterilerin siparişi iptal etmesine izin ver</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={menuItemForm.cancellable}
+                                        onChange={(e) => setMenuItemForm(prev => ({ ...prev, cancellable: e.target.checked }))}
+                                        className="toggle border-gray-400 bg-gray-300 checked:bg-secondary-500 checked:border-secondary-500"
+                                    />
+                                </div>
+                                
+                                {menuItemForm.cancellable && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            İptal Süresi (dakika)
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="60"
+                                                value={menuItemForm.cancellationDuration}
+                                                onChange={(e) => setMenuItemForm(prev => ({ ...prev, cancellationDuration: e.target.value }))}
+                                                className="input input-bordered input-sm text-text-500 w-24 bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            />
+                                            <span className="text-sm text-gray-500">dakika içinde iptal edilebilir</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Error Message */}
                             {menuItemFormError && (
-                                <p className="text-sm text-red-600 mt-2">{menuItemFormError}</p>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <p className="text-sm text-red-600">{menuItemFormError}</p>
+                                </div>
                             )}
                         </div>
 
                         {/* Modal Action Buttons */}
-                        <div className="modal-action mt-8">
+                        <div className="modal-action mt-6 pt-4 border-t border-gray-200">
                             <div className="flex gap-3 w-full">
                                 {/* Cancel Button */}
                                 <button
@@ -830,14 +1136,19 @@ export default function Menu() {
                                     disabled={isSubmitting}
                                     className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isSubmitting ? 'Ekleniyor...' : 'Ekle'}
+                                    {isSubmitting ? (
+                                        <span className="flex items-center gap-2">
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Ekleniyor...
+                                        </span>
+                                    ) : 'Ürün Ekle'}
                                 </button>
                             </div>
                         </div>
                     </form>
                 </div>
                 <form method="dialog" className="modal-backdrop">
-                    <button>close</button>
+                    <button onClick={closeMenuModal}>close</button>
                 </form>
             </dialog>
 
@@ -949,73 +1260,209 @@ export default function Menu() {
 
             {/* Edit Menu Item Modal */}
             <dialog id="Edit_Menu_Item" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-2xl">
                     <form onSubmit={handleEditMenuItem}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Ürün Düzenle</h3>
 
-                        {/* Input Fields */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Ürün adı
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Ürün adını giriniz"
-                                value={editMenuItemForm.name}
-                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
-                            />
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Ürün Açıklaması
-                            </label>
-                            <input
-                                maxLength={255}
-                                type="text"
-                                placeholder="Ürün açıklamasını giriniz"
-                                value={editMenuItemForm.description}
-                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 mb-4"
-                            />
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Fiyat
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Ürün Fiyatını giriniz"
-                                value={editMenuItemForm.price}
-                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
-                                className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
-                            />
+                        {/* Form Fields */}
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            {/* Product Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Adı <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Ürün adını giriniz"
+                                    value={editMenuItemForm.name}
+                                    onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, name: e.target.value }))}
+                                    className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Açıklaması
+                                </label>
+                                <textarea
+                                    maxLength={255}
+                                    placeholder="Ürün açıklamasını giriniz"
+                                    value={editMenuItemForm.description}
+                                    onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, description: e.target.value }))}
+                                    className="textarea textarea-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 min-h-20"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">{editMenuItemForm.description.length}/255</p>
+                            </div>
+
+                            {/* Price */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Fiyat <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₺</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        value={editMenuItemForm.price}
+                                        onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, price: e.target.value }))}
+                                        className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20 pl-8"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Style Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Görünüm Stili
+                                </label>
+                                <select
+                                    value={editMenuItemForm.style}
+                                    onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, style: e.target.value }))}
+                                    className="select bg-background-500 text-text-400 border-gray-300 w-full"
+                                >
+                                    <option value="NONE">Standart</option>
+                                    <option value="FEATURED">Öne Çıkan</option>
+                                    <option value="NEW">Yeni</option>
+                                    <option value="POPULAR">Popüler</option>
+                                    <option value="SPECIAL">Özel</option>
+                                </select>
+                            </div>
+
+                            {/* Availability Toggle */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Stok Durumu
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-0.5">Ürün müşterilere gösterilsin mi?</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={editMenuItemForm.available}
+                                        onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, available: e.target.checked }))}
+                                        className="toggle border-gray-400 bg-gray-300 checked:bg-green-500 checked:border-green-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Ürün Görseli
+                                </label>
+                                {editImagePreview ? (
+                                    <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                        <Image
+                                            src={editImagePreview}
+                                            alt="Preview"
+                                            fill
+                                            className="object-contain p-2"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={removeEditImage}
+                                            className="absolute top-2 right-2 btn btn-circle btn-sm bg-red-500 hover:bg-red-600 border-none text-white"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg className="w-8 h-8 mb-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                            <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP (max. 5MB)</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/png,image/jpeg,image/webp"
+                                            onChange={handleEditImageChange}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Cancellation Settings */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Sipariş İptali
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-0.5">Müşterilerin siparişi iptal etmesine izin ver</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={editMenuItemForm.cancellable}
+                                        onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, cancellable: e.target.checked }))}
+                                        className="toggle border-gray-400 bg-gray-300 checked:bg-secondary-500 checked:border-secondary-500"
+                                    />
+                                </div>
+                                
+                                {editMenuItemForm.cancellable && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            İptal Süresi (dakika)
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="60"
+                                                value={editMenuItemForm.cancellationDuration}
+                                                onChange={(e) => setEditMenuItemForm(prev => ({ ...prev, cancellationDuration: e.target.value }))}
+                                                className="input input-bordered input-sm text-text-500 w-24 bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            />
+                                            <span className="text-sm text-gray-500">dakika içinde iptal edilebilir</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Error Message */}
                             {editMenuItemError && (
-                                <p className="text-sm text-red-600 mt-2">{editMenuItemError}</p>
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <p className="text-sm text-red-600">{editMenuItemError}</p>
+                                </div>
                             )}
                         </div>
 
                         {/* Modal Action Buttons */}
-                        <div className="modal-action mt-8">
-                            <div className="flex justify-end items-center w-full">
-                                <div className="flex items-end justify-end gap-3">
-                                    {/* Cancel Button */}
-                                    <button
-                                        type="button"
-                                        onClick={closeEditMenuItemModal}
-                                        disabled={isSubmitting}
-                                        className="btn bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
-                                    >
-                                        İptal
-                                    </button>
-                                    {/* Update Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
-                                    </button>
-                                </div>
+                        <div className="modal-action mt-6 pt-4 border-t border-gray-200">
+                            <div className="flex gap-3 w-full">
+                                {/* Cancel Button */}
+                                <button
+                                    type="button"
+                                    onClick={closeEditMenuItemModal}
+                                    disabled={isSubmitting}
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                {/* Update Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? (
+                                        <span className="flex items-center gap-2">
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Güncelleniyor...
+                                        </span>
+                                    ) : 'Güncelle'}
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -1027,12 +1474,12 @@ export default function Menu() {
 
             {/* Edit Category Modal */}
             <dialog id="Edit_Category" className="modal">
-                <div className="modal-box bg-white rounded-xl shadow-xl p-6">
+                <div className="modal-box bg-white rounded-xl shadow-xl p-6 max-w-md">
                     <form onSubmit={handleEditCategory}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Kategori Düzenle</h3>
 
-                        {/* Input Field */}
+                        {/* Category Name Input Field */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Kategori Adı
@@ -1044,10 +1491,55 @@ export default function Menu() {
                                 onChange={(e) => setEditCategoryName(e.target.value)}
                                 className="input input-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
                             />
-                            {editCategoryError && (
-                                <p className="text-sm text-red-600 mt-2">{editCategoryError}</p>
+                        </div>
+
+                        {/* Category Image Upload */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Görseli (Opsiyonel)
+                            </label>
+                            {editCategoryImagePreview ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                    <Image
+                                        src={editCategoryImagePreview}
+                                        alt="Kategori önizleme"
+                                        fill
+                                        className="object-contain p-2"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeEditCategoryImage}
+                                        className="absolute top-2 right-2 btn btn-sm btn-circle bg-red-500 hover:bg-red-600 border-none text-white"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" className="text-gray-400 mb-2">
+                                                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+                                            </svg>
+                                            <p className="text-sm text-gray-500">Görsel yüklemek için tıklayın</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleEditCategoryImageChange}
+                                        />
+                                    </label>
+                                </div>
                             )}
                         </div>
+
+                        {/* Error Message */}
+                        {editCategoryError && (
+                            <p className="text-sm text-red-600 mb-4">{editCategoryError}</p>
+                        )}
 
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
@@ -1098,7 +1590,7 @@ export default function Menu() {
             {/* Main Content Grid */}
             <div className={`grid grid-cols-1 ${showPreview ? 'lg:grid-cols-[40%_60%]' : ''} gap-6 mr-6 -mt-6`}>
                 {/* Left Side - Phone Mockup with Toggle */}
-                <div className="flex flex-col items-center gap-1 sticky top-4">
+                <div className="flex flex-col items-center gap-1 lg:sticky lg:top-4 z-10">
                     {/* Phone Mockup Preview Toggle - Always Visible */}
                     <div className="hidden md:flex md:items-center md:gap-3 md:mb-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -1120,16 +1612,16 @@ export default function Menu() {
 
                     {/* Phone Mockup - Conditionally Rendered */}
                     {showPreview && (
-                        <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-visible">
-                            <div className="mockup-phone-display overflow-y-auto ">
-                                   <MenuView apiData={menuPreviewData} />
+                        <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-hidden">
+                            <div className="mockup-phone-display h-full overflow-hidden">
+                                   <MenuPreview apiData={menuPreviewData} />
                             </div>
                         </div>
                     )}
                 </div>
 
                 {/* Right Side - Menu Management */}
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4.5">
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4.5 relative z-20">
 
 
                     {/* Section Header */}
@@ -1247,12 +1739,21 @@ export default function Menu() {
                                             </td>
                                             <td className="text-[0.9375rem] text-gray-900 font-medium">₺{item.price.toFixed(2)}</td>
                                             <td>
-                                                <input
-                                                    type="checkbox"
-                                                    className="toggle toggle-sm border-gray-400  text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
-                                                    checked={item.available}
-                                                    onChange={() => handleAvailabilityToggle(item.id, item.available)}
-                                                />
+                                                {loadingAvailability.has(item.id) ? (
+                                                    <span
+                                                        className="loading loading-spinner loading-sm text-secondary-500"
+                                                        role="status"
+                                                        aria-live="polite"
+                                                        aria-label="Updating availability status"
+                                                    ></span>
+                                                ) : (
+                                                    <input
+                                                        type="checkbox"
+                                                        className="toggle toggle-sm border-gray-400 text-gray-500 checked:border-secondary-500 checked:bg-secondary-400 checked:text-secondary-800"
+                                                        checked={item.available}
+                                                        onChange={() => handleAvailabilityToggle(item.id, item.available)}
+                                                    />
+                                                )}
                                             </td>
                                             <td>
                                                 <div className="flex gap-1.5">

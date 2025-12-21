@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Backend API base URL from environment variables
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
-
-// Type definition for signup request body
-interface SignUpRequestBody {
-  username: string;
-  email: string;
-  password: string;
-  restaurantName: string;
-  restaurantLocation: string;
-}
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
 // Type definition for backend response
 interface SignUpResponse {
@@ -18,24 +9,39 @@ interface SignUpResponse {
   username: string;
   role: string;
   hasRestaurant: boolean;
+  profilePhotoUrl?: string | null;
+  restaurantLogoUrl?: string | null;
   message: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the incoming request body
-    const body: SignUpRequestBody = await request.json();
+    // Parse the incoming FormData
+    const formData = await request.formData();
+
+    // Extract required fields
+    const username = formData.get('username')?.toString();
+    const email = formData.get('email')?.toString();
+    const password = formData.get('password')?.toString();
+    const restaurantName = formData.get('restaurantName')?.toString();
+    const restaurantLocation = formData.get('restaurantLocation')?.toString();
+    const latitude = formData.get('latitude')?.toString();
+    const longitude = formData.get('longitude')?.toString();
 
     // Validate required fields
-    const requiredFields: (keyof SignUpRequestBody)[] = [
-      'username',
-      'email',
-      'password',
-      'restaurantName',
-      'restaurantLocation'
-    ];
+    const requiredFields = {
+      username,
+      email,
+      password,
+      restaurantName,
+      restaurantLocation,
+      latitude,
+      longitude,
+    };
 
-    const missingFields = requiredFields.filter(field => !body[field]);
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value || value.trim() === '')
+      .map(([key]) => key);
 
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -47,19 +53,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate latitude and longitude
+    const lat = parseFloat(latitude!);
+    const lng = parseFloat(longitude!);
+
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      return NextResponse.json(
+        {
+          message: 'Invalid latitude value. Must be between -90 and 90.',
+          error: 'VALIDATION_ERROR'
+        },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      return NextResponse.json(
+        {
+          message: 'Invalid longitude value. Must be between -180 and 180.',
+          error: 'VALIDATION_ERROR'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Create FormData for backend request
+    const backendFormData = new FormData();
+    backendFormData.append('username', username!);
+    backendFormData.append('email', email!);
+    backendFormData.append('password', password!);
+    backendFormData.append('restaurantName', restaurantName!);
+    backendFormData.append('restaurantLocation', restaurantLocation!);
+    backendFormData.append('latitude', latitude!);
+    backendFormData.append('longitude', longitude!);
+
+    // Optional: Add profile photo if provided
+    const profilePhoto = formData.get('profilePhoto');
+    if (profilePhoto && profilePhoto instanceof File && profilePhoto.size > 0) {
+      backendFormData.append('profilePhoto', profilePhoto);
+    }
+
+    // Optional: Add restaurant logo if provided
+    const restaurantLogo = formData.get('restaurantLogo');
+    if (restaurantLogo && restaurantLogo instanceof File && restaurantLogo.size > 0) {
+      backendFormData.append('restaurantLogo', restaurantLogo);
+    }
+
     // Forward the request to the backend
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/auth/signup`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
-      },
-      body: JSON.stringify({
-        username: body.username,
-        email: body.email,
-        password: body.password,
-        restaurantName: body.restaurantName,
-        restaurantLocation: body.restaurantLocation,
-      }),
+      body: backendFormData,
       credentials: 'include', // Important for handling cookies
     });
 

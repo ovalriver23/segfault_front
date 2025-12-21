@@ -3,20 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // Backend API base URL from environment variables
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
-// Type definition for create category request body
-interface CreateCategoryRequestBody {
-  name: string;
-}
-
-// Type definition for update category request body
-interface UpdateCategoryRequestBody {
-  name: string;
-}
-
 // Type definition for backend response
 interface CreateCategoryResponse {
   id: number;
   name: string;
+  imageUrl: string | null;
   menuItems: any[];
   restaurantId: string;
 }
@@ -25,6 +16,7 @@ interface CreateCategoryResponse {
 interface Category {
   id: number;
   name: string;
+  imageUrl: string | null;
   menuItems: any[];
   restaurantId: string;
 }
@@ -33,11 +25,13 @@ type ListCategoriesResponse = Category[];
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the incoming request body
-    const body: CreateCategoryRequestBody = await request.json();
+    // Parse the incoming FormData
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const file = formData.get('file') as File | null;
 
     // Validate required fields
-    if (!body.name) {
+    if (!name) {
       return NextResponse.json(
         {
           message: 'Missing required field: name',
@@ -60,16 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Prepare FormData for backend
+    const backendFormData = new FormData();
+    backendFormData.append('name', name);
+    if (file) {
+      backendFormData.append('file', file);
+    }
+
     // Forward the request to the backend
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu/categories`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
         'Cookie': `JWT_TOKEN=${jwtToken}`,
       },
-      body: JSON.stringify({
-        name: body.name,
-      }),
+      body: backendFormData,
       credentials: 'include', // Important for handling cookies
     });
 
@@ -225,11 +223,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Parse the incoming request body
-    const body: UpdateCategoryRequestBody = await request.json();
+    // Parse the incoming FormData
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const file = formData.get('file') as File | null;
 
     // Validate required fields
-    if (!body.name) {
+    if (!name) {
       return NextResponse.json(
         {
           message: 'Missing required field: name',
@@ -252,16 +252,20 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Prepare FormData for backend
+    const backendFormData = new FormData();
+    backendFormData.append('name', name);
+    if (file) {
+      backendFormData.append('file', file);
+    }
+
     // Forward the request to the backend
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu/categories/${categoryId}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
         'Cookie': `JWT_TOKEN=${jwtToken}`,
       },
-      body: JSON.stringify({
-        name: body.name,
-      }),
+      body: backendFormData,
       credentials: 'include',
     });
 

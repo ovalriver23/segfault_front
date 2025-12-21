@@ -1,31 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function WaiterLayout({
+function WaiterLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  // Check if current page is login page
-  const isLoginPage = pathname === '/waiter/login';
+  // Check if current page is login page or change password page (only if forced)
+  const isForced = searchParams.get('reason') === 'forced';
+  const shouldHideNavbar = pathname === '/waiter/login' || (pathname === '/waiter/change-password' && isForced);
 
   // Aktif ikon rengini belirlemek için yardımcı fonksiyon
   // Eğer path tam eşleşiyorsa koyu renk (#683817), değilse soluk renk (#b09886)
   const isActive = (path: string) => pathname === path ? "text-[#683817]" : "text-[#b09886]";
 
   return (
-    <div className={`min-h-screen bg-white font-sans ${!isLoginPage ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-white font-sans ${!shouldHideNavbar ? 'pb-20' : ''}`}>
       {/* Ana İçerik */}
       <main className="max-w-md mx-auto min-h-screen bg-white">
         {children}
       </main>
 
-      {/* Bottom Navigation Bar - Hidden on login page */}
-      {!isLoginPage && (
+      {/* Bottom Navigation Bar - Hidden on login and change password pages */}
+      {!shouldHideNavbar && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-4 pt-3 px-6 z-50">
           <div className="max-w-md mx-auto flex justify-between items-center">
             
@@ -47,7 +50,7 @@ export default function WaiterLayout({
                 {pathname === '/waiter/tables' && <rect x="3" y="10" width="18" height="2" fill="#683817" className="mt-1" />} 
               </svg>
               {pathname === '/waiter/tables' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500 rounded-full mt-1"></div>
               )}
             </Link>
 
@@ -70,7 +73,7 @@ export default function WaiterLayout({
                 <path d="M12 3v3" strokeWidth="2"/>
               </svg>
                {pathname === '/waiter/notifications' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500rounded-full mt-1"></div>
               )}
             </Link>
 
@@ -91,7 +94,7 @@ export default function WaiterLayout({
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
               {pathname === '/waiter/profile' && (
-                 <div className="w-12 h-1 bg-[#683817] rounded-full mt-1"></div>
+                 <div className="w-12 h-1 bg-text-500 rounded-full mt-1"></div>
               )}
             </Link>
 
@@ -99,5 +102,17 @@ export default function WaiterLayout({
         </div>
       )}
     </div>
+  );
+}
+
+export default function WaiterLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white"></div>}>
+      <WaiterLayoutContent>{children}</WaiterLayoutContent>
+    </Suspense>
   );
 }

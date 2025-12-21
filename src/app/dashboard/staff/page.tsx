@@ -1,443 +1,348 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 
-/**
- * Staff interface - Represents a staff member
- */
+// --- TİPLER ---
 interface Staff {
   id: number;
   username: string;
   email: string;
-  phone?: string;
-  role: string;
-  gender?: string;
-  createdAt: string;
-  avatar?: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  gender: string;
 }
 
-/**
- * Zod validation schema for staff form
- */
-const staffSchema = z.object({
-  username: z.string()
-    .min(3, 'Kullanıcı adı en az 3 karakter olmalıdır')
-    .max(50, 'Kullanıcı adı en fazla 50 karakter olabilir'),
-  email: z
-    .email('Geçerli bir e-posta adresi giriniz')
-    .min(1, 'E-posta adresi gereklidir'),
-  phone: z.string()
-    .transform(val => val.replace(/\s/g, ''))
-    .pipe(z.string().regex(/^\d{10,}$/, 'Geçerli bir telefon numarası giriniz (en az 10 rakam)')),
-  password: z.string().superRefine((val, ctx) => {
-    // Check minimum length first (highest priority)
-    if (val.length < 8) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Şifre en az 8 karakter olmalıdır',
-      });
-      return; // Stop validation here, don't check regex
-    }
-    
-    // Only check regex if length requirement is met
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/.test(val)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Büyük harf, küçük harf, rakam ve özel karakter',
-      });
-    }
-  }),
-  confirmPassword: z.string()
-    .min(8, 'Lütfen şifrenizi onaylayın'),
-  role: z.string()
-    .min(1, 'Lütfen bir rol seçiniz'),
-  gender: z.string()
-    .min(1, 'Lütfen cinsiyet seçiniz'),
-  avatar: z.any().optional()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Şifreler eşleşmiyor',
-  path: ['confirmPassword'],
+// --- ZOD ŞEMALARI ---
+const addStaffSchema = z.object({
+  firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
+  lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
+  username: z.string().min(3, 'Kullanıcı adı en az 3 karakter').max(20),
+  email: z.string().email('Geçerli email giriniz'),
+  phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
+  password: z.string().min(8, 'Şifre en az 8 karakter'),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
 });
 
-type StaffFormData = z.infer<typeof staffSchema>;
+const editStaffSchema = z.object({
+  firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
+  lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
+  email: z.string().email('Geçerli email giriniz'),
+  phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
+});
 
-/**
- * StaffPage Component
- * Manages staff members with CRUD operations, authentication, and search functionality
- */
 export default function StaffPage() {
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  // --- STATE ---
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Password verification modal states
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [passwordAction, setPasswordAction] = useState<'edit' | 'delete' | null>(null);
-  const [pendingStaff, setPendingStaff] = useState<Staff | null>(null);
-  const [verificationPassword, setVerificationPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  // Modal States
+  const [modalType, setModalType] = useState<'ADD' | 'EDIT' | 'INFO' | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
 
-  // Form data state
+  // Form State
   const [formData, setFormData] = useState({
     username: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     password: '',
     confirmPassword: '',
-    role: '',
-    gender: '',
-    avatar: null as File | null,
+    gender: 'MALE', 
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // Calculate statistics
-  const totalStaff = staffList.length;
-  const currentWorkingStaff = staffList.filter(staff => staff.role !== 'Inactive').length;
+  // --- EFFECT ---
+  useEffect(() => {
+    fetchStaff();
+  }, []);
 
-  // Filter staff based on search query
-  const filteredStaff = staffList.filter(staff =>
-    staff.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    staff.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    staff.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  /**
-   * Handles form input changes and clears related errors
-   */
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  /**
-   * Handles file upload for avatar
-   */
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, avatar: e.target.files![0] }));
-      if (errors.avatar) {
-        setErrors(prev => ({ ...prev, avatar: '' }));
-      }
-    }
-  };
-
-  /**
-   * Validates form data using Zod schema
-   * @returns boolean - true if form is valid
-   */
-  const validateForm = () => {
+  // --- API FONKSİYONLARI ---
+  const fetchStaff = async () => {
     try {
-      staffSchema.parse(formData);
-      setErrors({});
-      return true;
+      setIsLoading(true);
+      const response = await fetch('/api/dashboard/staff/get', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Veri alınamadı');
+      const data = await response.json();
+      setStaffList(data);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          if (err.path[0]) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-        setErrors(newErrors);
-      }
-      return false;
-    }
-  };
-
-  /**
-   * Handles form submission for both adding and editing staff
-   * @param e - Form event
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (isEditMode && editingStaffId) {
-        // Edit mode - update existing staff
-        const updatedStaff: Staff = {
-          id: editingStaffId,
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          gender: formData.gender,
-          role: formData.role,
-          createdAt: staffList.find(s => s.id === editingStaffId)?.createdAt || new Date().toISOString().split('T')[0],
-        };
-
-        setStaffList(prev => prev.map(staff => 
-          staff.id === editingStaffId ? updatedStaff : staff
-        ));
-      } else {
-        // Add mode - create new staff
-        const newStaff: Staff = {
-          id: staffList.length + 1,
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          gender: formData.gender,
-          role: formData.role,
-          createdAt: new Date().toISOString().split('T')[0],
-        };
-
-        setStaffList(prev => [...prev, newStaff]);
-      }
-
-      // Reset form and close modal
-      setFormData({ username: '', email: '', phone: '', password: '', confirmPassword: '', role: '', gender: '', avatar: null });
-      setIsModalOpen(false);
-      setIsEditMode(false);
-      setEditingStaffId(null);
-      setErrors({});
-    } catch (error) {
-      console.error('Personel eklenirken hata:', error);
-      setErrors({ submit: 'Personel eklenirken bir hata oluştu' });
+      console.error('Fetch error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Opens password verification modal for editing staff
-   * @param staff - Staff member to edit
-   */
-  const handleEditStaff = (staff: Staff) => {
-    setPendingStaff(staff);
-    setPasswordAction('edit');
-    setIsPasswordModalOpen(true);
+  const handleDeleteStaff = async (staffId: number) => {
+    if(!confirm('Bu personeli silmek istediğinize emin misiniz?')) return;
+    try {
+      const response = await fetch(`/api/dashboard/staff/delete?id=${staffId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Silinemedi');
+      // Listeden çıkar
+      setStaffList(prev => prev.filter(s => s.id !== staffId));
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  /**
-   * Opens password verification modal for deleting staff
-   * @param staff - Staff member to delete
-   */
-  const handleDeleteStaff = (staff: Staff) => {
-    setPendingStaff(staff);
-    setPasswordAction('delete');
-    setIsPasswordModalOpen(true);
+  // --- HANDLERS ---
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  /**
-   * Verifies admin password before allowing edit or delete operations
-   * Provides security layer to prevent accidental modifications
-   */
-  const handlePasswordVerification = async () => {
-    if (!verificationPassword) {
-      setPasswordError('Lütfen şifrenizi girin');
-      return;
-    }
+  const openModal = (type: 'ADD' | 'EDIT' | 'INFO', staff?: Staff) => {
+    setModalType(type);
+    setApiError(null);
+    setErrors({});
 
-    // TODO: Replace with actual API password verification
-    // Currently accepts any password for demo purposes
-    const isPasswordCorrect = true; // await verifyPassword(verificationPassword);
-
-    if (!isPasswordCorrect) {
-      setPasswordError('Şifre yanlış. Lütfen tekrar deneyin.');
-      return;
-    }
-
-    // Password verified - proceed with action
-    if (passwordAction === 'edit' && pendingStaff) {
-      // Open edit modal with staff data pre-filled
-      setIsEditMode(true);
-      setEditingStaffId(pendingStaff.id);
+    if (type === 'ADD') {
       setFormData({
-        username: pendingStaff.username,
-        email: pendingStaff.email,
-        phone: pendingStaff.phone || '',
-        password: '',
-        confirmPassword: '',
-        role: pendingStaff.role,
-        gender: pendingStaff.gender || '',
-        avatar: null,
+        username: '', firstName: '', lastName: '', email: '', phoneNumber: '', password: '', confirmPassword: '', gender: 'MALE'
       });
-      setIsModalOpen(true);
-    } else if (passwordAction === 'delete' && pendingStaff) {
-      // Delete staff member
-      try {
-        // TODO: Replace with actual API call
-        setStaffList(prev => prev.filter(staff => staff.id !== pendingStaff.id));
-      } catch (error) {
-        console.error('Personel silinirken hata:', error);
+    } else if (staff) {
+      setSelectedStaffId(staff.id);
+      setFormData({
+        username: staff.username,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email || '',
+        phoneNumber: staff.phoneNumber || '',
+        gender: staff.gender || 'MALE',
+        password: '', // Edit/Info modunda şifre boş gelir
+        confirmPassword: ''
+      });
+    }
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    setSelectedStaffId(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiError(null);
+    setErrors({});
+
+    // 1. Validasyon
+    try {
+      if (modalType === 'ADD') {
+        addStaffSchema.parse(formData);
+        if (formData.password !== formData.confirmPassword) {
+          setErrors({ confirmPassword: 'Şifreler eşleşmiyor' });
+          return;
+        }
+      } else if (modalType === 'EDIT') {
+        editStaffSchema.parse(formData);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.issues.forEach(err => { if(err.path[0]) fieldErrors[err.path[0] as string] = err.message; });
+        setErrors(fieldErrors);
+        return;
       }
     }
 
-    // Close modal and reset states
-    setIsPasswordModalOpen(false);
-    setVerificationPassword('');
-    setPasswordError('');
-    setPasswordAction(null);
-    setPendingStaff(null);
+    // 2. API İsteği
+    setIsSubmitting(true);
+    try {
+      let response;
+      if (modalType === 'ADD') {
+        response = await fetch('/api/dashboard/staff/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            phoneNumber: formData.phoneNumber.replace(/\s/g, '')
+          }),
+        });
+      } else if (modalType === 'EDIT' && selectedStaffId) {
+        response = await fetch(`/api/dashboard/staff/edit?id=${selectedStaffId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber.replace(/\s/g, ''),
+            gender: formData.gender
+          }),
+        });
+      }
+
+      if (response && !response.ok) {
+        const resData = await response.json();
+        throw new Error(resData.message || 'İşlem başarısız');
+      }
+
+      await fetchStaff();
+      closeModal();
+    } catch (error: any) {
+      setApiError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  /**
-   * Opens info modal to display staff details
-   * @param staff - Staff member to view
-   */
-  const handleInfoClick = (staff: Staff) => {
-    setSelectedStaff(staff);
-    setIsInfoModalOpen(true);
-  };
+  // --- RENDER HELPERS ---
+  const filteredStaff = staffList.filter(staff =>
+    staff.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    staff.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    staff.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalStaff = staffList.length;
+  const maleStaff = staffList.filter(s => s.gender === 'MALE').length;
 
   return (
-    <div>
-      {/* Header Section - Improved responsive layout */}
+    <div className="p-4 md:p-8">
+      {/* --- HEADER --- */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
+        <h1 
+          className="text-3xl font-bold text-gray-800" 
+          style={{ fontFamily: 'Pontano Sans, sans-serif' }}
+        >
           Personel Yönetim Merkezi
         </h1>
         <button
-          onClick={() => {
-            setIsEditMode(false);
-            setEditingStaffId(null);
-            setIsModalOpen(true);
-          }}
-          className="btn btn-primary bg-orange-500 hover:bg-orange-600 border-none text-white gap-2 w-full sm:w-auto"
+          onClick={() => openModal('ADD')}
+          className="btn btn-primary bg-[#E11383] hover:bg-[#c00f6f] border-none text-white gap-2 w-full sm:w-auto rounded-md shadow-lg"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
           Yeni Personel Ekle
         </button>
       </div>
 
-      {/* Statistics Cards - Responsive grid */}
+      {/* --- ISTATISTIK KARTLARI --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <div className="stat bg-white border border-gray-200 rounded-lg shadow p-6">
-          <div className="stat-title text-gray-500">Çalışan Personel</div>
-          <div className="stat-value text-gray-800 text-3xl">{currentWorkingStaff}</div>
-          <div className="stat-desc text-gray-400">Aktif çalışanlar</div>
-        </div>
-
-        <div className="stat bg-white border border-gray-200 rounded-lg shadow p-6">
+        <div className="stat bg-white border border-gray-200 rounded-lg shadow-sm p-6">
           <div className="stat-title text-gray-500">Toplam Personel</div>
           <div className="stat-value text-gray-800 text-3xl">{totalStaff}</div>
-          <div className="stat-desc text-gray-400">Tüm ekip üyeleri</div>
+        </div>
+        <div className="stat bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+          <div className="stat-title text-gray-500">Erkek / Kadın</div>
+          <div className="stat-value text-gray-800 text-3xl">{maleStaff} / {totalStaff - maleStaff}</div>
         </div>
       </div>
 
-      {/* All Staff Section */}
-      <div className="card bg-white shadow-sm border border-gray-200">
+      {/* --- LISTE VE ARAMA --- */}
+      <div className="card bg-white shadow-sm border border-gray-200 rounded-lg">
         <div className="card-body p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tüm Personeller</h2>
-            {/* Search Input - Full width on mobile */}
+            <h2 className="text-xl font-bold text-gray-800">Personel Listesi</h2>
+            
+            {/* ARAMA ÇUBUĞU GÜNCELLENDİ */}
             <div className="relative w-full sm:w-64">
+              
               <input
                 type="text"
-                placeholder="Personel ara..."
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 bg-white text-gray-800"
+                placeholder="Ara..."
+                // DEĞİŞİKLİKLER:
+                // 1. text-black: Yazı rengi siyah yapıldı.
+                // 2. border border-black: İnce siyah çerçeve eklendi.
+                // 3. bg-white: Arka plan beyaz yapıldı.
+                className="input w-full pl-10 bg-white rounded-md text-black border border-black focus:border-[#E11383] focus:outline-none placeholder:text-gray-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+
+              {/* DÜZELTME: İkon input'un altına taşındı (Z-index mantığıyla üstte görünmesi için) */}
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
           </div>
 
-          {/* Staff Table - Hide on mobile, show cards instead */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="table w-full table-fixed">
+            <table className="table w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-gray-600 font-semibold text-sm uppercase w-[40%]">Personel Adı</th>
-                  <th className="text-gray-600 font-semibold text-sm uppercase w-[20%]">Rol</th>
-                  <th className="text-gray-600 font-semibold text-sm uppercase w-[20%]">Eklenme Tarihi</th>
-                  <th className="text-gray-600 font-semibold text-sm uppercase w-[20%]">İşlemler</th>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="py-4 pl-6 text-gray-600 font-semibold">Personel</th>
+                  <th className="py-4 text-gray-600 font-semibold">İletişim</th>
+                  {/* DEĞİŞİKLİK: Rol -> Cinsiyet */}
+                  <th className="py-4 text-gray-600 font-semibold">Cinsiyet</th>
+                  <th className="py-4 pr-6 text-center text-gray-600 font-semibold">İşlemler</th>
                 </tr>
               </thead>
               <tbody>
-                {/* Empty state */}
-                {filteredStaff.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <p className="text-lg font-medium text-gray-600 mb-2">Henüz personel yok</p>
-                        <p className="text-sm text-gray-400">İlk ekip üyenizi eklemek için &quot;Yeni Personel Ekle&quot; butonuna tıklayın</p>
-                      </div>
-                    </td>
-                  </tr>
+                {isLoading ? (
+                   <tr><td colSpan={4} className="text-center py-8"><span className="loading loading-spinner text-[#E11383]"></span></td></tr>
+                ) : filteredStaff.length === 0 ? (
+                  <tr><td colSpan={4} className="text-center py-8 text-gray-400">Kayıt yok.</td></tr>
                 ) : (
-                  /* Staff rows */
                   filteredStaff.map((staff) => (
-                    <tr key={staff.id} className="hover:bg-gray-50 border-b border-gray-100">
-                      <td>
+                    <tr key={staff.id} className="hover:bg-gray-50 border-b border-gray-50 last:border-none">
+                      {/* Personel */}
+                      <td className="pl-6 py-4">
                         <div className="flex items-center gap-3">
-                          {/* Avatar with fallback to SVG icon */}
                           <div className="avatar placeholder">
-                            <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center">
-                              {staff.avatar ? (
-                                <Image src={staff.avatar} alt={staff.username} width={48} height={48} className="rounded-full w-12 h-12 object-cover" />
-                              ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                </svg>
-                              )}
+                            <div className="bg-primary-50 text-text-500 rounded-full w-10 h-10 flex items-center justify-center font-bold">
+                              {staff.firstName[0]}{staff.lastName[0]}
                             </div>
                           </div>
-                          <span className="font-semibold text-gray-800">{staff.username}</span>
+                          <div>
+                            <div className="font-bold text-gray-800">{staff.firstName} {staff.lastName}</div>
+                            <div className="text-xs text-gray-500">@{staff.username}</div>
+                          </div>
                         </div>
                       </td>
-                      <td className="text-gray-600">{staff.role}</td>
-                      <td className="text-gray-600">{staff.createdAt}</td>
-                      <td>
-                        {/* Action buttons */}
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleInfoClick(staff)}
-                            className="btn btn-ghost btn-sm text-gray-800 hover:bg-orange-100 hover:text-gray-800 border-0"
-                            title="Detaylı Bilgi"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                          <button 
-                            onClick={() => handleEditStaff(staff)}
-                            className="btn btn-ghost btn-sm text-gray-800 hover:bg-orange-100 hover:text-gray-800 border-0"
-                            title="Düzenle"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStaff(staff)}
-                            className="btn btn-ghost btn-sm text-gray-800 hover:bg-orange-100 hover:text-gray-800 border-0"
-                            title="Sil"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </button>
+                      {/* İletişim */}
+                      <td className="py-4 text-sm">
+                        <div className="text-gray-700 font-medium">{staff.phoneNumber}</div>
+                        <div className="text-gray-500 text-xs">{staff.email}</div>
+                      </td>
+                      {/* DEĞİŞİKLİK: Cinsiyet renkleri standart kahverengi tonuna çekildi */}
+                      <td className="py-4">
+                        <span className="badge border-none px-3 py-2 font-medium bg-primary-50 text-text-500">
+                            {staff.gender === 'MALE' ? 'Erkek' : staff.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
+                        </span>
+                      </td>
+                      {/* İşlemler - İkon Seti */}
+                      <td className="pr-6 py-4">
+                        <div className="flex justify-center items-center gap-6">
+                            
+                            {/* INFO - Gri Halka içinde i */}
+                            <button 
+                                onClick={() => openModal('INFO', staff)} 
+                                className="text-gray-500 hover:text-gray-700 transition-colors"
+                                title="Detaylar"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
+
+                            {/* EDIT - Gri Kalem */}
+                            <button 
+                                onClick={() => openModal('EDIT', staff)} 
+                                className="text-gray-500 hover:text-gray-700 transition-colors"
+                                title="Düzenle"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+
+                            {/* DELETE - Kırmızı Çöp Kutusu */}
+                            <button 
+                                onClick={() => handleDeleteStaff(staff.id)} 
+                                className="text-red-500 hover:text-red-700 transition-colors"
+                                title="Sil"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
                         </div>
                       </td>
                     </tr>
@@ -446,612 +351,240 @@ export default function StaffPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Mobile Card View - Show only on mobile */}
-          <div className="md:hidden space-y-4">
-            {filteredStaff.length === 0 ? (
-              <div className="text-center py-12">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 mb-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <p className="text-lg font-medium text-gray-600 mb-2">Henüz personel yok</p>
-                <p className="text-sm text-gray-400 px-4">İlk ekip üyenizi eklemek için &quot;Yeni Personel Ekle&quot; butonuna tıklayın</p>
-              </div>
-            ) : (
-              filteredStaff.map((staff) => (
-                <div key={staff.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  {/* Staff Header */}
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="avatar placeholder">
-                      <div className="bg-gray-200 text-gray-600 rounded-full w-12 h-12 flex items-center justify-center shrink-0">
-                        {staff.avatar ? (
-                          <Image src={staff.avatar} alt={staff.username} width={48} height={48} className="rounded-full w-12 h-12 object-cover" />
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-800 text-lg truncate">{staff.username}</h3>
-                      <p className="text-sm text-gray-500">{staff.role}</p>
-                    </div>
-                  </div>
-
-                  {/* Staff Info */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Eklenme Tarihi:</span>
-                      <span className="text-gray-800 font-medium">{staff.createdAt}</span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-100">
-                    <button 
-                      onClick={() => handleInfoClick(staff)}
-                      className="flex-1 btn btn-sm bg-gray-100 hover:bg-orange-100 text-gray-800 border-0"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      Bilgi
-                    </button>
-                    <button 
-                      onClick={() => handleEditStaff(staff)}
-                      className="flex-1 btn btn-sm bg-gray-100 hover:bg-orange-100 text-gray-800 border-0"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                      Düzenle
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStaff(staff)}
-                      className="btn btn-sm bg-gray-100 hover:bg-red-100 text-gray-800 hover:text-red-600 border-0"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Info Modal - Staff Details */}
-      {isInfoModalOpen && selectedStaff && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-2xl bg-white">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-bold text-2xl text-gray-800">Personel Detayları</h3>
-              <button
-                onClick={() => setIsInfoModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost text-gray-600 hover:bg-orange-100 hover:text-gray-800"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Staff profile header */}
-              <div className="flex items-center gap-4 pb-6 border-b border-gray-200">
-                <div className="avatar placeholder">
-                  <div className="bg-orange-100 text-orange-600 rounded-full w-20 h-20 flex items-center justify-center">
-                    {selectedStaff.avatar ? (
-                      <Image src={selectedStaff.avatar} alt={selectedStaff.username} width={80} height={80} className="rounded-full w-20 h-20 object-cover" />
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-gray-800">{selectedStaff.username}</h4>
-                  <p className="text-gray-500">{selectedStaff.role}</p>
-                </div>
+      {/* --- TEK MODAL YAPISI (ADD / EDIT / INFO İÇİN ORTAK TASARIM) --- */}
+      {modalType && (
+        <dialog className="modal modal-open">
+          <div className="modal-box bg-white rounded-lg max-w-3xl w-[95%] p-0 max-h-[95vh] overflow-y-auto">
+            
+            {/* Header - Pembe çizgi */}
+            <div className="p-6 border-b-2 border-[#E11383]">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold text-xl text-gray-800">
+                    {modalType === 'ADD' ? 'Yeni Personel Ekle' : 
+                     modalType === 'EDIT' ? 'Personel Düzenle' : 'Personel Detayı'}
+                </h3>
+                <button onClick={closeModal} className="btn btn-sm btn-circle btn-ghost text-gray-500 hover:bg-gray-100 hover:text-gray-700">✕</button>
               </div>
-
-              {/* Staff details grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">Personel ID</label>
-                  <p className="text-gray-800 font-medium mt-1">#{selectedStaff.id}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">E-posta Adresi</label>
-                  <p className="text-gray-800 font-medium mt-1">{selectedStaff.email}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">Telefon</label>
-                  <p className="text-gray-800 font-medium mt-1">{selectedStaff.phone || 'Belirtilmemiş'}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">Cinsiyet</label>
-                  <p className="text-gray-800 font-medium mt-1">{selectedStaff.gender || 'Belirtilmemiş'}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">Rol</label>
-                  <p className="text-gray-800 font-medium mt-1">{selectedStaff.role}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-500 uppercase">Eklenme Tarihi</label>
-                  <p className="text-gray-800 font-medium mt-1">{selectedStaff.createdAt}</p>
-                </div>
-              </div>
-
-              {/* Additional information section */}
-              <div className="pt-4 border-t border-gray-200">
-                <h5 className="text-sm font-semibold text-gray-500 uppercase mb-3">Ek Bilgiler</h5>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">
-                    Personel hesabı aktif durumda. Tüm yetkilere ve menü erişimine sahiptir.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-action">
-              <button
-                onClick={() => setIsInfoModalOpen(false)}
-                className="btn btn-ghost"
-              >
-                Kapat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Password Verification Modal */}
-      {isPasswordModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-md bg-white">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-bold text-xl text-gray-800">
-                {passwordAction === 'delete' ? 'Silme İşlemini Onayla' : 'Düzenleme İşlemini Onayla'}
-              </h3>
-              <button
-                onClick={() => {
-                  setIsPasswordModalOpen(false);
-                  setVerificationPassword('');
-                  setPasswordError('');
-                  setPasswordAction(null);
-                  setPendingStaff(null);
-                }}
-                className="btn btn-sm btn-circle btn-ghost text-gray-600 hover:bg-orange-100 hover:text-gray-800"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                {passwordAction === 'delete' 
-                  ? 'Bu personeli silmek için lütfen şifrenizi girin.' 
-                  : 'Personel bilgilerini düzenlemek için lütfen şifrenizi girin.'}
-              </p>
-
-              {/* Display staff info being acted upon */}
-              {pendingStaff && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Personel:</span> {pendingStaff.username}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">E-posta:</span> {pendingStaff.email}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Şifreniz
-                </label>
-                <input
-                  type="password"
-                  value={verificationPassword}
-                  onChange={(e) => {
-                    setVerificationPassword(e.target.value);
-                    setPasswordError('');
-                  }}
-                  placeholder="Şifrenizi girin"
-                  className="input input-bordered w-full bg-gray-50 text-gray-800"
-                  style={{ 
-                    borderColor: passwordError ? '#EF4444' : '#E5E7EB',
-                    color: '#1f2937'
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handlePasswordVerification();
-                    }
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="modal-action">
-              <button
-                onClick={() => {
-                  setIsPasswordModalOpen(false);
-                  setVerificationPassword('');
-                  setPasswordError('');
-                  setPasswordAction(null);
-                  setPendingStaff(null);
-                }}
-                className="btn btn-ghost"
-              >
-                İptal
-              </button>
-              <button
-                onClick={handlePasswordVerification}
-                className="btn text-white"
-                style={{ 
-                  backgroundColor: passwordAction === 'delete' ? '#EF4444' : '#F97316',
-                  borderColor: passwordAction === 'delete' ? '#EF4444' : '#F97316'
-                }}
-              >
-                {passwordAction === 'delete' ? 'Sil' : 'Düzenle'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Staff Modal */}
-      {isModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-3xl" style={{ backgroundColor: '#F5F5F5' }}>
-            {/* Modal Header */}
-            <div className="flex justify-between items-center mb-6 pb-4" style={{ borderBottom: '2px solid #E11383' }}>
-              <h3 className="font-bold text-2xl text-gray-800">
-                {isEditMode ? 'Personel Düzenle' : 'Yeni Personel Ekle'}
-              </h3>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setIsEditMode(false);
-                  setEditingStaffId(null);
-                  setFormData({ username: '', email: '', phone: '', password: '', confirmPassword: '', role: '', gender: '', avatar: null });
-                  setErrors({});
-                }}
-                className="btn btn-sm btn-circle btn-ghost hover:bg-pink-100"
-              >
-                ✕
-              </button>
             </div>
             
-            <form onSubmit={handleSubmit}>
-              {/* Profile Photo Upload Section */}
-              <div className="mb-6">
-                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
-                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Profil Fotoğrafı</h4>
-                  <div className="flex items-center gap-6">
-                    {/* Avatar preview */}
-                    <div className="avatar placeholder">
-                      <div 
-                        className="w-24 h-24 rounded-full flex items-center justify-center" 
-                        style={{ 
-                          backgroundColor: '#FCE7F3', 
-                          color: '#E11383',
-                          boxShadow: '0 0 0 4px #E11383'
-                        }}
-                      >
-                        {formData.avatar ? (
-                          // Checkmark when file is selected
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          // Default user icon
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
+            {apiError && <div className="alert alert-error text-white mx-6 mt-4 text-sm">{apiError}</div>}
+            
+            {/* --- INFO MODU İÇİN ÖZEL TASARIM --- */}
+            {modalType === 'INFO' ? (
+                <div className="p-6 flex flex-col items-center"> {/* Padding p-8 -> p-6 düşürüldü */}
+                    
+                    {/* Profil Resmi - CİDDİ ORANDA BÜYÜTÜLDÜ (w-28 -> w-48) */}
+                    <div className="w-48 h-48 rounded-full bg-pink-50 text-[#E11383] flex items-center justify-center text-6xl font-bold mb-3 border-4 border-white shadow-lg">
+                        {formData.firstName[0]}{formData.lastName[0]}
                     </div>
-                    {/* File upload button */}
-                    <div className="flex-1">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        id="avatar-upload"
-                        className="hidden"
-                      />
-                      <div className="mt-2">
-                        <label 
-                          htmlFor="avatar-upload"
-                          className="inline-block px-4 py-2 rounded-lg cursor-pointer text-sm font-medium hover:opacity-80 transition-opacity"
-                          style={{ 
-                            backgroundColor: '#E11383',
-                            color: '#ffffffff'
-                          }}
+
+                    {/* İsim ve Kullanıcı Adı - Boşluklar azaltıldı */}
+                    <h2 className="text-xl font-bold text-gray-800">{formData.firstName} {formData.lastName}</h2>
+                    <p className="text-gray-500 mb-6 font-medium text-sm">@{formData.username}</p> {/* mb-10 -> mb-6 */}
+
+                    {/* Bilgiler - Sıkıştırıldı (gap-y-8 -> gap-y-4 ve text-lg -> text-base) */}
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 max-w-lg">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">E-posta Adresi</span>
+                            <span className="text-gray-800 font-medium text-base truncate" title={formData.email}>{formData.email}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Telefon Numarası</span>
+                            <span className="text-gray-800 font-medium text-base">{formData.phoneNumber}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Cinsiyet</span>
+                            <span className="text-gray-800 font-medium text-base">
+                                {formData.gender === 'MALE' ? 'Erkek' : formData.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
+                            </span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Rol</span>
+                            <span className="text-gray-800 font-medium text-base">Garson</span>
+                        </div>
+                    </div>
+
+                    {/* Kapat Butonu - Margin azaltıldı (mt-12 -> mt-8) */}
+                    <div className="mt-8 w-full flex justify-center">
+                         <button 
+                            onClick={closeModal} 
+                            className="btn btn-sm h-10 btn-outline border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400 px-12 rounded-md"
                         >
-                          Dosya Seç
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-3">JPG, PNG veya GIF (MAX. 2MB)</p>
-                      {formData.avatar && (
-                        <p className="text-sm font-medium mt-2" >✓ {formData.avatar.name}</p>
-                      )}
+                            Kapat
+                        </button>
                     </div>
-                  </div>
                 </div>
-              </div>
-
-              {/* Kişisel Bilgiler */}
-              <div className="mb-6">
-                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm" >
-                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Kişisel Bilgiler</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* İsim Soyisim */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">İsim Soyisim</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="username"
-                        placeholder="örn. Ahmet Yılmaz"
-                        className="input input-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.username ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.username ? '#ef4444' : '#d1d5db'}
-                        value={formData.username}
-                        onChange={handleInputChange}
-                      />
-                      {errors.username && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.username}</span>
-                        </label>
-                      )}
+            ) : (
+                /* --- ADD ve EDIT MODU İÇİN FORM (Eski Yapı) --- */
+                <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
+                
+                {/* Profil Fotoğrafı Bölümü */}
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <h4 className="font-semibold text-gray-700 mb-4">Profil Fotoğrafı</h4>
+                    <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-full bg-pink-100 flex items-center justify-center border-[3px] border-[#E11383]">
+                        <span className="text-2xl font-bold text-[#E11383]">{formData.firstName[0] || '?'}{formData.lastName[0] || '?'}</span>
                     </div>
-
-                    {/* Cinsiyet */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">Cinsiyet</span>
-                      </label>
-                      <select
-                        name="gender"
-                        className="select select-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.gender ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.gender ? '#ef4444' : '#d1d5db'}
-                        value={formData.gender}
-                        onChange={handleInputChange}
-                      >
-                        <option value="">Cinsiyet seçiniz</option>
-                        <option value="Erkek">Erkek</option>
-                        <option value="Kadın">Kadın</option>
-                        <option value="Diğer">Diğer</option>
-                      </select>
-                      {errors.gender && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.gender}</span>
-                        </label>
-                      )}
+                    <div>
+                        <button type="button" className="btn btn-sm bg-[#E11383] hover:bg-[#d11279] text-white border-none rounded-md px-4">
+                        Dosya Seç
+                        </button>
+                        <p className="text-xs text-[#E11383] mt-1">JPG, PNG veya GIF (MAX. 2MB)</p>
                     </div>
-
-                    {/* Rol */}
-                    <div className="form-control md:col-span-2">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">Rol</span>
-                      </label>
-                      <select
-                        name="role"
-                        className="select select-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.role ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.role ? '#ef4444' : '#d1d5db'}
-                        value={formData.role}
-                        onChange={handleInputChange}
-                      >
-                        <option value="">Rol seçiniz</option>
-                        <option value="Garson">Garson</option>
-                        <option value="Kasiyer">Kasiyer</option>
-                      </select>
-                      {errors.role && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.role}</span>
-                        </label>
-                      )}
                     </div>
-                  </div>
                 </div>
-              </div>
 
-              {/* İletişim Bilgileri */}
-              <div className="mb-6">
-                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
-                  <h4 className="text-lg font-semibold mb-4 text-gray-800">İletişim Bilgileri</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Telefon */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">Telefon Numarası</span>
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
+                {/* Kişisel Bilgiler Bölümü */}
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <h4 className="font-semibold text-gray-700 mb-4">Kişisel Bilgiler</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">İsim</label>
+                        <input 
+                        type="text" 
+                        name="firstName" 
+                        value={formData.firstName} 
+                        onChange={handleInputChange} 
+                        placeholder="örn. Ahmet"
+                        className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                        />
+                        {errors.firstName && <span className="text-error text-xs">{errors.firstName}</span>}
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">Soyisim</label>
+                        <input 
+                        type="text" 
+                        name="lastName" 
+                        value={formData.lastName} 
+                        onChange={handleInputChange} 
+                        placeholder="örn. Yılmaz"
+                        className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                        />
+                        {errors.lastName && <span className="text-error text-xs">{errors.lastName}</span>}
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">Cinsiyet</label>
+                        <select 
+                        name="gender" 
+                        value={formData.gender} 
+                        onChange={handleInputChange}
+                        className="select select-bordered w-full bg-white rounded-md text-gray-900 focus:border-[#E11383] focus:outline-none"
+                        >
+                        <option value="" disabled>Cinsiyet seçiniz</option>
+                        <option value="MALE">Erkek</option>
+                        <option value="FEMALE">Kadın</option>
+                        <option value="OTHER">Diğer</option>
+                        </select>
+                        {errors.gender && <span className="text-error text-xs">{errors.gender}</span>}
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">Kullanıcı Adı</label>
+                        <input 
+                        type="text" 
+                        name="username" 
+                        value={formData.username} 
+                        onChange={handleInputChange}
+                        disabled={modalType === 'EDIT'} 
+                        placeholder="örn. ahmetyilmaz"
+                        className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" 
+                        />
+                        {errors.username && <span className="text-error text-xs">{errors.username}</span>}
+                    </div>
+                    </div>
+                </div>
+
+                {/* İletişim Bilgileri Bölümü */}
+                <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <h4 className="font-semibold text-gray-700 mb-4">İletişim Bilgileri</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">Telefon Numarası</label>
+                        <input 
+                        type="tel" 
+                        name="phoneNumber" 
+                        value={formData.phoneNumber} 
+                        onChange={handleInputChange} 
                         placeholder="0555 123 45 67"
-                        className="input input-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.phone ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.phone ? '#ef4444' : '#d1d5db'}
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                      />
-                      {errors.phone && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.phone}</span>
-                        </label>
-                      )}
+                        className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                        />
+                        {errors.phoneNumber && <span className="text-error text-xs">{errors.phoneNumber}</span>}
                     </div>
-
-                    {/* E-posta */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">E-posta Adresi</span>
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
+                    <div>
+                        <label className="text-sm font-medium text-gray-600 mb-1 block">E-posta Adresi</label>
+                        <input 
+                        type="email" 
+                        name="email" 
+                        value={formData.email} 
+                        onChange={handleInputChange} 
                         placeholder="ornek@email.com"
-                        className="input input-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.email ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.email ? '#ef4444' : '#d1d5db'}
-                        value={formData.email}
-                        onChange={handleInputChange}
-                      />
-                      {errors.email && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.email}</span>
-                        </label>
-                      )}
+                        className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                        />
+                        {errors.email && <span className="text-error text-xs">{errors.email}</span>}
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Güvenlik */}
-              <div className="mb-6">
-                <div className="bg-white rounded-lg p-6 border-secondary-100 border shadow-sm">
-                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Güvenlik</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Şifre */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">Şifre</span>
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        placeholder="••••••••"
-                        className="input input-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.password ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#d1d5db'}
-                        value={formData.password}
-                        onChange={handleInputChange}
-                      />
-                      {errors.password && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.password}</span>
-                        </label>
-                      )}
                     </div>
+                </div>
 
-                    {/* Şifre Tekrar */}
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium text-gray-700">Şifre Tekrar</span>
-                      </label>
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        placeholder="••••••••"
-                        className="input input-bordered w-full bg-gray-50 text-gray-800"
-                        style={{ 
-                          borderColor: errors.confirmPassword ? '#ef4444' : '#d1d5db',
-                          borderWidth: '2px',
-                          color: '#1f2937'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#E11383'}
-                        onBlur={(e) => e.target.style.borderColor = errors.confirmPassword ? '#ef4444' : '#d1d5db'}
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                      />
-                      {errors.confirmPassword && (
-                        <label className="label">
-                          <span className="label-text-alt text-error">{errors.confirmPassword}</span>
-                        </label>
-                      )}
+                {/* Güvenlik Bölümü - Sadece ADD modunda */}
+                {modalType === 'ADD' && (
+                    <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                        <h4 className="font-semibold text-gray-700 mb-4">Güvenlik</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre</label>
+                            <input 
+                            type="password" 
+                            name="password" 
+                            value={formData.password} 
+                            onChange={handleInputChange} 
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                            />
+                            {errors.password && <span className="text-error text-xs">{errors.password}</span>}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre Tekrar</label>
+                            <input 
+                            type="password" 
+                            name="confirmPassword" 
+                            value={formData.confirmPassword} 
+                            onChange={handleInputChange} 
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none" 
+                            />
+                            {errors.confirmPassword && <span className="text-error text-xs">{errors.confirmPassword}</span>}
+                        </div>
+                        </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                )}
 
-              {errors.submit && (
-                <div className="alert alert-error mb-4">
-                  <span>{errors.submit}</span>
+                {/* Butonlar */}
+                <div className="flex justify-end gap-3 pt-2">
+                    <button 
+                    type="button" 
+                    onClick={closeModal} 
+                    className="btn bg-white border-2 border-[#E11383] text-[#E11383] hover:bg-pink-50 hover:border-[#E11383] rounded-md px-6"
+                    >
+                    İptal
+                    </button>
+                    
+                    <button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="btn bg-[#E11383] hover:bg-[#d11279] text-white border-none rounded-md px-6"
+                    >
+                    {isSubmitting ? <span className="loading loading-spinner loading-sm"></span> : (modalType === 'EDIT' ? 'Güncelle' : '✓ Personeli Kaydet')}
+                    </button>
                 </div>
-              )}
-
-              {/* Modal Butonları */}
-              <div className="modal-action justify-end gap-3">
-                <button
-                  type="button"
-                  className="btn bg-white hover:bg-pink-50"
-                  style={{ 
-                    borderColor: '#E11383',
-                    borderWidth: '2px',
-                    color: '#E11383'
-                  }}
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setFormData({ username: '', email: '', phone: '', password: '', confirmPassword: '', role: '', gender: '', avatar: null });
-                    setErrors({});
-                  }}
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  className="btn border-none text-white hover:opacity-90"
-                  style={{ 
-                    backgroundColor: '#E11383'
-                  }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Kaydediliyor...' : '✓ Personeli Kaydet'}
-                </button>
-              </div>
-            </form>
+                </form>
+            )}
           </div>
-        </div>
+          <form method="dialog" className="modal-backdrop bg-black/30">
+            <button onClick={closeModal}>close</button>
+          </form>
+        </dialog>
       )}
     </div>
   );

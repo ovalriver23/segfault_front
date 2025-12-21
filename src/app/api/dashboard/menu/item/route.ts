@@ -11,6 +11,9 @@ interface CreateMenuItemRequestBody {
   imageUrl?: string;
   style?: string;
   categoryId: number;
+  cancellable?: boolean;
+  cancellationDuration?: number;
+  file?: File;
 }
 
 // Type definition for update menu item request body
@@ -21,6 +24,9 @@ interface UpdateMenuItemRequestBody {
   imageUrl?: string;
   style?: string;
   available: boolean;
+  cancellable?: boolean;
+  cancellationDuration?: number;
+  file?: File;
 }
 
 // Type definition for update availability request body
@@ -175,11 +181,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the incoming request body
-    const body: CreateMenuItemRequestBody = await request.json();
+    // Parse the incoming multipart form data
+    const formData = await request.formData();
+    
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const price = formData.get('price') as string;
+    const categoryId = formData.get('categoryId') as string;
+    const style = formData.get('style') as string;
+    const cancellable = formData.get('cancellable') as string;
+    const cancellationDuration = formData.get('cancellationDuration') as string;
+    const file = formData.get('file') as File | null;
 
     // Validate required fields
-    if (!body.name) {
+    if (!name) {
       return NextResponse.json(
         {
           message: 'Missing required field: name',
@@ -189,7 +204,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.price === undefined || body.price === null) {
+    if (!price) {
       return NextResponse.json(
         {
           message: 'Missing required field: price',
@@ -199,7 +214,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.categoryId) {
+    if (!categoryId) {
       return NextResponse.json(
         {
           message: 'Missing required field: categoryId',
@@ -222,23 +237,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create multipart form data for backend
+    const backendFormData = new FormData();
+    backendFormData.append('name', name);
+    if (description) backendFormData.append('description', description);
+    backendFormData.append('price', price);
+    if (style) backendFormData.append('style', style);
+    if (cancellable) backendFormData.append('cancellable', cancellable);
+    if (cancellationDuration) backendFormData.append('cancellationDuration', cancellationDuration);
+    if (file) backendFormData.append('file', file);
+
     // Forward the request to the backend
     const backendResponse = await fetch(
-      `${BACKEND_API_URL}/api/manager/menu/categories/${body.categoryId}/items`,
+      `${BACKEND_API_URL}/api/manager/menu/categories/${categoryId}/items`,
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json;charset=UTF-8',
           'Cookie': `JWT_TOKEN=${jwtToken}`,
         },
-        body: JSON.stringify({
-          name: body.name,
-          description: body.description,
-          price: body.price,
-          imageUrl: body.imageUrl,
-          style: body.style,
-          categoryId: body.categoryId,
-        }),
+        body: backendFormData,
         credentials: 'include',
       }
     );
@@ -320,11 +337,20 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Parse the incoming request body
-    const body: UpdateMenuItemRequestBody = await request.json();
+    // Parse the incoming multipart form data
+    const formData = await request.formData();
+    
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const price = formData.get('price') as string;
+    const style = formData.get('style') as string;
+    const available = formData.get('available') as string;
+    const cancellable = formData.get('cancellable') as string;
+    const cancellationDuration = formData.get('cancellationDuration') as string;
+    const file = formData.get('file') as File | null;
 
     // Validate required fields
-    if (!body.name) {
+    if (!name) {
       return NextResponse.json(
         {
           message: 'Missing required field: name',
@@ -334,7 +360,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (body.price === undefined || body.price === null) {
+    if (!price) {
       return NextResponse.json(
         {
           message: 'Missing required field: price',
@@ -344,7 +370,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (body.available === undefined || body.available === null) {
+    if (!available) {
       return NextResponse.json(
         {
           message: 'Missing required field: available',
@@ -367,23 +393,26 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Create multipart form data for backend
+    const backendFormData = new FormData();
+    backendFormData.append('name', name);
+    if (description) backendFormData.append('description', description);
+    backendFormData.append('price', price);
+    if (style) backendFormData.append('style', style);
+    backendFormData.append('available', available);
+    if (cancellable) backendFormData.append('cancellable', cancellable);
+    if (cancellationDuration) backendFormData.append('cancellationDuration', cancellationDuration);
+    if (file) backendFormData.append('file', file);
+
     // Forward the request to the backend
     const backendResponse = await fetch(
       `${BACKEND_API_URL}/api/manager/menu/items/${itemId}`,
       {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json;charset=UTF-8',
           'Cookie': `JWT_TOKEN=${jwtToken}`,
         },
-        body: JSON.stringify({
-          name: body.name,
-          description: body.description,
-          price: body.price,
-          imageUrl: body.imageUrl,
-          style: body.style,
-          available: body.available,
-        }),
+        body: backendFormData,
         credentials: 'include',
       }
     );

@@ -20,6 +20,19 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  getBasket,
+  addItemToBasket,
+  updateItemQuantity as updateBasketItemQuantity,
+  updateItemNote,
+  updateGeneralNote,
+  clearBasket,
+  prepareOrderRequest,
+  type Basket,
+  type BasketItem
+} from "../lib/services/basketService";
+import CartModal from "./CartModal";
 
 // --- API Response Types (Based on Section 9.3) ---
 export type MenuItem = {
@@ -37,6 +50,7 @@ export type MenuItem = {
 export type Category = {
   id: number;
   name: string;
+  imageUrl: string | null;
   menuItems: MenuItem[];
   restaurantId: string;
 };
@@ -83,6 +97,7 @@ type MenuSection = {
 type CategoryFilterItem = {
   id: number;
   name: string;
+  imageUrl: string | null;
 }
 
 // --- Alt Bileşenler ---
@@ -93,62 +108,142 @@ function ProductCard({
   itemInCart,
   onAddToCart,
   onUpdateQuantity,
+  qrToken,
 }: {
   product: Product;
   itemInCart?: CartItem;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
+  qrToken: string;
 }) {
+  const router = useRouter();
+  // Check if product is popular (you can adjust this logic based on your data)
+  const isPopular = product.style === 'popular' || false; // Modify based on your actual data structure
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+    
+    // Don't navigate if product is not available
+    if (!product.available) {
+      return;
+    }
+    
+    // Store product data in sessionStorage
+    sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
+    
+    // Navigate to detail page
+    router.push(`/table/${qrToken}/item/${product.id}`);
+  };
+
   return (
-    <div className="card shadow-sm rounded-2xl p-4 flex flex-col items-center w-full" style={{ backgroundColor: '#fbd2e1' }}>
-      <figure className="mb-2">
+    <div 
+      onClick={handleCardClick}
+      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${
+        product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
+      }`}
+    >
+      {/* Popular Badge */}
+      {isPopular && (
+        <div className="absolute top-2 right-2 bg-[#E8C5B8] text-gray-800 px-3 py-1 rounded-full text-xs font-medium z-10">
+          Popüler
+        </div>
+      )}
+      
+      {/* Product Image */}
+      <div className="w-full h-32 relative overflow-hidden">
         <Image 
-          src={product.imageUrl || "/images/cappucino.png"} 
+          src={product.imageUrl || "/images/cappucino.webp"} 
           alt={product.name} 
-          width={115} 
-          height={115} 
-          className="rounded-xl" 
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 50vw, 25vw"
+          loading="eager"
         />
-      </figure>
-      <div className="card-body p-0 text-center w-full">
-        <h2 className="font-bold text-gray-800 text-lg">{product.name}</h2>
-        <p className="text-2xl font-bold text-[#FF9F5A] mb-3">{product.price} ₺</p>
-        {!product.available ? (
-          <div className="text-red-500 text-sm font-semibold">Tükendi</div>
-        ) : (
-          <div className="card-actions justify-center w-full">
-            {!itemInCart ? (
-              <button
-                onClick={() => onAddToCart(product)}
-                className="btn btn-circle btn-sm bg-white border-[#FF9F5A] text-[#FF9F5A] hover:bg-[#FF9F5A] hover:text-white"
-              >
-                <span className="text-xl font-light">+</span>
-              </button>
-            ) : (
-              <div className="join bg-white rounded-full shadow-sm">
-                <button
-                  onClick={() =>
-                    onUpdateQuantity(product.id, itemInCart.quantity - 1)
-                  }
-                  className="btn join-item btn-sm bg-white border-none text-[#FF9F5A]"
-                >
-                  <span className="text-xl font-light">−</span>
-                </button>
-                <span className="join-item px-3 flex items-center bg-white text-gray-800 font-bold">
-                  {itemInCart.quantity}
-                </span>
-                <button
-                  onClick={() =>
-                    onUpdateQuantity(product.id, itemInCart.quantity + 1)
-                  }
-                  className="btn join-item btn-sm bg-white border-none text-[#FF9F5A]"
-                >
-                  <span className="text-xl font-light">+</span>
-                </button>
-              </div>
-            )}
+      </div>
+
+      {/* Product Info */}
+      <div className="p-3 pb-3">
+        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
+          {product.name}
+        </h3>
+        
+        {/* Price and Action */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-bold text-gray-900">
+              {product.price}
+            </span>
+            <span className="text-xs font-medium text-gray-500">TL</span>
           </div>
-        )}
+          
+          {!product.available ? (
+            <div className="text-red-500 text-xs font-medium px-2 py-1 bg-red-50 rounded-md">
+              Tükendi
+            </div>
+          ) : (
+            <>
+              {!itemInCart ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCart(product);
+                  }}
+                  className="w-8 h-8 bg-pink-500 hover:bg-pink-600 rounded-xl flex items-center justify-center transition-colors shadow-md"
+                >
+                  <span className="text-2xl text-white font-light">+</span>
+                </button>
+              ) : (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateQuantity(product.id, itemInCart.quantity - 1);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                  >
+                    {itemInCart.quantity === 1 ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    ) : (
+                      <span className="text-2xl font-light">−</span>
+                    )}
+                  </button>
+                  <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
+                    {itemInCart.quantity}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateQuantity(product.id, itemInCart.quantity + 1);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                  >
+                    <span className="text-2xl font-light">+</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -184,7 +279,7 @@ function CategoryFilter({
         >
            <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
         </div>
-        <span className="font-semibold text-gray-800 text-sm">All</span>
+        <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
 
       {/* Dinamik kategoriler */}
@@ -197,14 +292,31 @@ function CategoryFilter({
           }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
               selectedCategory === cat.name
                 ? "border-2 border-secondary-500"
                 : ""
             }`}
             style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
           >
-            <Image src="/images/burger.png" alt={cat.name} width={63} height={63} className="rounded-lg" />
+            {cat.imageUrl ? (
+              <div className="relative w-16 h-16">
+                <Image 
+                  src={cat.imageUrl} 
+                  alt={cat.name} 
+                  fill
+                  className="mask mask-squircle object-cover" 
+                />
+              </div>
+            ) : (
+              <Image 
+                src="/images/burger.png" 
+                alt={cat.name} 
+                width={63} 
+                height={63} 
+                className="mask mask-squircle" 
+              />
+            )}
           </div>
           <span className="font-semibold text-gray-800 text-sm">{cat.name}</span>
         </button>
@@ -217,24 +329,29 @@ function CategoryFilter({
 function CartSummary({
   itemCount,
   totalPrice,
+  onClick,
 }: {
   itemCount: number;
   totalPrice: number;
+  onClick: () => void;
 }) {
   return (
-    <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg">
-      <div>
+    <button 
+      onClick={onClick}
+      className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
+    >
+      <div className="text-left">
         <span className="font-semibold">{itemCount} Items</span>
-        <p className="text-lg font-bold">Total: {totalPrice} tl</p>
+        <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
       </div>
-      <button className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
+      <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={3}
           stroke="currentColor"
-          className="w-6 h-6"
+          className="w-6 h-6 rotate-180"
         >
           <path
             strokeLinecap="round"
@@ -242,8 +359,8 @@ function CartSummary({
             d="M19.5 8.25l-7.5 7.5-7.5-7.5"
           />
         </svg>
-      </button>
-    </div>
+      </div>
+    </button>
   );
 }
 
@@ -253,7 +370,9 @@ export interface MenuViewProps {
 }
 
 export default function MenuView({ apiData }: MenuViewProps) {
+  const qrToken = apiData.table.qrToken;
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [generalNote, setGeneralNote] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSearchVisible, setIsSearchVisible] = useState(true);
@@ -271,6 +390,31 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Load basket from localStorage on mount ---
+  useEffect(() => {
+    const basket = getBasket(qrToken);
+    setGeneralNote(basket.generalNote || "");
+    
+    // Convert basket items to cart items with product details
+    const cartItems: CartItem[] = basket.items
+      .map((basketItem: BasketItem) => {
+        // Find the product in the menu
+        for (const category of apiData.menu) {
+          const product = category.menuItems.find(item => item.id === basketItem.menuItemId);
+          if (product) {
+            return {
+              ...product,
+              quantity: basketItem.quantity
+            };
+          }
+        }
+        return null;
+      })
+      .filter((item): item is CartItem => item !== null);
+    
+    setCart(cartItems);
+  }, [qrToken, apiData.menu]);
 
   // --- Scroll Handler for Search and Category Filter Visibility ---
   useEffect(() => {
@@ -307,9 +451,18 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // --- Sepet İşlemleri ---
   const handleAddToCart = (product: Product) => {
+    // Update localStorage
+    addItemToBasket(qrToken, product.id, 1);
+    
+    // Update local state
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
+  
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
+    // Update localStorage
+    updateBasketItemQuantity(qrToken, productId, newQuantity);
+    
+    // Update local state
     if (newQuantity <= 0) {
       setCart((prevCart) =>
         prevCart.filter((item) => item.id !== productId)
@@ -321,6 +474,48 @@ export default function MenuView({ apiData }: MenuViewProps) {
         )
       );
     }
+  };
+
+  const handleUpdateGeneralNote = (note: string) => {
+    setGeneralNote(note);
+  };
+
+  const handleSubmitOrder = async () => {
+    const orderData = prepareOrderRequest(qrToken);
+    
+    try {
+      const response = await fetch('/api/public/table/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Clear basket and reset state
+        clearBasket(qrToken);
+        setCart([]);
+        setGeneralNote("");
+        
+        // Close modal
+        const modal = document.getElementById('cart_modal') as HTMLDialogElement;
+        modal?.close();
+        //showing with alert will be changed at next improvements.
+        // Show success message
+        alert(`✅ ${data.message || 'Sipariş başarıyla alındı'}\nSipariş No: ${data.orderId}`);
+      } else {
+        // Show error message from backend
+        alert(`❌ ${data.error || 'Sipariş gönderilemedi'}`);
+      }
+    } catch (error) {
+      alert('❌ Sipariş gönderilemedi. Lütfen tekrar deneyin.');
+    }
+  };
+
+  const handleOpenCart = () => {
+    const modal = document.getElementById('cart_modal') as HTMLDialogElement;
+    modal?.showModal();
   };
 
   // --- Doğru Kaydırma Mantığı ---
@@ -348,11 +543,12 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // Kategori Filtresi için Veri Türetme
   const categoriesForFilter = useMemo((): CategoryFilterItem[] => {
-    return menuData.map(section => ({
-      id: section.categoryId,
-      name: section.categoryName
+    return apiData.menu.map(category => ({
+      id: category.id,
+      name: category.name,
+      imageUrl: category.imageUrl || null
     }));
-  }, [menuData]); 
+  }, [apiData]); 
 
   // Sadece arama sorgusuna göre filtreler
   const filteredMenu = useMemo(() => {
@@ -369,6 +565,46 @@ export default function MenuView({ apiData }: MenuViewProps) {
     }
     return menuData;
   }, [searchQuery, menuData]);
+
+  // --- Intersection Observer for Auto-updating Category on Scroll ---
+  useEffect(() => {
+    const main = mainContainerRef.current;
+    if (!main) return;
+
+    const observerOptions = {
+      root: main,
+      rootMargin: '-100px 0px -60% 0px', // Trigger when section is in the upper 40% of the viewport
+      threshold: 0
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      // Filter only intersecting entries and sort by position in viewport
+      const visibleEntries = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => {
+          return a.boundingClientRect.top - b.boundingClientRect.top;
+        });
+
+      // Select the topmost visible section
+      if (visibleEntries.length > 0) {
+        const categoryName = visibleEntries[0].target.getAttribute('data-category');
+        if (categoryName) {
+          setSelectedCategory(categoryName);
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all sections
+    Object.values(sectionRefs.current).forEach(section => {
+      if (section) {
+        observer.observe(section);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [filteredMenu]);
 
   // Sepet Özeti
   const cartSummary = useMemo(() => {
@@ -393,6 +629,9 @@ export default function MenuView({ apiData }: MenuViewProps) {
       {/* YAPIŞKAN BAŞLIKLAR: */}
       <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
         <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
+        
+        
+        
         <div className="flex flex-col items-end text-right">
           <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
             <span>{apiData.restaurantName}</span>
@@ -455,10 +694,11 @@ export default function MenuView({ apiData }: MenuViewProps) {
         </div>
 
         {/* Menü Bölümleri */}
-        <div className="space-y-8 pt-4 px-4">
+        <div className="space-y-8 pt-4 px-4 pb-32">
           {filteredMenu.map((section) => (
             <section
               key={section.categoryId}
+              data-category={section.categoryName}
               ref={(el) => {
                 sectionRefs.current[section.categoryName] = el;
               }}
@@ -469,16 +709,16 @@ export default function MenuView({ apiData }: MenuViewProps) {
                   {section.categoryName}
                 </h2>
               </div>
-              <div className="carousel rounded-box w-full gap-2">
+              <div className="grid grid-cols-2 gap-4 w-full">
                 {section.items.map((product) => (
-                  <div key={product.id} className="carousel-item w-1/2">
-                    <ProductCard
-                      product={product}
-                      itemInCart={cartMap.get(product.id)}
-                      onAddToCart={handleAddToCart}
-                      onUpdateQuantity={handleUpdateQuantity}
-                    />
-                  </div>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    itemInCart={cartMap.get(product.id)}
+                    onAddToCart={handleAddToCart}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    qrToken={qrToken}
+                  />
                 ))}
               </div>
             </section>
@@ -487,14 +727,28 @@ export default function MenuView({ apiData }: MenuViewProps) {
       </main>
 
       {/* Sepet Özeti (Footer) */}
-      {cartSummary.itemCount > 0 && (
-        <div className="sticky bottom-4 px-6 z-10">
-          <CartSummary
-            itemCount={cartSummary.itemCount}
-            totalPrice={cartSummary.totalPrice}
-          />
-        </div>
-      )}
+      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${
+        cartSummary.itemCount > 0 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-20 pointer-events-none'
+      }`}>
+        <CartSummary
+          itemCount={cartSummary.itemCount}
+          totalPrice={cartSummary.totalPrice}
+          onClick={handleOpenCart}
+        />
+      </div>
+
+      {/* Cart Modal */}
+      <CartModal
+        modalId="cart_modal"
+        qrToken={qrToken}
+        items={cart}
+        generalNote={generalNote}
+        onUpdateQuantity={handleUpdateQuantity}
+        onUpdateGeneralNote={handleUpdateGeneralNote}
+        onSubmitOrder={handleSubmitOrder}
+      />
     </div>
   );
 }

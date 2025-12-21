@@ -12,8 +12,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 const SignInSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required")
+  username: z.string().min(1, "Kullanıcı Adı Gereklidir."),
+  password: z.string().min(1, "Şifre Gereklidir.")
 });
 
 type SignInFormData = z.infer<typeof SignInSchema>;
@@ -257,8 +257,8 @@ const SignInPage = () => {
         </div>
         {/* Right Section: Login Form */}
         <div className="flex-1 p-8 md:p-16 flex flex-col justify-center">
-          <h1 className="text-2xl md:text-[32px] mb-2 font-bold" style={{ color: "#683817" }}>Welcome back!</h1>
-          <p className="subtitle mb-10 text-base md:text-lg" style={{ color: "#E11383" }}>Please enter your details</p>
+          <h1 className="text-2xl md:text-[32px] mb-2 font-bold" style={{ color: "#683817" }}>Hoşgeldin!</h1>
+          <p className="subtitle mb-10 text-base md:text-lg" style={{ color: "#E11383" }}>Lütfen bilgilerini gir</p>
           
           {/* General API error message */}
           {apiError && (
@@ -270,13 +270,13 @@ const SignInPage = () => {
           {/* Success message */}
           {showSuccess && (
             <div className="mb-5 p-4 bg-green-50 border-2 border-green-400 rounded-lg text-green-700 text-sm font-medium text-center">
-              ✓ Login successful!
+              ✓ Giriş Başarılı
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group mb-5">
-              <label htmlFor="username" className="block mb-2 font-medium" style={{ color: "#683817" }}>Username</label>
+              <label htmlFor="username" className="block mb-2 font-medium" style={{ color: "#683817" }}>Kullanıcı Adı</label>
               <input 
                 type="text" 
                 id="username" 
@@ -289,7 +289,7 @@ const SignInPage = () => {
               )}
             </div>
             <div className="form-group mb-5">
-              <label htmlFor="password" className="block mb-2 font-medium" style={{ color: "#683817" }}>Password</label>
+              <label htmlFor="password" className="block mb-2 font-medium" style={{ color: "#683817" }}>Şifre</label>
               <div className="relative">
                 <input  
                   type={showPassword ? "text" : "password"} 
@@ -321,9 +321,9 @@ const SignInPage = () => {
               type="submit"
               disabled={isSubmitting}
               className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold mb-5 hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed">
-              {isSubmitting ? "Signing in..." : "Log in"}
+              {isSubmitting ? "Giriş Yapılıyor" : "Giriş Yap"}
             </button>
-            <button type="button"
+            {/*<button type="button"
               className="w-full py-3 bg-white border-2 border-[#F8645A] rounded-lg text-[#F8645A] text-base flex items-center justify-center gap-2 hover:border-[#E11383] hover:text-[#E11383] transition">
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -331,11 +331,11 @@ const SignInPage = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
-              Log in with Google
-            </button>
+              Google İle Giriş Yap
+            </button>*/}
           </form>
           <div className="text-center mt-8 text-text-500 text-base">
-            Don&apos;t have an account? <a href="/sign-up" className="text-[#E11383] font-bold">Sign Up</a>
+            Hesabınız Yok Mu? <a href="/sign-up" className="text-[#E11383] font-bold">Kayıt Ol</a>
           </div>
         </div>
       </div>

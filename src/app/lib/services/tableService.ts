@@ -21,6 +21,7 @@ export interface MenuItem {
 export interface MenuCategory {
     id: number;
     name: string;
+    imageUrl: string | null;
     menuItems: MenuItem[];
     restaurantId: string;
 }

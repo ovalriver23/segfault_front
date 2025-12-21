@@ -143,7 +143,8 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
         <div className="flex flex-row items-center justify-start px-7 pt-2 md:pt-4 pb-3">
           <Link
             href="/dashboard"
-            className="text-2xl md:text-3xl font-black text-black hover:text-gray-800 transition-colors"
+            // DEĞİŞİKLİK: 'font-bold' yerine 'font-semibold' yapıldı.
+            className="text-3xl md:text-3xl font-medium text-black hover:text-gray-800 transition-colors tracking-tight"
             style={{ fontFamily: 'Pontano Sans, sans-serif' }}
             onClick={() => handleLinkClick('general')}
           >
@@ -208,9 +209,21 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
         <div className="dropdown dropdown-top dropdown-center px-4 md:px-6 pb-6">
           <div tabIndex={0} role="button" className="flex justify-start items-center gap-3 cursor-pointer">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-              <div className="text-lg font-bold text-gray-700">
-                {loading ? '...' : user?.username?.charAt(0).toUpperCase() || 'N'}
-              </div>
+              {loading ? (
+                <div className="text-lg font-bold text-gray-700">...</div>
+              ) : user?.profilePhotoUrl ? (
+                <Image
+                  src={user.profilePhotoUrl}
+                  alt={user.username || 'User avatar'}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-lg font-bold text-gray-700">
+                  {user?.username?.charAt(0).toUpperCase() || 'N'}
+                </div>
+              )}
             </div>
             {/* User info - only visible when sidebar is open (mobile) or on desktop */}
             <div className="flex flex-col">
