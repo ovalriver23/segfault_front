@@ -121,20 +121,15 @@ export default function OrdersModal({
         setError(null);
 
         try {
-            console.log('Fetching orders for qrToken:', qrToken);
             const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(qrToken)}`);
             const data = await response.json();
-
-            console.log('Orders API response:', data);
 
             if (response.ok) {
                 setOrders(data);
             } else {
-                console.error('Orders API error:', data);
                 setError(data.error || 'Siparişler yüklenirken bir hata oluştu');
             }
         } catch (err) {
-            console.error('Orders fetch error:', err);
             setError('Siparişler yüklenirken bir hata oluştu');
         } finally {
             setIsLoading(false);
