@@ -154,7 +154,7 @@ export default function LearnMore() {
       <div className="pt-16">
         
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-primary-500 to-primary-600 py-20 px-4 sm:px-8 lg:px-16">
+        <div className="bg-linear-to-r from-primary-500 to-primary-600 py-20 px-4 sm:px-8 lg:px-16">
           <div className="max-w-6xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
               EasyOrder İle Neler Yapabilirsiniz?
@@ -211,7 +211,7 @@ export default function LearnMore() {
                   <ul className="space-y-3">
                     {feature.benefits.map((benefit, idx) => (
                       <li key={idx} className="flex items-start">
-                        <svg className="w-5 h-5 text-primary-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-primary-500 mr-3 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                         <span className="text-gray-700">{benefit}</span>
@@ -248,7 +248,7 @@ export default function LearnMore() {
                       {faq.question}
                     </span>
                     <svg
-                      className={`w-6 h-6 text-primary-500 flex-shrink-0 transition-transform ${
+                      className={`w-6 h-6 text-primary-500 shrink-0 transition-transform ${
                         openFaq === index ? 'rotate-180' : ''
                       }`}
                       fill="none"

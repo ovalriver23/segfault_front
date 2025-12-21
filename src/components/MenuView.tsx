@@ -50,6 +50,7 @@ export type MenuItem = {
 export type Category = {
   id: number;
   name: string;
+  imageUrl: string | null;
   menuItems: MenuItem[];
   restaurantId: string;
 };
@@ -96,6 +97,7 @@ type MenuSection = {
 type CategoryFilterItem = {
   id: number;
   name: string;
+  imageUrl: string | null;
 }
 
 // --- Alt Bileşenler ---
@@ -290,14 +292,31 @@ function CategoryFilter({
           }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
               selectedCategory === cat.name
                 ? "border-2 border-secondary-500"
                 : ""
             }`}
             style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
           >
-            <Image src="/images/burger.png" alt={cat.name} width={63} height={63} className="rounded-lg" />
+            {cat.imageUrl ? (
+              <div className="relative w-16 h-16">
+                <Image 
+                  src={cat.imageUrl} 
+                  alt={cat.name} 
+                  fill
+                  className="mask mask-squircle object-cover" 
+                />
+              </div>
+            ) : (
+              <Image 
+                src="/images/burger.png" 
+                alt={cat.name} 
+                width={63} 
+                height={63} 
+                className="mask mask-squircle" 
+              />
+            )}
           </div>
           <span className="font-semibold text-gray-800 text-sm">{cat.name}</span>
         </button>
@@ -524,11 +543,12 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // Kategori Filtresi için Veri Türetme
   const categoriesForFilter = useMemo((): CategoryFilterItem[] => {
-    return menuData.map(section => ({
-      id: section.categoryId,
-      name: section.categoryName
+    return apiData.menu.map(category => ({
+      id: category.id,
+      name: category.name,
+      imageUrl: category.imageUrl || null
     }));
-  }, [menuData]); 
+  }, [apiData]); 
 
   // Sadece arama sorgusuna göre filtreler
   const filteredMenu = useMemo(() => {
