@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Table {
@@ -17,7 +17,7 @@ export default function WaiterTablesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTables = async () => {
+  const fetchTables = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/waiter/tables/get', {
@@ -50,13 +50,13 @@ export default function WaiterTablesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchTables();
     const interval = setInterval(fetchTables, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchTables]);
 
   // İstatistikleri hesapla
   const totalTables = tables.length;

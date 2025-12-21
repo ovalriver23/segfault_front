@@ -61,7 +61,7 @@ export default function AboutUs() {
                     </motion.h1>
                     <motion.p variants={itemVariants} className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
                         Bir restoran yönetim paneli. Kan, ter, gözyaşı. <br className="hidden md:block" />
-                        Ve her merge conflict'te yükselen çığlık sesleri.
+                        Ve her merge conflict&apos;te yükselen çığlık sesleri.
                     </motion.p>
                 </motion.section>
 
@@ -77,12 +77,12 @@ export default function AboutUs() {
                         <h2 className="text-3xl font-bold mb-6 text-gray-900">Nasıl Başladı?</h2>
                         <div className="space-y-4 text-gray-600 leading-relaxed font-medium">
                             <p>
-                                "Bunu Kelebek restorana falan getirsek gerçekten havalı olur" diye düşündük. 
+                                &quot;Bunu Kelebek restorana falan getirsek gerçekten havalı olur&quot; diye düşündük. 
                                 Basit bir fikirdi, bir unicorn olma hayaliyle yola çıktık.
                             </p>
                             <p>
-                                Sonra insanlardan en çok duyduğumuz şey "Bunu yaptılar lan zaten haberiniz yok mu?" oldu. 
-                                Ama biz gülümsedik ve dedik ki: <span className="text-primary-600 font-semibold">"Evet, ama en güzeli bizimki oldu 🤙🏻"</span>
+                                Sonra insanlardan en çok duyduğumuz şey &quot;Bunu yaptılar lan zaten haberiniz yok mu?&quot; oldu. 
+                                Ama biz gülümsedik ve dedik ki: <span className="text-primary-600 font-semibold">&quot;Evet, ama en güzeli bizimki oldu 🤙🏻&quot;</span>
                             </p>
                         </div>
                     </motion.div>
@@ -229,7 +229,7 @@ export default function AboutUs() {
                     className="text-center border-t border-gray-200 pt-16"
                 >
                     <p className="text-gray-600 italic text-lg opacity-90 max-w-2xl mx-auto">
-                        "Segfault EasyOrder'ı gururla sunar." <br />
+                        &quot;Segfault EasyOrder&apos;ı gururla sunar.&quot; <br />
                         <span className="text-xs text-gray-400 mt-3 block font-semibold hover:text-primary-500 transition-colors">(Bu sayfayı bir backend/devopsçu (acaba kim) yaptı ama bizce fena olmadı 😌)</span>
                     </p>
                 </motion.section>
