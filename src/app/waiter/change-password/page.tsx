@@ -139,7 +139,7 @@ export default function ChangePasswordPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full h-[48px] bg-[#EB5FAB] rounded-xl shadow-lg shadow-[#EB5FAB]/20 flex items-center justify-center mt-2 hover:bg-[#d54f9a] transition-all disabled:opacity-70 active:scale-[0.98]"
+          className="w-full h-12 bg-[#EB5FAB] rounded-xl shadow-lg shadow-[#EB5FAB]/20 flex items-center justify-center mt-2 hover:bg-[#d54f9a] transition-all disabled:opacity-70 active:scale-[0.98]"
         >
           {isLoading ? (
             <span className="loading loading-spinner loading-sm text-white"></span>

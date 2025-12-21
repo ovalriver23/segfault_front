@@ -36,7 +36,7 @@ const floatingVariant = {
 
 export default function AboutUs() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900 overflow-hidden relative">
+        <div className="min-h-screen bg-linear-to-brrom-gray-50 via-white to-gray-100 text-gray-900 overflow-hidden relative">
             {/* Background Elements - Subtle and Light */}
             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-100/50 rounded-full blur-[120px] mix-blend-multiply" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-100/50 rounded-full blur-[120px] mix-blend-multiply" />
@@ -57,7 +57,7 @@ export default function AboutUs() {
                     </motion.div>
                     <motion.h1 variants={itemVariants} className="text-6xl md:text-7xl font-bold mb-8 text-gray-900 tracking-tight">
                         Gebze Teknik beyninizi, <br />
-                        <span className="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">EasyOrder karnınızı doyurur.</span>
+                        <span className="bg-linear-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">EasyOrder karnınızı doyurur.</span>
                     </motion.h1>
                     <motion.p variants={itemVariants} className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
                         Bir restoran yönetim paneli. Kan, ter, gözyaşı. <br className="hidden md:block" />
@@ -116,8 +116,8 @@ export default function AboutUs() {
                          </motion.div>
                          
                          {/* Decorative Orbs */}
-                         <div className="absolute top-10 right-10 w-20 h-20 bg-gradient-to-r from-orange-300 to-red-300 rounded-full blur-2xl opacity-40 animate-pulse" />
-                         <div className="absolute bottom-10 left-10 w-24 h-24 bg-gradient-to-r from-blue-300 to-purple-400 rounded-full blur-2xl opacity-40 animate-pulse" style={{ animationDelay: '1s'}} />
+                         <div className="absolute top-10 right-10 w-20 h-20 bg-linear-to-r from-orange-300 to-red-300 rounded-full blur-2xl opacity-40 animate-pulse" />
+                         <div className="absolute bottom-10 left-10 w-24 h-24 bg-linear-to-r from-blue-300 to-purple-400 rounded-full blur-2xl opacity-40 animate-pulse" style={{ animationDelay: '1s'}} />
                     </div>
                 </motion.section>
 
@@ -207,7 +207,7 @@ export default function AboutUs() {
                                 { name: "Rüya Koçak", role: "Backend Developer" }
                             ].map((member, i) => (
                                 <motion.div variants={itemVariants} key={i} className="text-center group">
-                                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 p-[3px] shadow-lg">
+                                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-linear-to-br from-orange-400 to-pink-500 p-[3px] shadow-lg">
                                          <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-white">
                                              <span className="text-4xl opacity-50">👨‍💻</span>
                                          </div>

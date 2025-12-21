@@ -155,7 +155,7 @@ export default function WaiterTablesPage() {
               <div
                 key={table.id}
                 className={`
-                  relative p-5 rounded-[1.5rem] h-32 flex flex-col justify-center transition-all bg-white border ${borderColor}
+                  relative p-5 rounded-3xl h-32 flex flex-col justify-center transition-all bg-white border ${borderColor}
                 `}
               >
                 {/* Sağ Üstteki Nokta */}
