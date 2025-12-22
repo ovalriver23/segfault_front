@@ -115,6 +115,9 @@ export default function OrdersModal({
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
+    const [isRequestingBill, setIsRequestingBill] = useState(false);
+    const [billRequested, setBillRequested] = useState(false);
 
     const fetchOrders = async () => {
         setIsLoading(true);
@@ -144,6 +147,56 @@ export default function OrdersModal({
     const handleRefresh = () => {
         fetchOrders();
         onRefresh?.();
+    };
+
+    const handleCancelOrder = async (orderId: number) => {
+        setCancellingOrderId(orderId);
+
+        try {
+            const response = await fetch(`/api/public/table/order/${orderId}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qrToken })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Refresh orders to show updated status
+                fetchOrders();
+            } else {
+                // Show error
+                setError(data.error || 'İptal işlemi başarısız oldu');
+            }
+        } catch (err) {
+            setError('Sipariş iptal edilirken bir hata oluştu');
+        } finally {
+            setCancellingOrderId(null);
+        }
+    };
+
+    const handleRequestBill = async () => {
+        setIsRequestingBill(true);
+
+        try {
+            const response = await fetch('/api/public/table/request-bill', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qrToken })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setBillRequested(true);
+            } else {
+                setError(data.error || 'Hesap isteği gönderilemedi');
+            }
+        } catch (err) {
+            setError('Hesap isteği gönderilirken bir hata oluştu');
+        } finally {
+            setIsRequestingBill(false);
+        }
     };
 
     const grandTotal = orders.reduce((sum, order) => sum + order.totalAmount, 0);
@@ -311,6 +364,36 @@ export default function OrdersModal({
                                                 </p>
                                             </div>
                                         )}
+
+                                        {/* Cancel Button - subtle link style */}
+                                        {order.canCancel && order.status !== 'CANCELLED' && (
+                                            <button
+                                                onClick={() => handleCancelOrder(order.id)}
+                                                disabled={cancellingOrderId === order.id}
+                                                className="text-xs text-red-400 mt-2 flex items-center gap-1 active:opacity-70"
+                                            >
+                                                {cancellingOrderId === order.id ? (
+                                                    <span className="loading loading-spinner loading-xs"></span>
+                                                ) : (
+                                                    <>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        İptal et
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+
+                                        {/* Show why order cannot be cancelled */}
+                                        {!order.canCancel && order.status !== 'CANCELLED' && order.cancellationReason && (
+                                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                {order.cancellationReason}
+                                            </p>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -318,15 +401,42 @@ export default function OrdersModal({
                     )}
                 </div>
 
-                {/* Footer - Grand Total */}
+                {/* Footer - Grand Total and Request Bill */}
                 {orders.length > 0 && (
-                    <div className="p-6 pt-4 border-t border-gray-200 shrink-0">
+                    <div className="p-6 pt-4 border-t border-gray-200 shrink-0 space-y-3">
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600 font-medium">Toplam Tutar</span>
                             <span className="text-2xl font-bold text-gray-900">
                                 {grandTotal.toFixed(2)} TL
                             </span>
                         </div>
+
+                        {/* Request Bill Button */}
+                        {billRequested ? (
+                            <div className="flex items-center justify-center gap-2 py-3 bg-green-50 rounded-xl text-green-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span className="font-medium">Hesap isteği gönderildi</span>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleRequestBill}
+                                disabled={isRequestingBill}
+                                className="btn w-full bg-green-500 active:bg-green-600 text-white border-none"
+                            >
+                                {isRequestingBill ? (
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                ) : (
+                                    <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                        </svg>
+                                        Hesap İste
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

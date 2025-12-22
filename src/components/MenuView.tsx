@@ -378,6 +378,8 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [ordersModalKey, setOrdersModalKey] = useState(0);
   const [notification, setNotification] = useState<{ type: NotificationType; message: string } | null>(null);
+  const [isCallingWaiter, setIsCallingWaiter] = useState(false);
+  const [waiterCalled, setWaiterCalled] = useState(false);
 
   // API verisini MenuSection formatına dönüştür
   const menuData: MenuSection[] = useMemo(() => {
@@ -531,6 +533,34 @@ export default function MenuView({ apiData }: MenuViewProps) {
     modal?.showModal();
   };
 
+  const handleCallWaiter = async () => {
+    setIsCallingWaiter(true);
+
+    try {
+      const response = await fetch('/api/public/table/call-waiter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrToken })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setWaiterCalled(true);
+        // Reset after 30 seconds so user can call again
+        setTimeout(() => setWaiterCalled(false), 30000);
+      } else {
+        setNotification({ type: 'error', message: data.error || 'Garson çağrılamadı' });
+        showNotification('notification_modal');
+      }
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Garson çağrılırken bir hata oluştu' });
+      showNotification('notification_modal');
+    } finally {
+      setIsCallingWaiter(false);
+    }
+  };
+
   // --- Doğru Kaydırma Mantığı ---
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
@@ -645,11 +675,13 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
 
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+
+
           {/* Orders Button */}
           <button
             onClick={handleOpenOrders}
-            className="flex items-center gap-1 bg-primary-100 hover:bg-primary-200 text-primary-700 px-3 py-2 mr-6 rounded-xl transition-colors"
+            className="flex items-center gap-1 bg-primary-100 active:bg-primary-200 text-primary-700 px-3 py-2 mr-10 rounded-xl"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -692,30 +724,63 @@ export default function MenuView({ apiData }: MenuViewProps) {
       {/* Ana İçerik Alanı */}
       <main className="px-2">
 
-        {/* Arama Çubuğu */}
-        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        {/* Search Bar and Call Waiter Button */}
+        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
           }`}>
-          <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="w-5 h-5 opacity-70 text-orange-900"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                clipRule="evenodd"
+          {/* Search Bar (60%) */}
+          <div className="w-[60%]">
+            <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-5 h-5 opacity-70 text-orange-900"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <input
+                type="text"
+                className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f] w-full"
+                placeholder="Ara"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </svg>
-            <input
-              type="text"
-              className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f]"
-              placeholder="Ara"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </label>
+            </label>
+          </div>
+
+          {/* Call Waiter Button (40%) */}
+          <div className="w-[40%] h-14">
+            {waiterCalled ? (
+              <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium">Çağrıldı</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleCallWaiter}
+                disabled={isCallingWaiter}
+                className="w-full h-full flex items-center justify-center gap-1 bg-secondary-100 active:bg-secondary-200 text-secondary-700 px-3 rounded-full transition-colors shadow-sm"
+              >
+                {isCallingWaiter ? (
+                  <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
+                    <g id="Group">
+                      <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  </svg>
+                )}
+                <span className="text-sm font-medium">Garson Çağır</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Kategori Filtresi */}
