@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 
 function WaiterLayoutContent({
@@ -18,8 +17,9 @@ function WaiterLayoutContent({
   const searchParams = useSearchParams();
 
   // Check if current page is login page or change password page (only if forced)
+  const isLoginPage = pathname === '/waiter/login';
   const isForced = searchParams.get('reason') === 'forced';
-  const shouldHideNavbar = pathname === '/waiter/login' || (pathname === '/waiter/change-password' && isForced);
+  const shouldHideNavbar = isLoginPage || (pathname === '/waiter/change-password' && isForced);
 
   useEffect(() => {
     // Skip auth check for login page
@@ -65,7 +65,7 @@ function WaiterLayoutContent({
   if (!isLoginPage && loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#683817]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-500"></div>
       </div>
     );
   }
@@ -84,7 +84,7 @@ function WaiterLayoutContent({
           <p className="text-gray-600 mb-6">Bu sayfaya erişim yetkiniz bulunmamaktadır. Garson paneline sadece <span className="font-semibold">Staff</span> rolündeki kullanıcılar erişebilir.</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="bg-[#683817] hover:bg-[#4a2810] text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className="bg-text-500 hover:bg-[#4a2810] text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
             Yönetici Paneline Git
           </button>
