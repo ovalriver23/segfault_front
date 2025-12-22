@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext,useContext,useState,useEffect,ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface User {
-    id:number;
+    id: number;
     email: string | null;
     username: string;
     role: string;
@@ -28,9 +28,9 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export function AuthProvider({children} : {children:ReactNode}){
+export function AuthProvider({ children }: { children: ReactNode }) {
 
-    const [user, setUser] = useState<User|null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -39,14 +39,14 @@ export function AuthProvider({children} : {children:ReactNode}){
             setLoading(true);
             setError(null);
 
-            const response = await fetch('api/auth/me',{
+            const response = await fetch('/api/auth/me', {
                 method: "GET",
                 credentials: "include"
             })
 
             // If unauthorized or not found, the backend session is invalid
             if (response.status === 401 || response.status === 404) {
-                // Clear everything and redirect to login
+                // Clear everything
                 setUser(null);
                 sessionStorage.removeItem('user');
                 
@@ -56,15 +56,14 @@ export function AuthProvider({children} : {children:ReactNode}){
                     credentials: 'include'
                 });
                 
-                // Redirect to login page
-                window.location.href = '/';
+                setLoading(false);
                 return;
             }
 
-            if(!response.ok) throw new Error('Failed to get user info!');
+            if (!response.ok) throw new Error('Failed to get user info!');
 
             const userData = await response.json();
-            
+
             setUser(userData);
             // Save to sessionStorage
             sessionStorage.setItem('user', JSON.stringify(userData));
@@ -73,7 +72,7 @@ export function AuthProvider({children} : {children:ReactNode}){
             setError(error instanceof Error ? error.message : 'Unknown error');
             setUser(null);
             sessionStorage.removeItem('user');
-        }finally{
+        } finally {
             setLoading(false);
         }
     }
@@ -84,26 +83,14 @@ export function AuthProvider({children} : {children:ReactNode}){
     }
 
     useEffect(() => {
-        // First, check if user data exists in localStorage
-        const storedUser = sessionStorage.getItem('user');
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-                setLoading(false);
-            } catch (error) {
-                // If parsing fails, fetch from server
-                fetchUser();
-            }
-        } else {
-            // No stored user, fetch from server
-            fetchUser();
-        }
+        // Always fetch from server to ensure we have the latest user data
+        // This is important for role-based access control
+        fetchUser();
     }, [])
 
-    return(
-        <AuthContext.Provider value={{user,loading,error,refreshUser: fetchUser,logout}}>
+    return (
+        <AuthContext.Provider value={{ user, loading, error, refreshUser: fetchUser, logout }}>
             {children}
         </AuthContext.Provider>
     )
-
 }
