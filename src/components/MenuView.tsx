@@ -33,6 +33,8 @@ import {
   type BasketItem
 } from "../lib/services/basketService";
 import CartModal from "./CartModal";
+import OrdersModal from "./OrdersModal";
+import NotificationModal, { showNotification, type NotificationType } from "./NotificationModal";
 
 // --- API Response Types (Based on Section 9.3) ---
 export type MenuItem = {
@@ -126,25 +128,24 @@ function ProductCard({
     if (target.closest('button')) {
       return;
     }
-    
+
     // Don't navigate if product is not available
     if (!product.available) {
       return;
     }
-    
+
     // Store product data in sessionStorage
     sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
-    
+
     // Navigate to detail page
     router.push(`/table/${qrToken}/item/${product.id}`);
   };
 
   return (
-    <div 
+    <div
       onClick={handleCardClick}
-      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${
-        product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
-      }`}
+      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
+        }`}
     >
       {/* Popular Badge */}
       {isPopular && (
@@ -152,12 +153,12 @@ function ProductCard({
           Popüler
         </div>
       )}
-      
+
       {/* Product Image */}
       <div className="w-full h-32 relative overflow-hidden">
-        <Image 
-          src={product.imageUrl || "/images/cappucino.webp"} 
-          alt={product.name} 
+        <Image
+          src={product.imageUrl || "/images/cappucino.webp"}
+          alt={product.name}
           fill
           className="object-cover"
           sizes="(max-width: 768px) 50vw, 25vw"
@@ -170,7 +171,7 @@ function ProductCard({
         <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
           {product.name}
         </h3>
-        
+
         {/* Price and Action */}
         <div className="flex justify-between items-center">
           <div className="flex items-baseline gap-1">
@@ -179,7 +180,7 @@ function ProductCard({
             </span>
             <span className="text-xs font-medium text-gray-500">TL</span>
           </div>
-          
+
           {!product.available ? (
             <div className="text-red-500 text-xs font-medium px-2 py-1 bg-red-50 rounded-md">
               Tükendi
@@ -197,7 +198,7 @@ function ProductCard({
                   <span className="text-2xl text-white font-light">+</span>
                 </button>
               ) : (
-                <div 
+                <div
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
                 >
@@ -265,19 +266,17 @@ function CategoryFilter({
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${
-          selectedCategory !== "All" ? "opacity-70" : ""
-        }`}
-      >
-        <div 
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
-            selectedCategory === "All" 
-              ? "border-2 border-secondary-500"
-              : ""
+        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
           }`}
+      >
+        <div
+          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
+            ? "border-2 border-secondary-500"
+            : ""
+            }`}
           style={{ backgroundColor: selectedCategory === "All" ? "#F8A45A" : "#FFC898" }}
         >
-           <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
+          <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
         </div>
         <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
@@ -287,34 +286,33 @@ function CategoryFilter({
         <button
           key={cat.id}
           onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${
-            selectedCategory !== cat.name ? "opacity-70" : ""
-          }`}
+          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
+            }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
-              selectedCategory === cat.name
-                ? "border-2 border-secondary-500"
-                : ""
-            }`}
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
+              ? "border-2 border-secondary-500"
+              : ""
+              }`}
             style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
           >
             {cat.imageUrl ? (
               <div className="relative w-16 h-16">
-                <Image 
-                  src={cat.imageUrl} 
-                  alt={cat.name} 
+                <Image
+                  src={cat.imageUrl}
+                  alt={cat.name}
                   fill
-                  className="mask mask-squircle object-cover" 
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="mask mask-squircle object-cover"
                 />
               </div>
             ) : (
-              <Image 
-                src="/images/burger.png" 
-                alt={cat.name} 
-                width={63} 
-                height={63} 
-                className="mask mask-squircle" 
+              <Image
+                src="/images/burger.png"
+                alt={cat.name}
+                width={63}
+                height={63}
+                className="mask mask-squircle"
               />
             )}
           </div>
@@ -336,7 +334,7 @@ function CartSummary({
   onClick: () => void;
 }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
     >
@@ -378,6 +376,11 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const [isSearchVisible, setIsSearchVisible] = useState(true);
   const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [ordersModalKey, setOrdersModalKey] = useState(0);
+  const [notification, setNotification] = useState<{ type: NotificationType; message: string } | null>(null);
+  const [isCallingWaiter, setIsCallingWaiter] = useState(false);
+  const [waiterCalled, setWaiterCalled] = useState(false);
+  const [showWaiterConfirmModal, setShowWaiterConfirmModal] = useState(false);
 
   // API verisini MenuSection formatına dönüştür
   const menuData: MenuSection[] = useMemo(() => {
@@ -395,7 +398,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
   useEffect(() => {
     const basket = getBasket(qrToken);
     setGeneralNote(basket.generalNote || "");
-    
+
     // Convert basket items to cart items with product details
     const cartItems: CartItem[] = basket.items
       .map((basketItem: BasketItem) => {
@@ -412,7 +415,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
         return null;
       })
       .filter((item): item is CartItem => item !== null);
-    
+
     setCart(cartItems);
   }, [qrToken, apiData.menu]);
 
@@ -424,7 +427,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
       const currentScrollY = main.scrollTop;
       const scrollDifference = currentScrollY - lastScrollY;
-      
+
       // Always show when near the top
       if (currentScrollY < 50) {
         setIsSearchVisible(true);
@@ -438,7 +441,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
         setIsSearchVisible(false);
         setIsCategoryFilterVisible(false);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -453,15 +456,15 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const handleAddToCart = (product: Product) => {
     // Update localStorage
     addItemToBasket(qrToken, product.id, 1);
-    
+
     // Update local state
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
-  
+
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
     // Update localStorage
     updateBasketItemQuantity(qrToken, productId, newQuantity);
-    
+
     // Update local state
     if (newQuantity <= 0) {
       setCart((prevCart) =>
@@ -482,7 +485,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   const handleSubmitOrder = async () => {
     const orderData = prepareOrderRequest(qrToken);
-    
+
     try {
       const response = await fetch('/api/public/table/order', {
         method: 'POST',
@@ -497,25 +500,75 @@ export default function MenuView({ apiData }: MenuViewProps) {
         clearBasket(qrToken);
         setCart([]);
         setGeneralNote("");
-        
-        // Close modal
-        const modal = document.getElementById('cart_modal') as HTMLDialogElement;
-        modal?.close();
-        //showing with alert will be changed at next improvements.
-        // Show success message
-        alert(`✅ ${data.message || 'Sipariş başarıyla alındı'}\nSipariş No: ${data.orderId}`);
+
+        // Close cart modal
+        const cartModal = document.getElementById('cart_modal') as HTMLDialogElement;
+        cartModal?.close();
+
+        // Refresh orders modal key to trigger refetch
+        setOrdersModalKey(prev => prev + 1);
+
+        // Open orders modal to show the new order
+        setTimeout(() => {
+          const ordersModal = document.getElementById('orders_modal') as HTMLDialogElement;
+          ordersModal?.showModal();
+        }, 300);
       } else {
-        // Show error message from backend
-        alert(`❌ ${data.error || 'Sipariş gönderilemedi'}`);
+        // Show error message with modal
+        setNotification({ type: 'error', message: data.error || 'Sipariş gönderilemedi' });
+        showNotification('notification_modal');
       }
     } catch (error) {
-      alert('❌ Sipariş gönderilemedi. Lütfen tekrar deneyin.');
+      setNotification({ type: 'error', message: 'Sipariş gönderilemedi. Lütfen tekrar deneyin.' });
+      showNotification('notification_modal');
     }
   };
 
   const handleOpenCart = () => {
     const modal = document.getElementById('cart_modal') as HTMLDialogElement;
     modal?.showModal();
+  };
+
+  const handleOpenOrders = () => {
+    const modal = document.getElementById('orders_modal') as HTMLDialogElement;
+    modal?.showModal();
+  };
+
+  const handleShowWaiterConfirm = () => {
+    setShowWaiterConfirmModal(true);
+  };
+
+  const handleConfirmCallWaiter = async () => {
+    setShowWaiterConfirmModal(false);
+    setIsCallingWaiter(true);
+
+    try {
+      const response = await fetch('/api/public/table/call-waiter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrToken })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setWaiterCalled(true);
+        // Reset after 30 seconds so user can call again
+        setTimeout(() => setWaiterCalled(false), 30000);
+      } else {
+        setNotification({ type: 'error', message: data.error || 'Garson çağrılamadı' });
+        showNotification('notification_modal');
+      }
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Garson çağrılırken bir hata oluştu' });
+      showNotification('notification_modal');
+    } finally {
+      setIsCallingWaiter(false);
+    }
+  };
+
+  const handleCancelWaiterConfirm = () => {
+    setShowWaiterConfirmModal(false);
   };
 
   // --- Doğru Kaydırma Mantığı ---
@@ -532,7 +585,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292; 
+      const STICKY_OFFSET = 292;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = main.getBoundingClientRect().top;
       const currentScrollTop = main.scrollTop;
@@ -548,7 +601,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
       name: category.name,
       imageUrl: category.imageUrl || null
     }));
-  }, [apiData]); 
+  }, [apiData]);
 
   // Sadece arama sorgusuna göre filtreler
   const filteredMenu = useMemo(() => {
@@ -622,16 +675,38 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
   // --- RENDER ---
   return (
-    <div 
+    <div
       ref={mainContainerRef}
       className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth"
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
-        <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
-        
-        
-        
+      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 bg-white z-10 border-b border-gray-100">
+        {/* Left: Menu Title */}
+        <h1 className="text-4xl font-bold text-gray-900">Menü</h1>
+
+        {/* Center: Orders Button */}
+        <button
+          onClick={handleOpenOrders}
+          className="flex items-center gap-1 bg-primary-100 active:bg-primary-200 text-primary-700 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+          <span className="text-sm font-medium">Siparişlerim</span>
+        </button>
+
+        {/* Right: Restaurant Info */}
         <div className="flex flex-col items-end text-right">
           <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
             <span>{apiData.restaurantName}</span>
@@ -654,38 +729,69 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
       {/* Ana İçerik Alanı */}
       <main className="px-2">
-        
-        {/* Arama Çubuğu */}
-        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
-          isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
-        }`}>
-          <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="w-5 h-5 opacity-70 text-orange-900"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                clipRule="evenodd"
+
+        {/* Search Bar and Call Waiter Button */}
+        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          }`}>
+          {/* Search Bar (60%) */}
+          <div className="w-[60%]">
+            <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-5 h-5 opacity-70 text-orange-900"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <input
+                type="text"
+                className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f] w-full"
+                placeholder="Ara"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </svg>
-            <input
-              type="text"
-              className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f]"
-              placeholder="Ara"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </label>
+            </label>
+          </div>
+
+          {/* Call Waiter Button (40%) */}
+          <div className="w-[40%] h-14">
+            {waiterCalled ? (
+              <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium">Çağrıldı</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleShowWaiterConfirm}
+                disabled={isCallingWaiter}
+                className="w-full h-full flex items-center justify-center gap-1 bg-secondary-100 active:bg-secondary-200 text-secondary-700 px-3 rounded-full transition-colors shadow-sm"
+              >
+                {isCallingWaiter ? (
+                  <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
+                    <g id="Group">
+                      <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  </svg>
+                )}
+                <span className="text-sm font-medium">Garson Çağır</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
-          isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
-        }`}>
+        <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          }`}>
           <CategoryFilter
             categories={categoriesForFilter}
             selectedCategory={selectedCategory}
@@ -727,11 +833,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       </main>
 
       {/* Sepet Özeti (Footer) */}
-      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${
-        cartSummary.itemCount > 0 
-          ? 'opacity-100 translate-y-0' 
-          : 'opacity-0 translate-y-20 pointer-events-none'
-      }`}>
+      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${cartSummary.itemCount > 0
+        ? 'opacity-100 translate-y-0'
+        : 'opacity-0 translate-y-20 pointer-events-none'
+        }`}>
         <CartSummary
           itemCount={cartSummary.itemCount}
           totalPrice={cartSummary.totalPrice}
@@ -749,6 +854,51 @@ export default function MenuView({ apiData }: MenuViewProps) {
         onUpdateGeneralNote={handleUpdateGeneralNote}
         onSubmitOrder={handleSubmitOrder}
       />
+
+      {/* Orders Modal */}
+      <OrdersModal
+        key={ordersModalKey}
+        modalId="orders_modal"
+        qrToken={qrToken}
+      />
+
+      {/* Notification Modal */}
+      {notification && (
+        <NotificationModal
+          modalId="notification_modal"
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      {/* Waiter Confirmation Modal */}
+      {showWaiterConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
+              Garson çağırmak istediğinize emin misiniz?
+            </h3>
+            <p className="text-sm text-gray-600 mb-6 text-center">
+              Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelWaiterConfirm}
+                className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleConfirmCallWaiter}
+                className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
+              >
+                Evet, Çağır
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

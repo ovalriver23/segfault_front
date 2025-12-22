@@ -229,6 +229,7 @@ function CategoryFilter({
                   src={cat.imageUrl} 
                   alt={cat.name} 
                   fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
                   className="mask mask-squircle object-cover" 
                 />
               </div>
