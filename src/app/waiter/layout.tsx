@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function WaiterLayout({
   children,
@@ -9,12 +10,86 @@ export default function WaiterLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Check if current page is login page
   const isLoginPage = pathname === '/waiter/login';
 
+  useEffect(() => {
+    // Skip auth check for login page
+    if (isLoginPage) {
+      setIsAuthorized(true);
+      setLoading(false);
+      return;
+    }
+
+    // Check user role
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          router.replace('/waiter/login');
+          return;
+        }
+
+        const user = await response.json();
+        
+        if (user.role !== 'STAFF') {
+          // Manager trying to access waiter pages -> show error
+          setIsAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
+        setIsAuthorized(true);
+      } catch (error) {
+        router.replace('/waiter/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [isLoginPage, router]);
+
+  // Show loading spinner while checking auth (except for login page)
+  if (!isLoginPage && loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#683817]"></div>
+      </div>
+    );
+  }
+
+  // Show access denied error for managers trying to access waiter pages
+  if (!isLoginPage && !isAuthorized && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md text-center border border-gray-200">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Erişim Reddedildi</h2>
+          <p className="text-gray-600 mb-6">Bu sayfaya erişim yetkiniz bulunmamaktadır. Garson paneline sadece <span className="font-semibold">Staff</span> rolündeki kullanıcılar erişebilir.</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-[#683817] hover:bg-[#4a2810] text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Yönetici Paneline Git
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Aktif ikon rengini belirlemek için yardımcı fonksiyon
-  // Eğer path tam eşleşiyorsa koyu renk (#683817), değilse soluk renk (#b09886)
   const isActive = (path: string) => pathname === path ? "text-[#683817]" : "text-[#b09886]";
 
   return (
