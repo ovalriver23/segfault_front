@@ -380,6 +380,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const [notification, setNotification] = useState<{ type: NotificationType; message: string } | null>(null);
   const [isCallingWaiter, setIsCallingWaiter] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
+  const [showWaiterConfirmModal, setShowWaiterConfirmModal] = useState(false);
 
   // API verisini MenuSection formatına dönüştür
   const menuData: MenuSection[] = useMemo(() => {
@@ -533,7 +534,12 @@ export default function MenuView({ apiData }: MenuViewProps) {
     modal?.showModal();
   };
 
-  const handleCallWaiter = async () => {
+  const handleShowWaiterConfirm = () => {
+    setShowWaiterConfirmModal(true);
+  };
+
+  const handleConfirmCallWaiter = async () => {
+    setShowWaiterConfirmModal(false);
     setIsCallingWaiter(true);
 
     try {
@@ -559,6 +565,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
     } finally {
       setIsCallingWaiter(false);
     }
+  };
+
+  const handleCancelWaiterConfirm = () => {
+    setShowWaiterConfirmModal(false);
   };
 
   // --- Doğru Kaydırma Mantığı ---
@@ -670,54 +680,50 @@ export default function MenuView({ apiData }: MenuViewProps) {
       className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth"
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
-        <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
+      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 bg-white z-10 border-b border-gray-100">
+        {/* Left: Menu Title */}
+        <h1 className="text-4xl font-bold text-gray-900">Menü</h1>
 
-
-
-        <div className="flex items-center gap-2">
-
-
-          {/* Orders Button */}
-          <button
-            onClick={handleOpenOrders}
-            className="flex items-center gap-1 bg-primary-100 active:bg-primary-200 text-primary-700 px-3 py-2 mr-10 rounded-xl"
+        {/* Center: Orders Button */}
+        <button
+          onClick={handleOpenOrders}
+          className="flex items-center gap-1 bg-primary-100 active:bg-primary-200 text-primary-700 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+          <span className="text-sm font-medium">Siparişlerim</span>
+        </button>
+
+        {/* Right: Restaurant Info */}
+        <div className="flex flex-col items-end text-right">
+          <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
+            <span>{apiData.restaurantName}</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-5 h-5 text-gray-400"
             >
               <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                fillRule="evenodd"
+                d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
+                clipRule="evenodd"
               />
             </svg>
-            <span className="text-sm font-medium">Siparişlerim</span>
-          </button>
-
-          <div className="flex flex-col items-end text-right">
-            <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
-              <span>{apiData.restaurantName}</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="w-5 h-5 text-gray-400"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
           </div>
+          <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
         </div>
       </header>
 
@@ -763,7 +769,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </div>
             ) : (
               <button
-                onClick={handleCallWaiter}
+                onClick={handleShowWaiterConfirm}
                 disabled={isCallingWaiter}
                 className="w-full h-full flex items-center justify-center gap-1 bg-secondary-100 active:bg-secondary-200 text-secondary-700 px-3 rounded-full transition-colors shadow-sm"
               >
@@ -864,6 +870,34 @@ export default function MenuView({ apiData }: MenuViewProps) {
           message={notification.message}
           onClose={() => setNotification(null)}
         />
+      )}
+
+      {/* Waiter Confirmation Modal */}
+      {showWaiterConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
+              Garson çağırmak istediğinize emin misiniz?
+            </h3>
+            <p className="text-sm text-gray-600 mb-6 text-center">
+              Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelWaiterConfirm}
+                className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleConfirmCallWaiter}
+                className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
+              >
+                Evet, Çağır
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
