@@ -45,6 +45,7 @@ type MenuSection = {
 type CategoryFilterItem = {
   id: number;
   name: string;
+  imageUrl: string | null;
 }
 
 // --- Sub Components ---
@@ -200,7 +201,7 @@ function CategoryFilter({
           }`}
           style={{ backgroundColor: selectedCategory === "All" ? "#F8A45A" : "#FFC898" }}
         >
-           <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
+           <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
         </div>
         <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
@@ -215,14 +216,31 @@ function CategoryFilter({
           }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
               selectedCategory === cat.name
                 ? "border-2 border-secondary-500"
                 : ""
             }`}
             style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
           >
-            <Image src="/images/burger.png" alt={cat.name} width={63} height={63} className="rounded-lg" />
+            {cat.imageUrl ? (
+              <div className="relative w-16 h-16">
+                <Image 
+                  src={cat.imageUrl} 
+                  alt={cat.name} 
+                  fill
+                  className="mask mask-squircle object-cover" 
+                />
+              </div>
+            ) : (
+              <Image 
+                src="/images/burger.png" 
+                alt={cat.name} 
+                width={63} 
+                height={63} 
+                className="mask mask-squircle" 
+              />
+            )}
           </div>
           <span className="font-semibold text-gray-800 text-sm">{cat.name}</span>
         </button>
@@ -371,11 +389,12 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
   // Category Filter Data
   const categoriesForFilter = useMemo((): CategoryFilterItem[] => {
-    return menuData.map(section => ({
-      id: section.categoryId,
-      name: section.categoryName
+    return apiData.menu.map(category => ({
+      id: category.id,
+      name: category.name,
+      imageUrl: category.imageUrl || null
     }));
-  }, [menuData]); 
+  }, [apiData]); 
 
   // Filter by search query only
   const filteredMenu = useMemo(() => {

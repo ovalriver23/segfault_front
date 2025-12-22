@@ -67,9 +67,9 @@ export default function ChangePasswordPage() {
     
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ChangePasswordForm, string>> = {};
-      result.error.errors.forEach((error) => {
-        const path = error.path[0] as keyof ChangePasswordForm;
-        fieldErrors[path] = error.message;
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0] as keyof ChangePasswordForm;
+        fieldErrors[path] = issue.message;
       });
       setErrors(fieldErrors);
       return;

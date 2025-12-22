@@ -15,6 +15,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000
+COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY package*.json ./

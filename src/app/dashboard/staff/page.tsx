@@ -286,7 +286,7 @@ export default function StaffPage() {
                       <td className="pl-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="avatar placeholder">
-                            <div className="bg-[#fde6d1] text-[#683817] rounded-full w-10 h-10 flex items-center justify-center font-bold">
+                            <div className="bg-primary-50 text-text-500 rounded-full w-10 h-10 flex items-center justify-center font-bold">
                               {staff.firstName[0]}{staff.lastName[0]}
                             </div>
                           </div>
@@ -303,7 +303,7 @@ export default function StaffPage() {
                       </td>
                       {/* DEĞİŞİKLİK: Cinsiyet renkleri standart kahverengi tonuna çekildi */}
                       <td className="py-4">
-                        <span className="badge border-none px-3 py-2 font-medium bg-[#fde6d1] text-[#683817]">
+                        <span className="badge border-none px-3 py-2 font-medium bg-primary-50 text-text-500">
                             {staff.gender === 'MALE' ? 'Erkek' : staff.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
                         </span>
                       </td>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import * as z from "zod";
@@ -14,6 +15,10 @@ const LocationPicker = dynamic(() => import("../../components/LocationPicker"), 
     </div>
   ),
 });
+
+// Allowed image types and max size (5MB)
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Zod schema for form validation
 const signUpSchema = z.object({
@@ -46,7 +51,7 @@ const signUpSchema = z.object({
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
-type FormErrors = Partial<Record<keyof SignUpFormData | 'general', string>>;
+type FormErrors = Partial<Record<keyof SignUpFormData | 'general' | 'profilePhoto' | 'restaurantLogo', string>>;
 
 const SignUpPage = () => {
   const router = useRouter();
@@ -61,11 +66,80 @@ const SignUpPage = () => {
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
 
+  // Image upload state
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [restaurantLogo, setRestaurantLogo] = useState<File | null>(null);
+  const [restaurantLogoPreview, setRestaurantLogoPreview] = useState<string | null>(null);
+
+  // File input refs
+  const profilePhotoRef = useRef<HTMLInputElement>(null);
+  const restaurantLogoRef = useRef<HTMLInputElement>(null);
+
   // UI state
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [touchedFields, setTouchedFields] = useState<Set<keyof SignUpFormData>>(new Set());
+
+  // Validate image file
+  const validateImageFile = (file: File): string | null => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return "Sadece JPEG, PNG, GIF veya WebP formatları kabul edilmektedir.";
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return "Dosya boyutu 5MB'dan küçük olmalıdır.";
+    }
+    return null;
+  };
+
+  // Handle profile photo selection
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateImageFile(file);
+      if (error) {
+        setErrors(prev => ({ ...prev, profilePhoto: error }));
+        return;
+      }
+      setErrors(prev => ({ ...prev, profilePhoto: undefined }));
+      setProfilePhoto(file);
+      setProfilePhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Handle restaurant logo selection
+  const handleRestaurantLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateImageFile(file);
+      if (error) {
+        setErrors(prev => ({ ...prev, restaurantLogo: error }));
+        return;
+      }
+      setErrors(prev => ({ ...prev, restaurantLogo: undefined }));
+      setRestaurantLogo(file);
+      setRestaurantLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Remove profile photo
+  const handleRemoveProfilePhoto = () => {
+    setProfilePhoto(null);
+    setProfilePhotoPreview(null);
+    if (profilePhotoRef.current) {
+      profilePhotoRef.current.value = '';
+    }
+  };
+
+  // Remove restaurant logo
+  const handleRemoveRestaurantLogo = () => {
+    setRestaurantLogo(null);
+    setRestaurantLogoPreview(null);
+    if (restaurantLogoRef.current) {
+      restaurantLogoRef.current.value = '';
+    }
+  };
 
   // Handle location selection from map
   const handleLocationSelect = (lat: string, lng: string) => {
@@ -219,24 +293,30 @@ const SignUpPage = () => {
       }
     }
 
-    // Submit to API
+    // Submit to API using FormData
     setIsLoading(true);
 
     try {
+      const formData = new FormData();
+      formData.append('username', userName);
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('restaurantName', restaurantName);
+      formData.append('restaurantLocation', restaurantLocation);
+      formData.append('latitude', latitude);
+      formData.append('longitude', longitude);
+
+      // Add optional image files
+      if (profilePhoto) {
+        formData.append('profilePhoto', profilePhoto);
+      }
+      if (restaurantLogo) {
+        formData.append('restaurantLogo', restaurantLogo);
+      }
+
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: userName,
-          email: email,
-          password: password,
-          restaurantName: restaurantName,
-          restaurantLocation: restaurantLocation,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-        }),
+        body: formData,
       });
 
       const data = await response.json();
@@ -260,6 +340,10 @@ const SignUpPage = () => {
       setConfirmPassword("");
       setLatitude("");
       setLongitude("");
+      setProfilePhoto(null);
+      setProfilePhotoPreview(null);
+      setRestaurantLogo(null);
+      setRestaurantLogoPreview(null);
 
       // Show success message
       setShowSuccess(true);
@@ -336,6 +420,116 @@ const SignUpPage = () => {
               <p className="mt-1 text-sm text-red-600">{errors.restaurantName}</p>
             )}
           </div>
+
+          {/* Image Upload Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {/* Profile Photo Upload */}
+            <div className="form-group">
+              <label className="block mb-2 font-medium" style={{ color: "#683817" }}>
+                Profil Fotoğrafı <span className="text-text-300 text-sm">(Opsiyonel)</span>
+              </label>
+              <div className="relative">
+                {profilePhotoPreview ? (
+                  <div className="relative w-full h-32 border-2 border-[#F8645A] rounded-lg overflow-hidden">
+                    <Image
+                      src={profilePhotoPreview}
+                      alt="Profile preview"
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfilePhoto}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition"
+                      disabled={isLoading}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="profilePhoto"
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${
+                      errors.profilePhoto ? 'border-red-500' : 'border-[#F8645A]'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <p className="text-xs text-text-300">Yüklemek için tıklayın</p>
+                    </div>
+                    <input
+                      ref={profilePhotoRef}
+                      id="profilePhoto"
+                      type="file"
+                      className="hidden"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleProfilePhotoChange}
+                      disabled={isLoading}
+                    />
+                  </label>
+                )}
+              </div>
+              {errors.profilePhoto && (
+                <p className="mt-1 text-sm text-red-600">{errors.profilePhoto}</p>
+              )}
+            </div>
+
+            {/* Restaurant Logo Upload */}
+            <div className="form-group">
+              <label className="block mb-2 font-medium" style={{ color: "#683817" }}>
+                Restoran Logosu <span className="text-text-300 text-sm">(Opsiyonel)</span>
+              </label>
+              <div className="relative">
+                {restaurantLogoPreview ? (
+                  <div className="relative w-full h-32 border-2 border-[#F8645A] rounded-lg overflow-hidden">
+                    <Image
+                      src={restaurantLogoPreview}
+                      alt="Restaurant logo preview"
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveRestaurantLogo}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition"
+                      disabled={isLoading}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="restaurantLogo"
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${
+                      errors.restaurantLogo ? 'border-red-500' : 'border-[#F8645A]'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-xs text-text-300">Yüklemek için tıklayın</p>
+                    </div>
+                    <input
+                      ref={restaurantLogoRef}
+                      id="restaurantLogo"
+                      type="file"
+                      className="hidden"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleRestaurantLogoChange}
+                      disabled={isLoading}
+                    />
+                  </label>
+                )}
+              </div>
+              {errors.restaurantLogo && (
+                <p className="mt-1 text-sm text-red-600">{errors.restaurantLogo}</p>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-text-300 mb-5 -mt-3">Maksimum dosya boyutu: 5MB. Desteklenen formatlar: JPEG, PNG, GIF, WebP</p>
 
           <div className="form-group mb-5">
             <label htmlFor="restaurantLocation" className="block mb-2 font-medium" style={{ color: "#683817" }}>

@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function WaiterLayout({
+function WaiterLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -13,9 +15,11 @@ export default function WaiterLayout({
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
 
-  // Check if current page is login page
-  const isLoginPage = pathname === '/waiter/login';
+  // Check if current page is login page or change password page (only if forced)
+  const isForced = searchParams.get('reason') === 'forced';
+  const shouldHideNavbar = pathname === '/waiter/login' || (pathname === '/waiter/change-password' && isForced);
 
   useEffect(() => {
     // Skip auth check for login page
@@ -93,14 +97,14 @@ export default function WaiterLayout({
   const isActive = (path: string) => pathname === path ? "text-[#683817]" : "text-[#b09886]";
 
   return (
-    <div className={`min-h-screen bg-white font-sans ${!isLoginPage ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-white font-sans ${!shouldHideNavbar ? 'pb-20' : ''}`}>
       {/* Ana İçerik */}
       <main className="max-w-md mx-auto min-h-screen bg-white">
         {children}
       </main>
 
-      {/* Bottom Navigation Bar - Hidden on login page */}
-      {!isLoginPage && (
+      {/* Bottom Navigation Bar - Hidden on login and change password pages */}
+      {!shouldHideNavbar && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-4 pt-3 px-6 z-50">
           <div className="max-w-md mx-auto flex justify-between items-center">
             
@@ -174,5 +178,17 @@ export default function WaiterLayout({
         </div>
       )}
     </div>
+  );
+}
+
+export default function WaiterLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white"></div>}>
+      <WaiterLayoutContent>{children}</WaiterLayoutContent>
+    </Suspense>
   );
 }

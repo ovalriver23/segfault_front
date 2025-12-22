@@ -94,7 +94,7 @@ export default function WaiterProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
-      <div className="bg-gradient-to-br from-[#FF9F5A] to-[#e88d48] px-6 pt-6 pb-16">
+      <div className="bg-linear-to-br from-[#FF9F5A] to-[#e88d48] px-6 pt-6 pb-16">
         <h1 className="text-2xl font-semibold text-white mb-4">Profil</h1>
         
         {/* Profile Avatar & Name */}

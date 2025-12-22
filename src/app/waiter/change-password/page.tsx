@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isForced = searchParams.get('reason') === 'forced';
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -76,9 +79,11 @@ export default function ChangePasswordPage() {
         Şifre Değişikliği
       </h1>
       
-      <p className="text-center text-gray-500 text-sm mb-8 px-4">
-        Güvenliğiniz için lütfen yöneticinizden aldığınız geçici şifreyi değiştiriniz.
-      </p>
+      {isForced && (
+        <p className="text-center text-gray-500 text-sm mb-8 px-4">
+          Güvenliğiniz için lütfen yöneticinizden aldığınız geçici şifreyi değiştiriniz.
+        </p>
+      )}
 
       {error && <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-4 text-center">{error}</div>}
       {success && <div className="bg-green-50 text-green-600 text-sm p-3 rounded-lg mb-4 text-center">{success}</div>}
@@ -134,7 +139,7 @@ export default function ChangePasswordPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full h-[48px] bg-[#EB5FAB] rounded-xl shadow-lg shadow-[#EB5FAB]/20 flex items-center justify-center mt-2 hover:bg-[#d54f9a] transition-all disabled:opacity-70 active:scale-[0.98]"
+          className="w-full h-12 bg-[#EB5FAB] rounded-xl shadow-lg shadow-[#EB5FAB]/20 flex items-center justify-center mt-2 hover:bg-[#d54f9a] transition-all disabled:opacity-70 active:scale-[0.98]"
         >
           {isLoading ? (
             <span className="loading loading-spinner loading-sm text-white"></span>

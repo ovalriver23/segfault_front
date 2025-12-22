@@ -10,6 +10,7 @@ interface ResponseDataType {
     role: string;
     hasRestaurant: boolean;
     passwordChangeRequired: boolean;
+    profilePhotoUrl?: string | null;
 }
 
 export async function GET(request: NextRequest) {
