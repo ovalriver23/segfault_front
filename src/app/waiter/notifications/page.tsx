@@ -53,20 +53,20 @@ export default function WaiterNotificationsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Push Notification Hook
-  const { 
-    isSupported: pushSupported, 
-    isSubscribed: pushSubscribed, 
-    isLoading: pushLoading, 
-    error: pushError, 
-    subscribe: pushSubscribe, 
-    unsubscribe: pushUnsubscribe 
+  const {
+    isSupported: pushSupported,
+    isSubscribed: pushSubscribed,
+    isLoading: pushLoading,
+    error: pushError,
+    subscribe: pushSubscribe,
+    unsubscribe: pushUnsubscribe
   } = usePushNotification();
 
   // Ref ile güncel değerlere erişim
   const restoredRequestsRef = useRef<ServiceRequest[]>([]);
   const completedOrdersRef = useRef<Order[]>([]);
   const previousOrderCountRef = useRef<number | null>(null);
-  
+
   // restoredRequests değiştiğinde ref'i güncelle
   useEffect(() => {
     restoredRequestsRef.current = restoredRequests;
@@ -85,7 +85,7 @@ export default function WaiterNotificationsPage() {
       try {
         const parsed = JSON.parse(savedCompleted);
         const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-        const filtered = parsed.filter((r: ServiceRequest) => 
+        const filtered = parsed.filter((r: ServiceRequest) =>
           r.completedAt && new Date(r.completedAt).getTime() > oneDayAgo
         );
         setCompletedRequests(filtered);
@@ -100,7 +100,7 @@ export default function WaiterNotificationsPage() {
       try {
         const parsed = JSON.parse(savedCompletedOrders);
         const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-        const filtered = parsed.filter((o: Order) => 
+        const filtered = parsed.filter((o: Order) =>
           o.createdAt && new Date(o.createdAt).getTime() > oneDayAgo
         );
         setCompletedOrders(filtered);
@@ -165,17 +165,17 @@ export default function WaiterNotificationsPage() {
 
       const data = await response.json();
       const backendRequests: ServiceRequest[] = data.map((r: any) => ({ ...r, status: 'PENDING' as RequestStatus }));
-      
+
       // Ref'ten güncel restored requests'i al
       const currentRestored = restoredRequestsRef.current;
       const restoredIds = currentRestored.map(r => r.id);
-      
+
       // Backend'den gelenlerden restored olanları çıkar
       const backendOnly = backendRequests.filter(r => !restoredIds.includes(r.id));
-      
+
       // Birleştir: önce restored, sonra backend'den gelenler
       const merged = [...currentRestored, ...backendOnly];
-      
+
       setPendingRequests(merged);
       setError(null);
     } catch (err: any) {
@@ -202,15 +202,15 @@ export default function WaiterNotificationsPage() {
       }
 
       const data = await response.json();
-      
+
       // Ref'ten güncel completed orders'ı al
       const currentCompleted = completedOrdersRef.current;
       const completedIds = currentCompleted.map(o => o.id);
-      
+
       // SERVED ve COMPLETED siparişleri filtreleyerek sadece aktif olanları al
       // Ayrıca completedOrders içinde olanları da çıkar
-      const activeOnly = data.filter((order: Order) => 
-        order.status !== 'SERVED' && 
+      const activeOnly = data.filter((order: Order) =>
+        order.status !== 'SERVED' &&
         order.status !== 'COMPLETED' &&
         !completedIds.includes(order.id)
       );
@@ -291,7 +291,7 @@ export default function WaiterNotificationsPage() {
     try {
       // Önce geri alınanlardan mı kontrol et
       const isRestored = restoredRequestsRef.current.some(r => r.id === requestId);
-      
+
       if (!isRestored) {
         // Sadece backend'den gelenler için API çağrısı yap
         const response = await fetch('/api/waiter/requests/complete', {
@@ -314,15 +314,15 @@ export default function WaiterNotificationsPage() {
           status: 'COMPLETED',
           completedAt: new Date().toISOString()
         };
-        
+
         // Pending'den kaldır
         setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-        
+
         // Geri alınanlardan da kaldır
         const newRestored = restoredRequestsRef.current.filter(r => r.id !== requestId);
         setRestoredRequests(newRestored);
         restoredRequestsRef.current = newRestored;
-        
+
         // Completed'a ekle (en başa)
         setCompletedRequests(prev => [updatedRequest, ...prev]);
       }
@@ -341,15 +341,15 @@ export default function WaiterNotificationsPage() {
         status: 'PENDING',
         completedAt: undefined
       };
-      
+
       // Completed'dan kaldır
       setCompletedRequests(prev => prev.filter(r => r.id !== requestId));
-      
+
       // Geri alınanlara ekle (ref'i de güncelle)
       const newRestored = [restoredRequest, ...restoredRequestsRef.current];
       setRestoredRequests(newRestored);
       restoredRequestsRef.current = newRestored;
-      
+
       // Pending'e ekle (en başa)
       setPendingRequests(prev => [restoredRequest, ...prev.filter(r => r.id !== requestId)]);
     }
@@ -382,10 +382,10 @@ export default function WaiterNotificationsPage() {
           ...servedOrder,
           status: 'SERVED'
         };
-        
+
         // Active'den kaldır
         setActiveOrders(prev => prev.filter(o => o.id !== orderId));
-        
+
         // Completed'a ekle (en başa) - duplicate kontrolü ile
         setCompletedOrders(prev => {
           // Zaten varsa ekleme
@@ -430,11 +430,10 @@ export default function WaiterNotificationsPage() {
             <button
               onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
               disabled={pushLoading}
-              className={`p-2 rounded-lg transition-colors ${
-                pushSubscribed 
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+              className={`p-2 rounded-lg transition-colors ${pushSubscribed
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+                }`}
               title={pushSubscribed ? 'Bildirimleri Kapat' : 'Bildirimleri Aç'}
             >
               {pushLoading ? (
@@ -473,51 +472,45 @@ export default function WaiterNotificationsPage() {
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
         <button
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${
-            activeTab === 'requests'
+          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'requests'
               ? 'bg-white text-[#FF9F5A] shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           İstekler
           {pendingRequests.length > 0 && (
-            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'requests' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'requests' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
               {pendingRequests.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('orders')}
-          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${
-            activeTab === 'orders'
+          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'orders'
               ? 'bg-white text-[#FF9F5A] shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           Sipariş
           {activeOrders.length > 0 && (
-            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'orders' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'orders' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
               {activeOrders.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('done')}
-          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${
-            activeTab === 'done'
+          className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'done'
               ? 'bg-white text-[#FF9F5A] shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           Tamamlandı
           {(completedRequests.length + completedOrders.length) > 0 && (
-            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'done' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'done' ? 'bg-[#FF9F5A] text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
               {completedRequests.length + completedOrders.length}
             </span>
           )}
@@ -541,7 +534,7 @@ export default function WaiterNotificationsPage() {
           <>
             {pendingRequests.length > 0 && (
               <div className="bg-pink-100 border-2 border-pink-500 rounded-lg p-3 flex items-start gap-2.5">
-                <Bell className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
+                <Bell className="w-4 h-4 text-pink-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-pink-600 font-semibold text-sm">
                     {tableNames.length} masa sizi bekliyor
@@ -556,11 +549,11 @@ export default function WaiterNotificationsPage() {
             {pendingRequests.map((request) => (
               <div
                 key={request.id}
-                className="w-full rounded-lg p-2.5 transition-all border-2 bg-white border-[#683817] hover:shadow-md"
+                className="w-full rounded-lg p-2.5 transition-all border-2 bg-white border-text-500 hover:shadow-md"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       {getRequestIcon(request.type)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -568,17 +561,17 @@ export default function WaiterNotificationsPage() {
                         {request.tableName}
                       </h3>
                       <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#FF9F5A]" />
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#FF9F5A]" />
                         <p className="text-gray-500 text-xs truncate">
                           {getRequestMessage(request.type)}
                         </p>
                       </div>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => handleMarkAsDone(request.id)}
-                    className="flex-shrink-0 p-2 bg-[#FF9F5A] hover:bg-[#e88d48] text-white rounded-lg transition-colors"
+                    className="shrink-0 p-2 bg-[#FF9F5A] hover:bg-[#e88d48] text-white rounded-lg transition-colors"
                     title="Tamamlandı"
                   >
                     <Check className="w-4 h-4" />
@@ -601,7 +594,7 @@ export default function WaiterNotificationsPage() {
           <>
             {activeOrders.length > 0 && (
               <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 flex items-center gap-2.5">
-                <ChefHat className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                <ChefHat className="w-5 h-5 text-blue-500 shrink-0" />
                 <p className="text-blue-600 font-semibold text-sm">
                   {activeOrders.length} aktif sipariş
                 </p>
@@ -611,16 +604,16 @@ export default function WaiterNotificationsPage() {
             {activeOrders.map((order) => (
               <div
                 key={order.id}
-                className="w-full rounded-lg p-3 transition-all border-2 bg-white border-[#683817] hover:shadow-md"
+                className="w-full rounded-lg p-3 transition-all border-2 bg-white border-text-500 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Package className="w-4 h-4 text-[#8B4513] flex-shrink-0" />
+                    <Package className="w-4 h-4 text-[#8B4513] shrink-0" />
                     <h3 className="text-sm font-semibold text-black truncate">
                       {order.tableName}
                     </h3>
                   </div>
-                  <span className="text-sm font-semibold text-[#FF9F5A] flex-shrink-0">
+                  <span className="text-sm font-semibold text-[#FF9F5A] shrink-0">
                     ₺{order.totalAmount.toFixed(2)}
                   </span>
                 </div>
@@ -669,7 +662,7 @@ export default function WaiterNotificationsPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       {getRequestIcon(request.type)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -677,7 +670,7 @@ export default function WaiterNotificationsPage() {
                         {request.tableName}
                       </h3>
                       <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-green-500" />
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-green-500" />
                         <p className="text-gray-500 text-xs truncate">
                           {getRequestMessage(request.type)}
                         </p>
@@ -689,16 +682,16 @@ export default function WaiterNotificationsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleUndoComplete(request.id)}
-                      className="flex-shrink-0 p-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-lg transition-colors"
+                      className="shrink-0 p-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-lg transition-colors"
                       title="Geri Al"
                     >
                       <Undo2 className="w-4 h-4" />
                     </button>
-                    <div className="flex-shrink-0 p-2 bg-green-100 text-green-600 rounded-lg">
+                    <div className="shrink-0 p-2 bg-green-100 text-green-600 rounded-lg">
                       <Check className="w-4 h-4" />
                     </div>
                   </div>
@@ -714,15 +707,15 @@ export default function WaiterNotificationsPage() {
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Package className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <Package className="w-4 h-4 text-green-600 shrink-0" />
                     <h3 className="text-sm font-semibold text-black truncate">
                       {order.tableName}
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-300 whitespace-nowrap flex-shrink-0">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-300 whitespace-nowrap shrink-0">
                       Servis Edildi
                     </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-600 flex-shrink-0">
+                  <span className="text-sm font-semibold text-gray-600 shrink-0">
                     ₺{order.totalAmount.toFixed(2)}
                   </span>
                 </div>
