@@ -17,13 +17,7 @@ const recentOrders = [
   { id: "#1234", table: 12, items: "Döner, Kola", total: 120, status: "Hazırlanıyor", time: "5 dk önce" },
 ];
 
-const popularItems = [
-  { name: "Hamburger", orders: 45 },
-  { name: "Pizza", orders: 38 },
-  { name: "Lahmacun", orders: 32 },
-  { name: "Döner", orders: 28 },
-  { name: "Köfte", orders: 24 },
-];
+
 
 // --- ALT BİLEŞENLER ---
 
@@ -58,61 +52,35 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Alt Kısım: Siparişler ve Popülerler */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Son Siparişler Tablosu */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Son Siparişler</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 uppercase border-b">
-                <tr>
-                  <th className="py-3 px-2">Sipariş No</th>
-                  <th className="py-3 px-2">Masa</th>
-                  <th className="py-3 px-2">Ürünler</th>
-                  <th className="py-3 px-2">Tutar</th>
-                  <th className="py-3 px-2">Durum</th>
-                  <th className="py-3 px-2">Zaman</th>
+      {/* Alt Kısım: Son Siparişler */}
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <h2 className="text-lg font-bold text-gray-800 mb-4">Son Siparişler</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-500 uppercase border-b">
+              <tr>
+                <th className="py-3 px-2">Sipariş No</th>
+                <th className="py-3 px-2">Masa</th>
+                <th className="py-3 px-2">Ürünler</th>
+                <th className="py-3 px-2">Tutar</th>
+                <th className="py-3 px-2">Durum</th>
+                <th className="py-3 px-2">Zaman</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOrders.map((order, index) => (
+                <tr key={index} className="border-b last:border-none">
+                  <td className="py-4 px-2 font-medium text-gray-700">{order.id}</td>
+                  <td className="py-4 px-2 text-gray-600">{order.table}</td>
+                  <td className="py-4 px-2 text-gray-600">{order.items}</td>
+                  <td className="py-4 px-2 font-semibold text-gray-700">₺{order.total}</td>
+                  <td className="py-4 px-2"><StatusPill status={order.status} /></td>
+                  <td className="py-4 px-2 text-gray-500">{order.time}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order, index) => (
-                  <tr key={index} className="border-b last:border-none">
-                    <td className="py-4 px-2 font-medium text-gray-700">{order.id}</td>
-                    <td className="py-4 px-2 text-gray-600">{order.table}</td>
-                    <td className="py-4 px-2 text-gray-600">{order.items}</td>
-                    <td className="py-4 px-2 font-semibold text-gray-700">₺{order.total}</td>
-                    <td className="py-4 px-2"><StatusPill status={order.status} /></td>
-                    <td className="py-4 px-2 text-gray-500">{order.time}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        {/* Popüler Ürünler */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Popüler</h2>
-          <div className="space-y-4">
-            {popularItems.map((item) => (
-              <div key={item.name}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-semibold text-gray-700">{item.name}</span>
-                  <span className="text-gray-500">{item.orders} sipariş</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-orange-500 h-2 rounded-full" 
-                    style={{ width: `${(item.orders / popularItems[0].orders) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
     </div>
   );
