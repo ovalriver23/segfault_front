@@ -198,3 +198,47 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 .custom-calendar .react-datepicker__month {
   margin: 0.8rem !important;
 }
+
+/* Custom select dropdown styling */
+select {
+  accent-color: #f8a45a;
+  /* Orange accent color for focus/hover */
+}
+
+select option {
+  background-color: white;
+  color: #111827 !important;
+  /* Black text */
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus {
+  background: linear-gradient(0deg, rgba(254, 215, 170, 0.8), rgba(254, 215, 170, 0.8)) !important;
+  /* Light orange */
+  color: #111827 !important;
+}
+
+/* Override browser default blue/orange for checked */
+select:focus option:checked {
+  background: white !important;
+  color: #111827 !important;
+}
+
+select option:checked:hover,
+select option:checked:focus {
+  background: linear-gradient(0deg, rgba(254, 215, 170, 0.8), rgba(254, 215, 170, 0.8)) !important;
+  color: #111827 !important;
+}
+
+/* Firefox specific */
+@-moz-document url-prefix() {
+  select option {
+    background-color: white;
+    color: #111827;
+  }
+
+  select option:hover {
+    background-color: #fed7aa;
+  }
+}
