@@ -26,12 +26,25 @@ type OrdersResponse = {
   last: boolean;
 };
 
+interface TableStats {
+  activeTables: number;
+  totalTables: number;
+}
+
+interface StaffStats {
+  activeStaff: number;
+  totalStaff: number;
+}
+
 // --- SAHTE VERİLER (Özet Kartları için) ---
-const summaryData = [
-  { title: "Aktif Çalışan Personel", value: "3", color: "text-red-500" },
-  { title: "Aktif Masa", value: "9", color: "text-red-500" },
-  { title: "Rezervasyon", value: "7", color: "text-red-500" },
-];
+// Rezervasyon kartı için mock data
+const mockReservationCount = 0;
+
+// Mock staff data (endpoint hazır olana kadar)
+const mockStaffStats: StaffStats = {
+  activeStaff: 3,
+  totalStaff: 5
+};
 
 // --- ALT BİLEŞENLER ---
 
@@ -71,6 +84,81 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
   </div>
 );
 
+// Yakında - Gray Radial Progress (Rezervasyon için)
+const ComingSoonRadialCard = ({ title, count }: { title: string; count: number }) => {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center">
+      <p className="text-sm text-gray-500 mb-4">{title}</p>
+      <div
+        className="radial-progress bg-gray-200 text-gray-400"
+        style={{ "--value": 0, "--size": "12rem", "--thickness": "1.6rem" } as React.CSSProperties}
+        role="progressbar"
+        aria-valuenow={0}
+      >
+        <div className="bg-white rounded-full flex flex-col items-center justify-center" style={{ width: '8.8rem', height: '8.8rem' }}>
+          <div className="text-3xl font-bold text-gray-400">{count}</div>
+          <div className="text-sm text-gray-400">Rezerve</div>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 font-medium mt-4">Yakında</p>
+    </div>
+  );
+};
+
+// Radial Progress Kartı
+const RadialProgressCard = ({ activeTables, totalTables, title = "Aktif Masa" }: { activeTables: number; totalTables: number; title?: string }) => {
+  const percentage = totalTables > 0 ? Math.round((activeTables / totalTables) * 100) : 0;
+
+  // Yüzdeye göre dinamik renk seçimi
+  const getColors = () => {
+    if (percentage < 25) {
+      return {
+        bg: "bg-green-200",
+        text: "text-green-700",
+        label: "text-green-600"
+      };
+    } else if (percentage < 50) {
+      return {
+        bg: "bg-yellow-200",
+        text: "text-yellow-700",
+        label: "text-yellow-600"
+      };
+    } else if (percentage < 75) {
+      return {
+        bg: "bg-orange-200",
+        text: "text-orange-700",
+        label: "text-orange-600"
+      };
+    } else {
+      return {
+        bg: "bg-red-200",
+        text: "text-red-700",
+        label: "text-red-600"
+      };
+    }
+  };
+
+  const colors = getColors();
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center">
+      <p className="text-sm text-gray-500 mb-4">{title}</p>
+      <div
+        className={`radial-progress ${colors.bg} ${colors.text}`}
+        style={{ "--value": percentage, "--size": "12rem", "--thickness": "1.6rem" } as React.CSSProperties}
+        role="progressbar"
+        aria-valuenow={percentage}
+      >
+        <div className="bg-white rounded-full flex flex-col items-center justify-center" style={{ width: '8.8rem', height: '8.8rem' }}>
+          <div className="text-3xl font-bold text-gray-800">{activeTables}</div>
+          <div className="text-sm text-gray-500">/ {totalTables}</div>
+        </div>
+      </div>
+      <p className={`text-xs ${colors.label} font-medium mt-4`}>%{percentage} Doluluk</p>
+    </div>
+  );
+};
+
 // --- ANA DASHBOARD SAYFASI ---
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -78,6 +166,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [tableStats, setTableStats] = useState<TableStats>({ activeTables: 0, totalTables: 0 });
+  const [tableStatsLoading, setTableStatsLoading] = useState(true);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -89,8 +179,34 @@ export default function DashboardPage() {
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
   useEffect(() => {
+    fetchTableStats();
+  }, []);
+
+  useEffect(() => {
     fetchOrders();
   }, [currentPage, statusFilter, tableNameFilter, startDateFilter, endDateFilter, sortBy, sortDirection]);
+
+  const fetchTableStats = async () => {
+    try {
+      const response = await fetch('/api/dashboard/manager/table-stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTableStats(data);
+      } else {
+        console.error('Failed to fetch table stats:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching table stats:', error);
+    } finally {
+      setTableStatsLoading(false);
+    }
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -116,7 +232,7 @@ export default function DashboardPage() {
         params.append("endDate", formatted);
       }
 
-      const response = await fetch(`/api/manager/orders?${params.toString()}`);
+      const response = await fetch(`/api/dashboard/manager/orders?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Siparişler yüklenemedi');
@@ -155,9 +271,20 @@ export default function DashboardPage() {
 
       {/* Üst Kısım: Özet Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {summaryData.map((item) => (
-          <SummaryCard key={item.title} title={item.title} value={item.value} color={item.color} />
-        ))}
+        {/* Radial Progress for Active Tables */}
+        {tableStatsLoading ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm flex items-center justify-center">
+            <span className="loading loading-spinner loading-lg text-pink-700"></span>
+          </div>
+        ) : (
+          <RadialProgressCard activeTables={tableStats.activeTables} totalTables={tableStats.totalTables} title="Aktif Masa" />
+        )}
+
+        {/* Radial Progress for Active Staff (Mock data) */}
+        <RadialProgressCard activeTables={mockStaffStats.activeStaff} totalTables={mockStaffStats.totalStaff} title="Aktif Çalışan Personel" />
+
+        {/* Coming Soon Radial Progress for Reservations */}
+        <ComingSoonRadialCard title="Rezervasyon" count={mockReservationCount} />
       </div>
 
       {/* Alt Kısım: Son Siparişler */}
