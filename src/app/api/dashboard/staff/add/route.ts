@@ -23,14 +23,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
-    // 4. Backend'e İlet (DOKÜMANTASYONA UYGUN: POST /api/manager/staff)
+    // 4. FormData oluştur (Backend artık multipart/form-data bekliyor)
+    const formData = new FormData();
+    formData.append('username', body.username || '');
+    formData.append('password', body.password || '');
+    formData.append('firstName', body.firstName || '');
+    formData.append('lastName', body.lastName || '');
+    formData.append('gender', body.gender || 'MALE');
+    formData.append('email', body.email || '');
+    formData.append('phoneNumber', body.phoneNumber || '');
+
+    // 5. Backend'e İlet (POST /api/manager/staff - multipart/form-data)
     const response = await fetch(`${backendUrl}/api/manager/staff`, {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        // Content-Type otomatik olarak FormData ile ayarlanır (boundary dahil)
       },
-      body: JSON.stringify(body), // RegisterRequest yapısı (username, password, firstName...)
+      body: formData,
     });
 
     const data = await response.json();
