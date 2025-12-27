@@ -20,11 +20,10 @@ interface ServiceRequest {
 }
 
 interface OrderItem {
-  id: number;
-  itemName: string;
+  menuItemName: string;
   quantity: number;
-  unitPrice: number;
-  note?: string;
+  price: number;
+  note: string | null;
 }
 
 interface Order {
@@ -431,8 +430,8 @@ export default function WaiterNotificationsPage() {
               onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
               disabled={pushLoading}
               className={`p-2 rounded-lg transition-colors ${pushSubscribed
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               title={pushSubscribed ? 'Bildirimleri Kapat' : 'Bildirimleri Aç'}
             >
@@ -473,8 +472,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('requests')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'requests'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           İstekler
@@ -488,8 +487,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('orders')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'orders'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           Sipariş
@@ -503,8 +502,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('done')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'done'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           Tamamlandı
@@ -621,12 +620,12 @@ export default function WaiterNotificationsPage() {
                 {/* Order Items */}
                 <div className="bg-gray-50 rounded-lg p-2 mb-2">
                   {order.items.map((item, idx) => (
-                    <div key={`${order.id}-${item.id}-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
+                    <div key={`${order.id}-item-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
                       <span className="text-gray-700">
-                        {item.quantity}x {item.itemName}
+                        {item.quantity}x {item.menuItemName}
                         {item.note && <span className="text-gray-400 ml-1">({item.note})</span>}
                       </span>
-                      <span className="text-gray-500">₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      <span className="text-gray-500">₺{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -723,12 +722,12 @@ export default function WaiterNotificationsPage() {
                 {/* Order Items */}
                 <div className="bg-white rounded-lg p-2">
                   {order.items.map((item, idx) => (
-                    <div key={`${order.id}-${item.id}-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
+                    <div key={`${order.id}-item-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
                       <span className="text-gray-700">
-                        {item.quantity}x {item.itemName}
+                        {item.quantity}x {item.menuItemName}
                         {item.note && <span className="text-gray-400 ml-1">({item.note})</span>}
                       </span>
-                      <span className="text-gray-500">₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      <span className="text-gray-500">₺{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
