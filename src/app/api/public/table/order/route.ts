@@ -18,6 +18,7 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000';
  *     "status": "RECEIVED",
  *     "totalAmount": 150.0,
  *     "createdAt": "2025-12-21T12:16:31.591767769",
+ *     "generalNote": null,
  *     "canCancel": true,
  *     "cancellationReason": null,
  *     "items": [
@@ -39,6 +40,25 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8000';
  * - COMPLETED: Ödeme alındı / Bitti
  * - CANCELLED: İptal
  */
+
+interface Order {
+  id: number;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  generalNote: string | null;
+  canCancel: boolean;
+  cancellationReason: string | null;
+  items: {
+    menuItemName: string;
+    quantity: number;
+    price: number;
+    note: string | null;
+  }[];
+}
+
+type OrderResponse = Order[];
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -62,7 +82,7 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const responseData = await backendResponse.json();
+    const responseData: OrderResponse = await backendResponse.json();
 
     if (!backendResponse.ok) {
       return NextResponse.json(

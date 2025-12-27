@@ -24,6 +24,7 @@ export interface Order {
     status: OrderStatus;
     totalAmount: number;
     createdAt: string;
+    generalNote: string | null;
     canCancel: boolean;
     cancellationReason: string | null;
     items: OrderItem[];
@@ -349,6 +350,15 @@ export default function OrdersModal({
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {/* General Note */}
+                                        {order.generalNote && (
+                                            <div className="bg-blue-50 rounded-lg p-2">
+                                                <p className="text-xs text-blue-700">
+                                                    <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* Order Total */}
                                         <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
