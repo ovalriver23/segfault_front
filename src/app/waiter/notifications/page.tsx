@@ -31,6 +31,7 @@ interface Order {
   tableName: string;
   status: OrderStatus;
   totalAmount: number;
+  generalNote: string | null;
   createdAt: string;
   items: OrderItem[];
 }
@@ -630,6 +631,14 @@ export default function WaiterNotificationsPage() {
                   ))}
                 </div>
 
+                {/* General Note */}
+                {order.generalNote && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
+                    <p className="text-xs text-amber-700">
+                      <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
+                    </p>
+                  </div>
+                )}
                 {/* Servis Et Button */}
                 <button
                   onClick={() => handleServeOrder(order.id)}
@@ -731,6 +740,15 @@ export default function WaiterNotificationsPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* General Note */}
+                {order.generalNote && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                    <p className="text-xs text-amber-700">
+                      <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
 
