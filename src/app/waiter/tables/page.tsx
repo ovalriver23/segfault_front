@@ -12,12 +12,10 @@ interface Table {
 }
 
 interface OrderItem {
-  id: number;
   menuItemName: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  notes?: string;
+  price: number;
+  note?: string | null;
 }
 
 interface Order {
@@ -50,7 +48,7 @@ export default function WaiterTablesPage() {
   const fetchOrders = async (qrToken: string) => {
     setIsLoadingOrders(true);
     try {
-      const response = await fetch(`/api/public/order?qrToken=${qrToken}`, {
+      const response = await fetch(`/api/public/table/order?qrToken=${qrToken}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -308,17 +306,54 @@ export default function WaiterTablesPage() {
                           </span>
                         </div>
 
-                        {/* Order Items */}
-                        <div className="space-y-2">
-                          {order.items?.map((item) => (
-                            <div key={item.id} className="flex justify-between items-center text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">
-                                  {item.quantity}x
-                                </span>
-                                <span className="text-gray-700">{item.menuItemName}</span>
+                        {/* Order Items - CartItem Style */}
+                        <div className="space-y-3">
+                          {order.items?.map((item, index) => (
+                            <div key={`${order.id}-item-${index}`} className="bg-gray-50 rounded-xl p-4 space-y-2">
+                              <div className="flex gap-3">
+                                {/* Item Details */}
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-gray-900">
+                                    {item.menuItemName}
+                                  </h3>
+                                  <p className="text-gray-600 text-sm mt-1">
+                                    {item.price?.toFixed(2)} TL
+                                  </p>
+
+                                  {/* Quantity and Total */}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <div className="inline-flex items-center bg-[#E11383] rounded-xl shadow-md h-8 px-3">
+                                      <span className="text-white font-bold text-sm">
+                                        {item.quantity}x
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-900 font-semibold">
+                                      {(item.price * item.quantity)?.toFixed(2)} TL
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <span className="text-gray-500 font-medium">₺{item.totalPrice?.toFixed(2)}</span>
+
+                              {/* Item Note */}
+                              {item.note && (
+                                <div className="text-[#E11383] text-sm font-medium flex items-center gap-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+                                  Not: {item.note}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
