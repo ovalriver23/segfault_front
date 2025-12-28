@@ -29,23 +29,8 @@ export default async function proxy(req: NextRequest) {
         return NextResponse.redirect(new URL('/log-in', req.nextUrl));
       }
 
-      // Role-based access control
-      const userRole = claims.role as string;
-
-      // Check if STAFF user is trying to access manager or superadmin routes
-      if (userRole === 'STAFF' && (isManagerRoute || isSuperadminRoute)) {
-        return NextResponse.redirect(new URL('/waiter/tables', req.nextUrl));
-      }
-
-      // Check if MANAGER user is trying to access staff or superadmin routes
-      if (userRole === 'MANAGER' && (isStaffRoute || isSuperadminRoute)) {
-        return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
-      }
-
-      // Check if SUPER_ADMIN user is trying to access staff or manager routes
-      if (userRole === 'SUPER_ADMIN' && (isStaffRoute || isManagerRoute)) {
-        return NextResponse.redirect(new URL('/Superadmin', req.nextUrl));
-      }
+      // Note: Role-based access control is handled in layout components
+      // because JWT doesn't contain role information
 
     } catch (err) {
       if (isStaffRoute) {
