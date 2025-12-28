@@ -1002,23 +1002,38 @@ export default function MenuView({ apiData }: MenuViewProps) {
       {
         showWaiterConfirmModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
+            <div className={`rounded-2xl shadow-xl max-w-sm w-full p-6 ${theme === 'MODERN' ? 'bg-[#2d2d2d]' :
+                theme === 'ELEGANT' ? 'bg-[#fdfbf7] border border-[#d2b48c]' :
+                  'bg-white'
+              }`}>
+              <h3 className={`text-lg font-bold mb-2 text-center ${theme === 'MODERN' ? 'text-white' :
+                  theme === 'ELEGANT' ? 'text-[#5c4033] font-serif' :
+                    'text-gray-900'
+                }`}>
                 Garson çağırmak istediğinize emin misiniz?
               </h3>
-              <p className="text-sm text-gray-600 mb-6 text-center">
+              <p className={`text-sm mb-6 text-center ${theme === 'MODERN' ? 'text-gray-400' :
+                  theme === 'ELEGANT' ? 'text-[#8b4513]' :
+                    'text-gray-600'
+                }`}>
                 Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={handleCancelWaiterConfirm}
-                  className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'border border-gray-600 text-gray-300 hover:bg-gray-700' :
+                      theme === 'ELEGANT' ? 'border border-[#d2b48c] text-[#5c4033] hover:bg-[#e6dcc3]' :
+                        'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   İptal
                 </button>
                 <button
                   onClick={handleConfirmCallWaiter}
-                  className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'bg-[#ea580c] text-white hover:bg-[#c2410c]' :
+                      theme === 'ELEGANT' ? 'bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]' :
+                        'bg-secondary-500 text-white hover:bg-secondary-600'
+                    }`}
                 >
                   Evet, Çağır
                 </button>

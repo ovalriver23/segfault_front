@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to the backend
+    console.log('🔐 Signin isteği backend\'e gönderiliyor:', BACKEND_API_URL);
+
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -54,9 +56,11 @@ export async function POST(request: NextRequest) {
       credentials: 'include', // Important for handling cookies
     });
 
+    console.log('🔐 Backend yanıtı:', backendResponse.status);
+
     // Get the response body
     let responseData: SignInResponse | { message?: string; error?: string };
-    
+
     try {
       responseData = await backendResponse.json();
     } catch (error) {
@@ -89,6 +93,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
+    console.error('❌ Signin hatası:', error);
 
     // Check if it's a network error
     if (error instanceof TypeError && error.message.includes('fetch')) {

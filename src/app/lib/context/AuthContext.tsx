@@ -15,6 +15,7 @@ interface User {
     restaurantLocation: string;
     latitude: number;
     longitude: number;
+    restaurantId?: number; // Added for correct theme mapping
 }
 
 interface AuthContextType {

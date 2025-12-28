@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageTitle } from "../../layout";
-import { useEffect } from "react";
+import { useAuth } from "@/app/lib/context/AuthContext";
 
 type Theme = "DEFAULT" | "MODERN" | "ELEGANT";
 
 export default function ThemePage() {
     const router = useRouter();
     const { setPageTitle } = usePageTitle();
+    const { user } = useAuth();
     const [selectedTheme, setSelectedTheme] = useState<Theme>("DEFAULT");
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -17,9 +18,11 @@ export default function ThemePage() {
     useEffect(() => {
         setPageTitle("Menü Teması");
 
+        if (!user) return;
+
         const fetchCurrentTheme = async () => {
             try {
-                const res = await fetch("/api/manager/menu-theme", { cache: 'no-store' });
+                const res = await fetch(`/api/manager/menu-theme`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.theme) {
@@ -32,7 +35,7 @@ export default function ThemePage() {
         };
 
         fetchCurrentTheme();
-    }, [setPageTitle]);
+    }, [setPageTitle, user]);
 
     const handleSave = async () => {
         setIsLoading(true);
@@ -44,14 +47,16 @@ export default function ThemePage() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ theme: selectedTheme }),
+                body: JSON.stringify({
+                    theme: selectedTheme
+                }),
             });
 
             if (response.ok) {
                 setMessage({ type: "success", text: "Tema başarıyla güncellendi!" });
             } else {
                 const errorData = await response.json().catch(() => ({}));
-                setMessage({ type: "error", text: errorData.message || "Tema güncellenirken bir hata oluştu." });
+                setMessage({ type: "error", text: errorData.error || errorData.message || "Tema güncellenirken bir hata oluştu." });
             }
         } catch (error) {
             setMessage({ type: "error", text: "Bağlantı hatası." });
@@ -83,7 +88,7 @@ export default function ThemePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {/* DEFAULT THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "DEFAULT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 overflow-hidden ${selectedTheme === "DEFAULT" ? "border-primary-500 scale-105" : "border-white hover:border-gray-100"}`}
                     onClick={() => setSelectedTheme("DEFAULT")}
                 >
                     <figure className="h-48 bg-gray-100 flex items-center justify-center relative overflow-hidden group">
@@ -98,7 +103,7 @@ export default function ThemePage() {
                         </div>
                         <span className="badge badge-lg bg-white absolute bottom-4 shadow-sm text-gray-700">Önizleme</span>
                     </figure>
-                    <div className="card-body p-6 text-center">
+                    <div className="card-body p-6 text-center bg-white rounded-b-2xl">
                         <h2 className="card-title justify-center text-gray-800">Varsayılan</h2>
                         <p className="text-sm text-gray-500">Standart, temiz ve kullanışlı arayüz.</p>
                         {selectedTheme === "DEFAULT" && <div className="badge badge-primary mt-2">Seçili</div>}
@@ -107,7 +112,7 @@ export default function ThemePage() {
 
                 {/* MODERN THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "MODERN" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 overflow-hidden ${selectedTheme === "MODERN" ? "border-primary-500 scale-105" : "border-white hover:border-gray-100"}`}
                     onClick={() => setSelectedTheme("MODERN")}
                 >
                     <figure className="h-48 bg-gray-900 flex items-center justify-center relative overflow-hidden group">
@@ -126,7 +131,7 @@ export default function ThemePage() {
                         </div>
                         <span className="badge badge-lg bg-gray-800 text-white border-none absolute bottom-4 shadow-sm">Önizleme</span>
                     </figure>
-                    <div className="card-body p-6 text-center">
+                    <div className="card-body p-6 text-center bg-white rounded-b-2xl">
                         <h2 className="card-title justify-center text-gray-800">Modern</h2>
                         <p className="text-sm text-gray-500">Koyu mod, canlı renkler ve geniş kartlar.</p>
                         {selectedTheme === "MODERN" && <div className="badge badge-primary mt-2">Seçili</div>}
@@ -135,7 +140,7 @@ export default function ThemePage() {
 
                 {/* ELEGANT THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "ELEGANT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 overflow-hidden ${selectedTheme === "ELEGANT" ? "border-primary-500 scale-105" : "border-white hover:border-gray-100"}`}
                     onClick={() => setSelectedTheme("ELEGANT")}
                 >
                     <figure className="h-48 bg-[#f5f5dc] flex items-center justify-center relative overflow-hidden group">
@@ -154,7 +159,7 @@ export default function ThemePage() {
                         </div>
                         <span className="badge badge-lg bg-[#f0e6d2] text-[#5c4033] border-none absolute bottom-4 shadow-sm">Önizleme</span>
                     </figure>
-                    <div className="card-body p-6 text-center">
+                    <div className="card-body p-6 text-center bg-white rounded-b-2xl">
                         <h2 className="card-title justify-center text-gray-800">Elegant</h2>
                         <p className="text-sm text-gray-500">Şık, minimalist ve sofistike tasarım.</p>
                         {selectedTheme === "ELEGANT" && <div className="badge badge-primary mt-2">Seçili</div>}

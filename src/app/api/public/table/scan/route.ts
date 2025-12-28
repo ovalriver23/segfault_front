@@ -57,12 +57,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Inject the theme from the backend response (or default if missing)
-        // We are no longer suppressing the backend value with the local store
-        // const theme = getTheme(); 
-        // responseData.menuTheme = theme; 
-
-        // Check if the backend returned a theme, otherwise use DEFAULT
+        // Backend'den tema gelmezse DEFAULT kullan
         if (!responseData.menuTheme) {
             responseData.menuTheme = 'DEFAULT';
         }

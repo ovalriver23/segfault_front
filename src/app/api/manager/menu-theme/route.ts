@@ -5,32 +5,50 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.co
 export async function PUT(request: NextRequest) {
     try {
         const body = await request.json();
-        const cookies = request.cookies;
-        const cookieHeader = cookies.toString();
+
+        // Get JWT token from cookies
+        const jwtToken = request.cookies.get('JWT_TOKEN')?.value;
+
+        if (!jwtToken) {
+            console.error('❌ Tema güncelleme: JWT_TOKEN bulunamadı');
+            return NextResponse.json(
+                { error: 'Oturum bulunamadı' },
+                { status: 401 }
+            );
+        }
+
+        console.log('📤 Tema güncelleme isteği backend\'e gönderiliyor:', body.theme);
 
         const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu-theme`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Cookie': cookieHeader
+                'Cookie': `JWT_TOKEN=${jwtToken}`
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ theme: body.theme }),
+            credentials: 'include'
         });
 
-        const data = await backendResponse.json();
+        const responseText = await backendResponse.text();
+        console.log('📥 Backend PUT yanıtı:', backendResponse.status, responseText);
 
-        // Also update local store for dev fallback if needed, or remove if fully migrating
-        // For safety, let's keep local store synced just in case
-        if (backendResponse.ok && body.theme) {
-            try {
-                const { setTheme } = await import('../../../lib/store/themeStore');
-                setTheme(body.theme);
-            } catch (e) {
-                // ignore local store error
-            }
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : { theme: body.theme };
+        } catch {
+            data = { message: responseText || 'Tema güncellendi' };
         }
 
-        return NextResponse.json(data, { status: backendResponse.status });
+        if (!backendResponse.ok) {
+            console.error('❌ Tema güncelleme hatası:', data);
+            return NextResponse.json(
+                { error: data.message || data.error || 'Tema güncellenemedi' },
+                { status: backendResponse.status }
+            );
+        }
+
+        console.log('✅ Tema başarıyla güncellendi:', body.theme);
+        return NextResponse.json({ theme: body.theme, ...data }, { status: 200 });
 
     } catch (error) {
         console.error('Error updating theme:', error);
@@ -43,44 +61,76 @@ export async function PUT(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        const cookies = request.cookies;
-        const cookieHeader = cookies.toString();
+        // Get JWT token from cookies
+        const jwtToken = request.cookies.get('JWT_TOKEN')?.value;
 
-        // Try getting from backend first
-        try {
-            const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu-theme`, {
-                headers: {
-                    'Cookie': cookieHeader
-                }
-            });
-
-            if (backendResponse.ok) {
-                const data = await backendResponse.json();
-                return NextResponse.json(data, {
+        if (!jwtToken) {
+            console.log('⚠️ JWT_TOKEN bulunamadı, DEFAULT tema kullanılıyor');
+            return NextResponse.json(
+                { theme: 'DEFAULT' },
+                {
                     headers: {
                         'Cache-Control': 'no-store, max-age=0, must-revalidate'
                     }
-                });
-            }
-        } catch (e) {
-            console.warn('Backend theme fetch failed, falling back to local store');
+                }
+            );
         }
 
-        // Fallback to local store if backend fails or 404s
-        // This is necessary because the backend persistence seems unreliable for this session
-        const { getTheme } = await import('../../../lib/store/themeStore');
-        const theme = getTheme();
+        console.log('📤 Tema bilgisi için backend /api/account/me çağrılıyor...');
 
-        return NextResponse.json({ theme }, {
+        // Backend /api/account/me - menuTheme alanını burada aramalıyız
+        const backendResponse = await fetch(`${BACKEND_API_URL}/api/account/me`, {
+            method: 'GET',
             headers: {
-                'Cache-Control': 'no-store, max-age=0, must-revalidate'
-            }
+                'Content-Type': 'application/json',
+                'Cookie': `JWT_TOKEN=${jwtToken}`
+            },
+            credentials: 'include'
         });
 
-    } catch (error) {
+        const responseText = await backendResponse.text();
+        console.log('📥 Backend account/me yanıtı:', backendResponse.status);
+
+        if (backendResponse.ok && responseText) {
+            try {
+                const data = JSON.parse(responseText);
+                console.log('📥 Account data keys:', Object.keys(data));
+
+                // menuTheme doğrudan veya restaurant içinde olabilir
+                const theme = data.menuTheme || data.restaurant?.menuTheme || 'DEFAULT';
+                console.log('✅ Tema alındı:', theme);
+
+                return NextResponse.json(
+                    { theme },
+                    {
+                        headers: {
+                            'Cache-Control': 'no-store, max-age=0, must-revalidate'
+                        }
+                    }
+                );
+            } catch (e) {
+                console.warn('⚠️ Backend yanıtı JSON değil');
+            }
+        } else {
+            console.log('⚠️ Backend account/me başarısız:', backendResponse.status);
+        }
+
+        // Fallback to DEFAULT
+        console.log('⚠️ Tema alınamadı, DEFAULT kullanılıyor');
         return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
+            { theme: 'DEFAULT' },
+            {
+                headers: {
+                    'Cache-Control': 'no-store, max-age=0, must-revalidate'
+                }
+            }
+        );
+
+    } catch (error) {
+        console.error('❌ Tema alınırken hata:', error);
+        return NextResponse.json(
+            { theme: 'DEFAULT' },
+            { status: 200 }
         );
     }
 }
