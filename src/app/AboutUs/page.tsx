@@ -242,6 +242,66 @@ export default function AboutUs() {
                     </div>
                 </motion.section>
 
+                {/* Contact Section */}
+                <motion.section
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    variants={containerVariants}
+                    className="mb-32"
+                >
+                    <motion.div variants={itemVariants} className="text-center mb-12">
+                        <h2 className="text-4xl font-bold mb-4 text-gray-900">İletişim</h2>
+                        <p className="text-gray-600">Bizimle iletişime geçin</p>
+                    </motion.div>
+
+                    <motion.div 
+                        variants={itemVariants}
+                        className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl p-8 md:p-12"
+                    >
+                        <div className="space-y-6">
+                            {/* Email */}
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+                                    <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 mb-1">E-posta</h3>
+                                    <a href="mailto:segfaultgtu@gmail.com" className="text-primary-600 hover:text-primary-700 transition-colors">
+                                        segfaultgtu@gmail.com
+                                    </a>
+                                </div>
+                            </div>
+
+                            {/* Phone */}
+                            <div className="flex items-start gap-4">
+                                <div className="flex-1">
+                                </div>
+                            </div>
+
+                            {/* Address */}
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 mb-1">Adres</h3>
+                                    <p className="text-gray-700 leading-relaxed">
+                                        Gebze Teknik Üniversitesi<br />
+                                        Bilgisayar Mühendisliği Bölümü Z-23 (Derste olabiliriz)<br />
+                                        Kocaeli, Türkiye
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </motion.section>
+
                 {/* Final Note */}
                 <motion.section
                     initial={{ opacity: 0 }}
