@@ -45,7 +45,27 @@ export default function RestaurantsPage() {
     // Info modal state
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [infoRestaurant, setInfoRestaurant] = useState<Restaurant | null>(null);
-    const [showBanReasonInModal, setShowBanReasonInModal] = useState(false);
+    const [showBanReasonPanel, setShowBanReasonPanel] = useState(false);
+    const [userBanReason, setUserBanReason] = useState<string>('');
+    const [banReasonLoading, setBanReasonLoading] = useState(false);
+
+    const fetchUserBanReason = async (userId: number) => {
+        setBanReasonLoading(true);
+        setShowBanReasonPanel(true);
+        try {
+            const response = await fetch(`/api/Superadmin/users/${userId}/ban-reason`);
+            if (response.ok) {
+                const data = await response.json();
+                setUserBanReason(data.banReason || 'Belirtilmemiş');
+            } else {
+                setUserBanReason('Ban sebebi alınamadı');
+            }
+        } catch (error) {
+            setUserBanReason('Bir hata oluştu');
+        } finally {
+            setBanReasonLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchRestaurants(currentPage);
@@ -451,26 +471,10 @@ export default function RestaurantsPage() {
                                 />
                             </div>
 
-                            {/* Seçenekler */}
-                            <div className="space-y-2 mb-6">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={banManager}
-                                        onChange={(e) => setBanManager(e.target.checked)}
-                                        className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500 accent-orange-500"
-                                    />
-                                    <span className="text-sm text-gray-700">Manager&apos;ı da yasakla</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={banStaff}
-                                        onChange={(e) => setBanStaff(e.target.checked)}
-                                        className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500 accent-orange-500"
-                                    />
-                                    <span className="text-sm text-gray-700">Staff&apos;ları da yasakla</span>
-                                </label>
+                            {/* Seçenekler - Hidden but always checked */}
+                            <div className="hidden">
+                                <input type="checkbox" checked={banManager} readOnly />
+                                <input type="checkbox" checked={banStaff} readOnly />
                             </div>
 
                             <div className="flex gap-3 justify-end">
@@ -503,152 +507,190 @@ export default function RestaurantsPage() {
             {
                 showInfoModal && infoRestaurant && (
                     <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl border border-gray-200">
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-xl font-bold text-gray-800">Restoran Detayları</h3>
-                                <button
-                                    onClick={() => {
-                                        setShowInfoModal(false);
-                                        setInfoRestaurant(null);
-                                    }}
-                                    className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-                                >
-                                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
+                        <div className="flex gap-4 items-start">
+                            {/* Main Modal */}
+                            <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl border border-gray-200">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h3 className="text-xl font-bold text-gray-800">Restoran Detayları</h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowInfoModal(false);
+                                            setInfoRestaurant(null);
+                                            setShowBanReasonPanel(false);
+                                            setUserBanReason('');
+                                        }}
+                                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
 
-                            <div className="space-y-4">
-                                {/* Restaurant Name with Logo */}
-                                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'linear-gradient(to right, #fef3f8, #fff8f0)' }}>
-                                    {infoRestaurant.logoUrl ? (
-                                        <img
-                                            src={infoRestaurant.logoUrl}
-                                            alt={infoRestaurant.name}
-                                            className="w-12 h-12 rounded-lg object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-50 border-2 border-orange-400">
-                                            <svg className="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8V5m0 0a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-1 1h0a1 1 0 01-1-1z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 16c-.5 0-1 .15-1.5.45a2.7 2.7 0 01-3 0 2.7 2.7 0 00-3 0 2.7 2.7 0 01-3 0 2.7 2.7 0 00-3 0 2.7 2.7 0 01-3 0A1.75 1.75 0 003 16v2a2 2 0 002 2h14a2 2 0 002-2v-2zM21 16v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5" />
+                                <div className="space-y-4">
+                                    {/* Restaurant Name with Logo */}
+                                    <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'linear-gradient(to right, #fef3f8, #fff8f0)' }}>
+                                        {infoRestaurant.logoUrl ? (
+                                            <img
+                                                src={infoRestaurant.logoUrl}
+                                                alt={infoRestaurant.name}
+                                                className="w-12 h-12 rounded-lg object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-50 border-2 border-orange-400">
+                                                <svg className="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8V5m0 0a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-1 1h0a1 1 0 01-1-1z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 16c-.5 0-1 .15-1.5.45a2.7 2.7 0 01-3 0 2.7 2.7 0 00-3 0 2.7 2.7 0 01-3 0 2.7 2.7 0 00-3 0 2.7 2.7 0 01-3 0A1.75 1.75 0 003 16v2a2 2 0 002 2h14a2 2 0 002-2v-2zM21 16v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <p className="text-sm text-gray-500">Restoran Adı</p>
+                                            <p className="font-bold text-gray-800">{infoRestaurant.name}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Restaurant ID */}
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Restoran ID</p>
+                                            <p className="text-sm font-mono font-medium text-gray-800">{infoRestaurant.id}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {/* Location */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Konum</p>
+                                                <p className="text-sm font-medium text-gray-800">{infoRestaurant.location}</p>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div>
-                                        <p className="text-sm text-gray-500">Restoran Adı</p>
-                                        <p className="font-bold text-gray-800">{infoRestaurant.name}</p>
-                                    </div>
-                                </div>
 
-                                {/* Restaurant ID */}
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-xs text-gray-500">Restoran ID</p>
-                                        <p className="text-sm font-mono font-medium text-gray-800">{infoRestaurant.id}</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {/* Location */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Konum</p>
-                                            <p className="text-sm font-medium text-gray-800">{infoRestaurant.location}</p>
+                                        {/* Phone */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Telefon</p>
+                                                <p className="text-sm font-medium text-gray-800">{infoRestaurant.phoneNumber}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Phone */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Telefon</p>
-                                            <p className="text-sm font-medium text-gray-800">{infoRestaurant.phoneNumber}</p>
+                                        {/* Manager */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Manager</p>
+                                                <p className="text-sm font-medium text-gray-800">{infoRestaurant.managerUsername}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Manager */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Manager</p>
-                                            <p className="text-sm font-medium text-gray-800">{infoRestaurant.managerUsername}</p>
+                                        {/* Email */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">E-posta</p>
+                                                <p className="text-sm font-medium text-gray-800">{infoRestaurant.managerEmail}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Email */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">E-posta</p>
-                                            <p className="text-sm font-medium text-gray-800">{infoRestaurant.managerEmail}</p>
+                                        {/* Manager ID */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Manager ID</p>
+                                                <p className="text-sm font-medium text-gray-800">#{infoRestaurant.managerId}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Manager ID */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Manager ID</p>
-                                            <p className="text-sm font-medium text-gray-800">#{infoRestaurant.managerId}</p>
+                                        {/* Revenue */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Toplam Ciro</p>
+                                                <p className="text-sm font-medium text-gray-800">{formatCurrency(infoRestaurant.totalRevenue)}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Orders */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-xs text-gray-500">Toplam Sipariş</p>
+                                                <p className="text-sm font-medium text-gray-800">{infoRestaurant.totalOrders}</p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Revenue */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Toplam Ciro</p>
-                                            <p className="text-sm font-medium text-gray-800">{formatCurrency(infoRestaurant.totalRevenue)}</p>
-                                        </div>
+                                    {/* Status */}
+                                    <div className="flex gap-2 pt-2">
+                                        {infoRestaurant.approved ? (
+                                            <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-lg font-medium">✓ Onaylı</span>
+                                        ) : (
+                                            <span className="px-3 py-1.5 bg-orange-100 text-orange-700 text-sm rounded-lg font-medium">⏳ Onay Bekliyor</span>
+                                        )}
+                                        {infoRestaurant.banned && (
+                                            <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-lg font-medium">🚫 Yasaklı</span>
+                                        )}
                                     </div>
 
-                                    {/* Orders */}
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Toplam Sipariş</p>
-                                            <p className="text-sm font-medium text-gray-800">{infoRestaurant.totalOrders}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Status */}
-                                <div className="flex gap-2 pt-2">
-                                    {infoRestaurant.approved ? (
-                                        <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-lg font-medium">✓ Onaylı</span>
-                                    ) : (
-                                        <span className="px-3 py-1.5 bg-orange-100 text-orange-700 text-sm rounded-lg font-medium">⏳ Onay Bekliyor</span>
-                                    )}
+                                    {/* Ban Reason Button */}
                                     {infoRestaurant.banned && (
-                                        <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-lg font-medium">🚫 Yasaklı</span>
+                                        <button
+                                            onClick={() => {
+                                                if (showBanReasonPanel) {
+                                                    setShowBanReasonPanel(false);
+                                                    setUserBanReason('');
+                                                } else {
+                                                    fetchUserBanReason(infoRestaurant.managerId);
+                                                }
+                                            }}
+                                            className="mt-4 w-full px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border-2 border-red-300 rounded-lg hover:bg-red-100 transition-colors"
+                                        >
+                                            {showBanReasonPanel ? 'Ban Sebebini Gizle' : 'Ban Sebebini Göster'}
+                                        </button>
                                     )}
                                 </div>
                             </div>
+
+                            {/* Ban Reason Panel - Right side of modal */}
+                            {showBanReasonPanel && (
+                                <div className="bg-white rounded-xl p-6 w-96 shadow-2xl border border-gray-200 self-start">
+                                    <h3 className="text-lg font-bold text-red-800 mb-4">Ban Sebebi</h3>
+                                    {banReasonLoading ? (
+                                        <div className="flex justify-center items-center h-16">
+                                            <div className="animate-spin h-6 w-6 border-b-2 border-red-500 rounded-full"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                                            <p className="text-sm text-red-700">{userBanReason}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )
             }
-        </div >
+        </div>
     );
 }

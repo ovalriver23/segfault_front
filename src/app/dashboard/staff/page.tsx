@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { z } from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
 
 // --- TİPLER ---
 interface Staff {
@@ -20,16 +22,19 @@ const addStaffSchema = z.object({
   firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
   lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
   username: z.string().min(3, 'Kullanıcı adı en az 3 karakter').max(20),
-  email: z.string().email('Geçerli email giriniz'),
+  email: z.email('Geçerli email giriniz'),
   phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
-  password: z.string().min(8, 'Şifre en az 8 karakter'),
+  password: z.string()
+    .min(8, "Şifre en az 8 karakter uzunluğunda olmalıdır.")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
+      "Şifre en az 1 büyük harf, küçük harf, numara ve özel karakter içermelidir."),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
 });
 
 const editStaffSchema = z.object({
   firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
   lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
-  email: z.string().email('Geçerli email giriniz'),
+  email: z.email('Geçerli email giriniz'),
   phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
 });
@@ -65,6 +70,10 @@ export default function StaffPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // --- EFFECT ---
   useEffect(() => {
@@ -366,8 +375,8 @@ export default function StaffPage() {
                         <div className="flex items-center gap-3">
                           <div className="avatar placeholder">
                             {staff.profilePhotoUrl ? (
-                              <div className="rounded-full w-10 h-10">
-                                <img src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} className="object-cover" />
+                              <div className="rounded-full w-10 h-10 relative overflow-hidden">
+                                <Image src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} fill className="object-cover" />
                               </div>
                             ) : (
                               <div className="bg-primary-50 text-text-500 rounded-full w-10 h-10 flex items-center justify-center font-bold">
@@ -430,9 +439,87 @@ export default function StaffPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {isLoading ? (
+              <div className="text-center py-8"><span className="loading loading-spinner text-[#E11383]"></span></div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">Kayıt yok.</div>
+            ) : (
+              filteredStaff.map((staff) => (
+                <div key={staff.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="avatar placeholder">
+                      {staff.profilePhotoUrl ? (
+                        <div className="rounded-full w-12 h-12">
+                          <img src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="bg-primary-50 text-text-500 rounded-full w-12 h-12 flex items-center justify-center font-bold">
+                          {staff.firstName[0]}{staff.lastName[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-800">{staff.firstName} {staff.lastName}</div>
+                      <div className="text-xs text-gray-500">@{staff.username}</div>
+                    </div>
+                    <span className="badge border-none px-2 py-1 text-xs font-medium bg-primary-50 text-text-500">
+                      {staff.gender === 'MALE' ? 'Erkek' : staff.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
+                    </span>
+                  </div>
+
+                  <div className="text-sm space-y-1 mb-3">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span>{staff.phoneNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span className="truncate">{staff.email}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-4 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => openModal('INFO', staff)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-2"
+                      title="Detaylar"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => openModal('EDIT', staff)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-2"
+                      title="Düzenle"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStaff(staff.id)}
+                      className="text-red-500 hover:text-red-700 transition-colors p-2"
+                      title="Sil"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
-
       {/* --- MODAL --- */}
       {modalType && (
         <dialog className="modal modal-open">
@@ -456,8 +543,8 @@ export default function StaffPage() {
               <div className="p-6 flex flex-col items-center">
                 {/* Profil Resmi */}
                 {existingPhotoUrl ? (
-                  <div className="w-48 h-48 rounded-full border-4 border-white shadow-lg mb-3 overflow-hidden">
-                    <img src={existingPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <div className="w-48 h-48 rounded-full border-4 border-white shadow-lg mb-3 overflow-hidden relative">
+                    <Image src={existingPhotoUrl} alt="Profile" fill className="object-cover" />
                   </div>
                 ) : (
                   <div className="w-48 h-48 rounded-full bg-pink-50 text-[#E11383] flex items-center justify-center text-6xl font-bold mb-3 border-4 border-white shadow-lg">
@@ -509,11 +596,12 @@ export default function StaffPage() {
                     {/* Photo Preview */}
                     <div className="relative">
                       {getDisplayPhoto() ? (
-                        <div className="w-20 h-20 rounded-full border-[3px] border-[#E11383] overflow-hidden">
-                          <img
+                        <div className="w-20 h-20 rounded-full border-[3px] border-[#E11383] overflow-hidden relative">
+                          <Image
                             src={getDisplayPhoto()!}
                             alt="Preview"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         </div>
                       ) : (
@@ -655,26 +743,44 @@ export default function StaffPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre</label>
-                        <input
-                          type="password"
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder="••••••••"
-                          className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none pr-12"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition z-10"
+                          >
+                            {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                          </button>
+                        </div>
                         {errors.password && <span className="text-error text-xs">{errors.password}</span>}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre Tekrar</label>
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          placeholder="••••••••"
-                          className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleInputChange}
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none pr-12"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition z-10"
+                          >
+                            {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                          </button>
+                        </div>
                         {errors.confirmPassword && <span className="text-error text-xs">{errors.confirmPassword}</span>}
                       </div>
                     </div>

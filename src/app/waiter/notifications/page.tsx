@@ -51,6 +51,8 @@ export default function WaiterNotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeOrdersUnfilteredVersion, setActiveOrdersUnfilteredVersion] = useState<Order[]>([]);
+  const [tables, setTables] = useState<{ id: string; name: string }[]>([]);
 
   // Push Notification Hook
   const {
@@ -58,6 +60,7 @@ export default function WaiterNotificationsPage() {
     isSubscribed: pushSubscribed,
     isLoading: pushLoading,
     error: pushError,
+    notSupportedReason: pushNotSupportedReason,
     subscribe: pushSubscribe,
     unsubscribe: pushUnsubscribe
   } = usePushNotification();
@@ -205,6 +208,7 @@ export default function WaiterNotificationsPage() {
 
       // Ref'ten güncel completed orders'ı al
       const currentCompleted = completedOrdersRef.current;
+      setActiveOrdersUnfilteredVersion(currentCompleted);
       const completedIds = currentCompleted.map(o => o.id);
 
       // SERVED ve COMPLETED siparişleri filtreleyerek sadece aktif olanları al
@@ -221,12 +225,34 @@ export default function WaiterNotificationsPage() {
     }
   };
 
+  const fetchTables = async () => {
+    try {
+      const response = await fetch('/api/waiter/tables/get', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.error('Masalar yüklenemedi');
+        return;
+      }
+
+      const data = await response.json();
+      setTables(data.map((t: any) => ({ id: t.id, name: t.name })));
+    } catch (err: any) {
+      console.error('Fetch tables error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
     fetchOrders();
+    fetchTables();
     const interval = setInterval(() => {
       fetchRequests();
       fetchOrders();
+      fetchTables();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -257,6 +283,7 @@ export default function WaiterNotificationsPage() {
     setIsRefreshing(true);
     fetchRequests();
     fetchOrders();
+    fetchTables();
   };
 
   const tableNames = [...new Set(pendingRequests.map(r => r.tableName))];
@@ -316,8 +343,8 @@ export default function WaiterNotificationsPage() {
       // REQUEST_BILL ise, o masanın tüm siparişlerini COMPLETED yap
       if (requestToComplete?.type === 'REQUEST_BILL') {
         const tableName = requestToComplete.tableName;
-        const tableOrders = activeOrders.filter(o => o.tableName === tableName);
-
+        const tableOrders = activeOrdersUnfilteredVersion.filter(o => o.tableName === tableName);
+        console.log('Table orders:', tableOrders);
         // Her sipariş için COMPLETED status'a güncelle
         for (const order of tableOrders) {
           try {
@@ -349,7 +376,32 @@ export default function WaiterNotificationsPage() {
             // Sipariş güncelleme hatası ana işlemi durdurmasın
           }
         }
+
+        // Siparişler tamamlandıktan sonra masa oturumunu kapat
+        const table = tables.find(t => t.name === tableName);
+        console.log('Table:', table);
+        if (table) {
+          try {
+            const closeSessionResponse = await fetch('/api/waiter/orders/close-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ tableId: table.id })
+            });
+
+            if (!closeSessionResponse.ok) {
+              console.error('Close session failed');
+            } else {
+              console.log('Session closed for table:', tableName);
+            }
+          } catch (sessionErr) {
+            console.error('Error closing session:', sessionErr);
+          }
+        } else {
+          console.error('Table not found for closing session:', tableName);
+        }
       }
+
 
       // Pending'den bul ve completed'a taşı
       const completedRequest = pendingRequests.find(r => r.id === requestId);
@@ -470,26 +522,32 @@ export default function WaiterNotificationsPage() {
           Görev Paneli
         </h1>
         <div className="flex items-center gap-2">
-          {/* Push Notification Toggle */}
-          {pushSupported && (
-            <button
-              onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
-              disabled={pushLoading}
-              className={`p-2 rounded-lg transition-colors ${pushSubscribed
-                ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              title={pushSubscribed ? 'Bildirimleri Kapat' : 'Bildirimleri Aç'}
-            >
-              {pushLoading ? (
-                <RefreshCw className="w-5 h-5 animate-spin" />
-              ) : pushSubscribed ? (
-                <BellRing className="w-5 h-5" />
-              ) : (
-                <BellOff className="w-5 h-5" />
-              )}
-            </button>
-          )}
+          {/* Push Notification Toggle - Always show */}
+          <button
+            onClick={pushSupported ? (pushSubscribed ? pushUnsubscribe : pushSubscribe) : undefined}
+            disabled={pushLoading || !pushSupported}
+            className={`p-2 rounded-lg transition-colors ${!pushSupported
+                ? 'bg-orange-100 text-orange-600 cursor-not-allowed'
+                : pushSubscribed
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            title={
+              !pushSupported
+                ? (pushNotSupportedReason || 'Bildirimler desteklenmiyor')
+                : pushSubscribed
+                  ? 'Bildirimleri Kapat'
+                  : 'Bildirimleri Aç'
+            }
+          >
+            {pushLoading ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : pushSubscribed ? (
+              <BellRing className="w-5 h-5" />
+            ) : (
+              <BellOff className="w-5 h-5" />
+            )}
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -500,6 +558,14 @@ export default function WaiterNotificationsPage() {
           </button>
         </div>
       </div>
+
+      {/* Push Notification Not Supported Message */}
+      {!pushSupported && pushNotSupportedReason && (
+        <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg text-orange-700 text-sm flex items-start gap-2">
+          <BellOff className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>{pushNotSupportedReason}</span>
+        </div>
+      )}
 
       {/* Push Notification Error */}
       {pushError && (

@@ -8,6 +8,7 @@ interface PushNotificationState {
   permission: NotificationPermission | 'default';
   isLoading: boolean;
   error: string | null;
+  notSupportedReason: string | null;
 }
 
 export function usePushNotification() {
@@ -16,43 +17,88 @@ export function usePushNotification() {
     isSubscribed: false,
     permission: 'default',
     isLoading: true,
-    error: null
+    error: null,
+    notSupportedReason: null
   });
 
   // Service Worker ve Push API desteğini kontrol et
   useEffect(() => {
     const checkSupport = async () => {
-      const isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
-      
-      if (!isSupported) {
-        setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
-        return;
-      }
-
-      const permission = Notification.permission;
-      
-      // Service Worker'ı kaydet
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registered:', registration);
-        
-        // Mevcut subscription'ı kontrol et
-        const subscription = await registration.pushManager.getSubscription();
-        
-        setState({
-          isSupported: true,
-          isSubscribed: !!subscription,
-          permission,
-          isLoading: false,
-          error: null
-        });
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+          setState(prev => ({
+            ...prev,
+            isSupported: false,
+            isLoading: false,
+            notSupportedReason: 'Tarayıcı ortamı bulunamadı'
+          }));
+          return;
+        }
+
+        const hasServiceWorker = 'serviceWorker' in navigator;
+        const hasPushManager = 'PushManager' in window;
+        const hasNotification = 'Notification' in window;
+
+        if (!hasServiceWorker || !hasPushManager || !hasNotification) {
+          // Detect iOS Safari without PWA
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          const isStandalone = (window.navigator as any).standalone === true;
+
+          let reason = 'Push bildirimleri bu cihazda desteklenmiyor';
+          if (isIOS && !isStandalone) {
+            reason = 'iOS cihazlarda bildirim almak için uygulamayı Ana Ekrana ekleyin (Paylaş > Ana Ekrana Ekle)';
+          } else if (!hasServiceWorker) {
+            reason = 'Service Worker desteklenmiyor';
+          } else if (!hasPushManager) {
+            reason = 'Push API desteklenmiyor';
+          }
+
+          setState(prev => ({
+            ...prev,
+            isSupported: false,
+            isLoading: false,
+            notSupportedReason: reason
+          }));
+          return;
+        }
+
+        const permission = Notification.permission;
+
+        // Service Worker'ı kaydet
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('Service Worker registered:', registration);
+
+          // Mevcut subscription'ı kontrol et
+          const subscription = await registration.pushManager.getSubscription();
+
+          setState({
+            isSupported: true,
+            isSubscribed: !!subscription,
+            permission,
+            isLoading: false,
+            error: null,
+            notSupportedReason: null
+          });
+        } catch (err) {
+          console.error('Service Worker registration failed:', err);
+          setState(prev => ({
+            ...prev,
+            isSupported: false,
+            isLoading: false,
+            error: 'Service Worker kaydedilemedi',
+            notSupportedReason: 'Service Worker kaydedilemedi'
+          }));
+        }
       } catch (err) {
-        console.error('Service Worker registration failed:', err);
-        setState(prev => ({ 
-          ...prev, 
-          isSupported: true, 
+        console.error('Push notification check failed:', err);
+        setState(prev => ({
+          ...prev,
+          isSupported: false,
           isLoading: false,
-          error: 'Service Worker kaydedilemedi'
+          error: 'Bildirim desteği kontrol edilemedi',
+          notSupportedReason: 'Bildirim desteği kontrol edilemedi'
         }));
       }
     };
@@ -66,11 +112,11 @@ export function usePushNotification() {
       const response = await fetch('/api/waiter/notifications/vapid-key', {
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error('VAPID key alınamadı');
       }
-      
+
       const data = await response.json();
       return data.publicKey;
     } catch (err) {
@@ -107,11 +153,11 @@ export function usePushNotification() {
     try {
       // Bildirim izni iste
       const permission = await Notification.requestPermission();
-      
+
       if (permission !== 'granted') {
-        setState(prev => ({ 
-          ...prev, 
-          permission, 
+        setState(prev => ({
+          ...prev,
+          permission,
           isLoading: false,
           error: 'Bildirim izni verilmedi'
         }));
@@ -126,7 +172,7 @@ export function usePushNotification() {
 
       // Service Worker registration al
       const registration = await navigator.serviceWorker.ready;
-      
+
       // Push subscription oluştur
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -153,18 +199,18 @@ export function usePushNotification() {
         throw new Error('Abonelik kaydedilemedi');
       }
 
-      setState(prev => ({ 
-        ...prev, 
-        isSubscribed: true, 
+      setState(prev => ({
+        ...prev,
+        isSubscribed: true,
         permission: 'granted',
-        isLoading: false 
+        isLoading: false
       }));
-      
+
       return true;
     } catch (err: any) {
       console.error('Subscribe error:', err);
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isLoading: false,
         error: err.message || 'Abonelik oluşturulamadı'
       }));
@@ -193,17 +239,17 @@ export function usePushNotification() {
         await subscription.unsubscribe();
       }
 
-      setState(prev => ({ 
-        ...prev, 
-        isSubscribed: false, 
-        isLoading: false 
+      setState(prev => ({
+        ...prev,
+        isSubscribed: false,
+        isLoading: false
       }));
-      
+
       return true;
     } catch (err: any) {
       console.error('Unsubscribe error:', err);
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isLoading: false,
         error: err.message || 'Abonelik iptal edilemedi'
       }));

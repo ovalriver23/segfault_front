@@ -24,7 +24,7 @@ export default function Tables() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
     const [fetchError, setFetchError] = useState('');
-    
+
     // Edit modal state
     const [editingTable, setEditingTable] = useState<Table | null>(null);
     const [editTableName, setEditTableName] = useState('');
@@ -38,7 +38,7 @@ export default function Tables() {
 
     // Fetch tables on component mount
     useEffect(() => {
-            fetchTables();
+        fetchTables();
     }, []);
 
     // Cleanup debounce timeout on unmount
@@ -118,7 +118,7 @@ export default function Tables() {
     // Add table handler
     const handleAddTable = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const trimmedName = tableName.trim();
         if (!trimmedName) {
             setFormError('Masa adı gereklidir');
@@ -141,9 +141,9 @@ export default function Tables() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     name: trimmedName,
-                    capacity: capacity 
+                    capacity: capacity
                 })
             });
 
@@ -177,7 +177,7 @@ export default function Tables() {
     // Edit table handler
     const handleEditTable = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!editingTable) return;
 
         const trimmedName = editTableName.trim();
@@ -202,7 +202,7 @@ export default function Tables() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     id: editingTable.id,
                     name: trimmedName,
                     capacity: capacity,
@@ -219,7 +219,7 @@ export default function Tables() {
             }
 
             // Success - update table in the list
-            setTableList(prev => prev.map(table => 
+            setTableList(prev => prev.map(table =>
                 table.id === editingTable.id ? {
                     id: data.id,
                     name: data.name,
@@ -256,7 +256,7 @@ export default function Tables() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     id: editingTable.id
                 })
             });
@@ -343,7 +343,7 @@ export default function Tables() {
                     // Fetch QR code image
                     try {
                         const response = await fetch(`/api/dashboard/qr?tableId=${table.id}&size=300`);
-                        
+
                         if (!response.ok) {
                             console.error(`Failed to fetch QR code for table ${table.name}`);
                             continue;
@@ -422,8 +422,8 @@ export default function Tables() {
         <div className="p-8 bg-gray-50 min-h-screen">
             {/* Header */}
 
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-semibold text-neutral-900">Masalar</h1>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-900">Masalar</h1>
 
                 <div className="flex gap-3">
                     {/* QR Code Button */}
@@ -484,7 +484,7 @@ export default function Tables() {
                     <form onSubmit={handleAddTable}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Ekle</h3>
-                        
+
                         {/* Table Name Input Field */}
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -516,12 +516,12 @@ export default function Tables() {
                                 <p className="text-sm text-red-600 mt-2">{formError}</p>
                             )}
                         </div>
-                        
+
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
                             <div className="flex gap-3 w-full">
                                 {/* Cancel Button */}
-                                <button 
+                                <button
                                     type="button"
                                     onClick={closeModal}
                                     disabled={isSubmitting}
@@ -530,7 +530,7 @@ export default function Tables() {
                                     İptal
                                 </button>
                                 {/* Add Button */}
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={isSubmitting}
                                     className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -553,7 +553,7 @@ export default function Tables() {
                     <form onSubmit={handleEditTable}>
                         {/* Modal Header */}
                         <h3 className="font-bold text-2xl text-neutral-900 mb-6">Masa Düzenle</h3>
-                        
+
                         {/* Table Name Input Field */}
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -600,27 +600,27 @@ export default function Tables() {
                                 <p className="text-sm text-red-600 mt-2">{editFormError}</p>
                             )}
                         </div>
-                        
+
                         {/* Modal Action Buttons */}
                         <div className="modal-action mt-8">
                             <div className="flex justify-between items-center w-full">
                                 {/* Delete Button */}
                                 <div className="tooltip tooltip-right" data-tip="Masayı Sil">
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleDeleteTable}
                                         disabled={isSubmitting}
                                         className="btn btn-sm p-2 h-10 min-h-10 w-10 bg-red-600 hover:bg-red-700 border-none rounded-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="text-white">
-                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z"/>
+                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .825-.587 1.413T17 21zM17 6H7v13h10zM9 17h2V8H9zm4 0h2V8h-2zM7 6v13z" />
                                         </svg>
                                     </button>
                                 </div>
-                                
+
                                 <div className="flex gap-3">
                                     {/* Cancel Button */}
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={closeEditModal}
                                         disabled={isSubmitting}
@@ -629,7 +629,7 @@ export default function Tables() {
                                         İptal
                                     </button>
                                     {/* Update Button */}
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={isSubmitting}
                                         className="btn shadow-sm bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -648,13 +648,13 @@ export default function Tables() {
 
 
             {/* Summary Stats Grid */}
-            <div className="grid grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                 {/* Total Tables Card */}
                 <div className="bg-white border border-gray-300 rounded-xl p-6 shadow">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-sm text-gray-500 mb-2">Toplam Masa</p>
-                            <p className="text-4xl font-semibold text-neutral-900">{totalTables}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Toplam Masa</p>
+                            <p className="text-2xl sm:text-4xl font-semibold text-neutral-900">{totalTables}</p>
                         </div>
                         <div aria-label="status" className="status status-neutral status-lg"></div>
                     </div>
@@ -664,8 +664,8 @@ export default function Tables() {
                 <div className="bg-white border border-green-200 rounded-xl p-6 shadow">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-sm text-gray-500 mb-2">Müsait</p>
-                            <p className="text-4xl font-semibold text-green-600">{availableTables}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Müsait</p>
+                            <p className="text-2xl sm:text-4xl font-semibold text-green-600">{availableTables}</p>
                         </div>
                         <div className="inline-grid *:[grid-area:1/1]">
                             <div className="status status-lg status-success"></div>
@@ -677,8 +677,8 @@ export default function Tables() {
                 <div className="bg-white border border-red-300 rounded-xl p-6 shadow">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-sm text-gray-500 mb-2">Dolu</p>
-                            <p className="text-4xl font-semibold text-orange-600">{occupiedTables}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Dolu</p>
+                            <p className="text-2xl sm:text-4xl font-semibold text-orange-600">{occupiedTables}</p>
                         </div>
                         <div className="inline-grid *:[grid-area:1/1]">
                             <div className="status status-lg status-error"></div>
@@ -690,8 +690,8 @@ export default function Tables() {
                 <div className="bg-white border border-blue-200 rounded-xl p-6 shadow">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-sm text-gray-500 mb-2">Rezerve</p>
-                            <p className="text-4xl font-semibold text-blue-600">{reservedTables}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Rezerve</p>
+                            <p className="text-2xl sm:text-4xl font-semibold text-blue-600">{reservedTables}</p>
                         </div>
                         <div className="inline-grid *:[grid-area:1/1]">
                             <div className="status status-lg status-info"></div>
@@ -702,11 +702,11 @@ export default function Tables() {
 
 
             {/* Tables Grid */}
-            <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
                 {isLoading ? (
                     <>
                         {[...Array(10)].map((_, index) => (
-                                        <div key={index} className="skeleton h-32 w-full text-pri bg-gray-100 text-prim rounded-xl [--color-base-100:#fbd0a9]"></div>
+                            <div key={index} className="skeleton h-32 w-full text-pri bg-gray-100 text-prim rounded-xl [--color-base-100:#fbd0a9]"></div>
                         ))}
                     </>
                 ) : fetchError ? (
@@ -716,7 +716,7 @@ export default function Tables() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <p className="text-red-600 font-medium mb-2">{fetchError}</p>
-                            <button 
+                            <button
                                 onClick={fetchTables}
                                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none mt-2"
                             >
@@ -729,17 +729,16 @@ export default function Tables() {
                         Henüz masa eklenmemiş
                     </div>
                 ) : (
-                    
+
                     tableList.map((table) => (
                         <div
                             key={table.id}
-                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${
-                                table.status === 'EMPTY' ? 'border-green-300' : 'border-red-300'
-                            }`}
+                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${table.status === 'EMPTY' ? 'border-green-300' : 'border-red-300'
+                                }`}
                         >
                             {/* Edit Button Indicator - Shows only on hover */}
                             <div className="indicator-item indicator-top opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                <button 
+                                <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         openEditModal(table);
@@ -756,12 +755,10 @@ export default function Tables() {
 
                             <div className="absolute right-5 top-3">
                                 <div className="inline-grid *:[grid-area:1/1]">
-                                    <div className={`status ${
-                                        table.status === 'EMPTY' ? 'status-success' : 'status-error'
-                                    } animate-ping`}></div>
-                                    <div className={`status ${
-                                        table.status === 'EMPTY' ? 'status-success' : 'status-error'
-                                    }`}></div>
+                                    <div className={`status ${table.status === 'EMPTY' ? 'status-success' : 'status-error'
+                                        } animate-ping`}></div>
+                                    <div className={`status ${table.status === 'EMPTY' ? 'status-success' : 'status-error'
+                                        }`}></div>
                                 </div>
                             </div>
 

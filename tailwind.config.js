@@ -65,6 +65,9 @@ module.exports = {
           DEFAULT: "var(--color-background-500)",
         },
       },
+      fontFamily: {
+        elegant: ['var(--font-playfair)', 'serif'],
+      },
     },
   },
   plugins: [],
