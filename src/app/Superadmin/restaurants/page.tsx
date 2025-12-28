@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CustomSelect from '../../../components/CustomSelect';
 
 interface Restaurant {
     id: string;
@@ -97,8 +98,8 @@ export default function RestaurantsPage() {
     const handleBanClick = (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
         setBanReason('');
-        setBanManager(false);
-        setBanStaff(false);
+        setBanManager(true);
+        setBanStaff(true);
         setShowBanModal(true);
     };
 
@@ -226,7 +227,7 @@ export default function RestaurantsPage() {
         );
     };
 
-    if (loading && restaurants.length === 0) return <div className="flex justify-center py-12"><div className="animate-spin h-12 w-12 border-b-2 rounded-full" style={{ borderColor: '#004369' }}></div></div>;
+    if (loading && restaurants.length === 0) return <div className="flex items-center justify-center min-h-[calc(100vh-200px)]"><div className="animate-spin h-12 w-12 border-b-2 rounded-full" style={{ borderColor: '#004369' }}></div></div>;
     if (error) return <div className="bg-red-50 p-6 rounded-xl text-center"><p className="text-red-600">{error}</p><button onClick={() => fetchRestaurants(currentPage)} className="mt-4 bg-red-600 text-white px-4 py-2 rounded">Tekrar Dene</button></div>;
 
     return (
@@ -269,35 +270,37 @@ export default function RestaurantsPage() {
                         {/* Approval Filter */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Onay Durumu</label>
-                            <select
+                            <CustomSelect
                                 value={approvalFilter}
-                                onChange={(e) => {
-                                    setApprovalFilter(e.target.value);
+                                onChange={(val) => {
+                                    setApprovalFilter(val);
                                     setCurrentPage(0);
                                 }}
-                                className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-                            >
-                                <option value="">Tümü</option>
-                                <option value="true">Onaylı</option>
-                                <option value="false">Bekleyen</option>
-                            </select>
+                                options={[
+                                    { value: '', label: 'Tümü' },
+                                    { value: 'true', label: 'Onaylı' },
+                                    { value: 'false', label: 'Bekleyen' },
+                                ]}
+                                placeholder="Seçiniz..."
+                            />
                         </div>
 
                         {/* Ban Filter */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Yasaklı Durumu</label>
-                            <select
+                            <CustomSelect
                                 value={banFilter}
-                                onChange={(e) => {
-                                    setBanFilter(e.target.value);
+                                onChange={(val) => {
+                                    setBanFilter(val);
                                     setCurrentPage(0);
                                 }}
-                                className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-                            >
-                                <option value="">Tümü</option>
-                                <option value="true">Yasaklı</option>
-                                <option value="false">Aktif</option>
-                            </select>
+                                options={[
+                                    { value: '', label: 'Tümü' },
+                                    { value: 'true', label: 'Yasaklı' },
+                                    { value: 'false', label: 'Aktif' },
+                                ]}
+                                placeholder="Seçiniz..."
+                            />
                         </div>
 
                         {/* Reset Button */}

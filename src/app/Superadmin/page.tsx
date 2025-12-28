@@ -90,7 +90,7 @@ export default function SuperadminDashboard() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#004369' }}></div>
             </div>
         );

@@ -228,10 +228,10 @@ export default function SuperadminNav({ activeTab = 'dashboard', isOpen = false,
                 <div className="mx-4 mb-3 rounded-lg bg-orange-200 overflow-hidden whitespace-nowrap">
                     <div style={{ animation: 'marquee 8s linear infinite' }} className="inline-block py-1">
                         <span className="text-pink-700 font-bold text-xs mx-4">
-                            Welcome sadmin ! We were waiting you !
+                            Hello sadmin ! We were waiting you !
                         </span>
                         <span className="text-pink-700 font-bold text-xs mx-4">
-                            Welcome sadmin ! We were waiting you !
+                            Hello sadmin ! We were waiting you !
                         </span>
                     </div>
                 </div>

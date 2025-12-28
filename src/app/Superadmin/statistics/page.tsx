@@ -110,7 +110,7 @@ export default function StatisticsPage() {
 
     if (loading) {
         return (
-            <div className="flex justify-center py-12">
+            <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
                 <div className="animate-spin h-12 w-12 border-b-2 rounded-full" style={{ borderColor: THEME_COLORS.primary }}></div>
             </div>
         );

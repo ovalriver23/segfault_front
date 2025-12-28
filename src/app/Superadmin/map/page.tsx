@@ -131,7 +131,7 @@ export default function MapPage() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-[500px]">
+            <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
                 <div className="animate-spin h-12 w-12 border-b-2 border-purple-500 rounded-full"></div>
             </div>
         );

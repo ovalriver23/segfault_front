@@ -101,7 +101,7 @@ export default function PendingPage() {
         }
     };
 
-    if (loading) return <div className="flex justify-center py-12"><div className="animate-spin h-12 w-12 border-b-2 border-purple-500 rounded-full"></div></div>;
+    if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-200px)]"><div className="animate-spin h-12 w-12 border-b-2 border-purple-500 rounded-full"></div></div>;
     if (error) return <div className="bg-red-50 p-6 rounded-xl text-center"><p className="text-red-600">{error}</p></div>;
 
     return (
