@@ -27,15 +27,15 @@ export default function WaiterTablesPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         const errorMsg = errorData.error || errorData.message || '';
 
         if (response.status === 403 && (
-            errorMsg.includes("şifrenizi değiştirmeniz") || 
-            errorMsg.includes("password")
+          errorMsg.includes("şifrenizi değiştirmeniz") ||
+          errorMsg.includes("password")
         )) {
-            router.push('/waiter/change-password?reason=forced');
-            return; 
+          router.push('/waiter/change-password?reason=forced');
+          return;
         }
 
         throw new Error(errorMsg || 'Masalar yüklenemedi');
@@ -52,11 +52,30 @@ export default function WaiterTablesPage() {
     }
   }, [router]);
 
+  // Check if password change is required before loading tables
   useEffect(() => {
-    fetchTables();
+    const checkPasswordChangeRequired = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData.passwordChangeRequired === true) {
+            router.push('/waiter/change-password?reason=forced');
+            return;
+          }
+        }
+        // If check passes or fails silently, proceed to fetch tables
+        fetchTables();
+      } catch (error) {
+        // If check fails, still try to fetch tables (backend will handle it)
+        fetchTables();
+      }
+    };
+
+    checkPasswordChangeRequired();
     const interval = setInterval(fetchTables, 30000);
     return () => clearInterval(interval);
-  }, [fetchTables]);
+  }, [fetchTables, router]);
 
   // İstatistikleri hesapla
   const totalTables = tables.length;
@@ -75,7 +94,7 @@ export default function WaiterTablesPage() {
     return (
       <div className="flex flex-col justify-center items-center h-screen px-6 text-center pb-20">
         <p className="text-red-500 mb-4 font-medium">{error}</p>
-        <button 
+        <button
           onClick={fetchTables}
           className="btn bg-[#E11383] text-white hover:bg-[#c00f6f] border-none"
         >
@@ -93,9 +112,9 @@ export default function WaiterTablesPage() {
           Masalar
         </h1>
         <button onClick={fetchTables} className="btn btn-sm btn-ghost btn-circle text-[#E11383] hover:bg-pink-50">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
         </button>
       </div>
 
@@ -138,10 +157,10 @@ export default function WaiterTablesPage() {
       {/* Masa Listesi */}
       {tables.length === 0 ? (
         <div className="flex flex-col items-center justify-center mt-10 text-gray-400">
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
-           </svg>
-           <p>Henüz masa bulunmuyor.</p>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+          </svg>
+          <p>Henüz masa bulunmuyor.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -150,7 +169,7 @@ export default function WaiterTablesPage() {
             // Görseldeki renk kodları
             const borderColor = isOccupied ? 'border-[#F73753]' : 'border-[#34C759]';
             const dotColor = isOccupied ? 'bg-[#F73753] shadow-[0_0_4px_#F73753]' : 'bg-[#34C759] shadow-[0_0_4px_#34C759]';
-            
+
             return (
               <div
                 key={table.id}
@@ -160,10 +179,10 @@ export default function WaiterTablesPage() {
               >
                 {/* Sağ Üstteki Nokta */}
                 <div className="absolute top-4 right-4">
-                    <div className="inline-grid *:[grid-area:1/1]">
-                        <div className={`w-2.5 h-2.5 rounded-full ${dotColor} animate-ping opacity-75`}></div>
-                        <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
-                    </div>
+                  <div className="inline-grid *:[grid-area:1/1]">
+                    <div className={`w-2.5 h-2.5 rounded-full ${dotColor} animate-ping opacity-75`}></div>
+                    <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
+                  </div>
                 </div>
 
                 {/* Masa Adı */}

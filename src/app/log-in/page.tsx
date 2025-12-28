@@ -58,6 +58,7 @@ const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<string>("");
 
   const {
     register,
@@ -192,17 +193,20 @@ const SignInPage = () => {
       // TODO: Store auth data in global state/context if needed
       // For now, the JWT cookie is automatically stored by the browser
 
-      // Show success message
+      // Store user role and show success message
+      setUserRole(responseData.role);
       setShowSuccess(true);
 
-      // Redirect to dashboard after 2 seconds
+      // Redirect based on role after 3 seconds
       setTimeout(() => {
         if (responseData.role === 'SUPER_ADMIN') {
           router.replace('/Superadmin');
+        } else if (responseData.role === 'STAFF') {
+          router.replace('/waiter/tables');
         } else {
           router.replace('/dashboard');
         }
-      }, 1500);
+      }, 3000);
     } catch (error) {
       console.error('Sign-in error:', error);
       setApiError('An unexpected error occurred. Please try again.');
@@ -266,15 +270,31 @@ const SignInPage = () => {
 
           {/* General API error message */}
           {apiError && (
-            <div className="mb-5 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-              {apiError}
+            <div className={`mb-5 p-3 border rounded-lg text-sm ${apiError.includes('BANLI') || apiError.toLowerCase().includes('yasaklandı')
+                ? 'bg-orange-50 border-orange-400 text-orange-800'
+                : 'bg-red-100 border-red-400 text-red-700'
+              }`}>
+              {apiError.includes('BANLI') ? (
+                <div>
+                  <div className="font-bold mb-1">⚠️ Hesap Yasaklandı</div>
+                  <div>{apiError.replace('BANLI :', '').replace('BANLI:', '').trim()}</div>
+                </div>
+              ) : (
+                apiError
+              )}
             </div>
           )}
 
           {/* Success message */}
           {showSuccess && (
             <div className="mb-5 p-4 bg-green-50 border-2 border-green-400 rounded-lg text-green-700 text-sm font-medium text-center">
-              ✓ Giriş Başarılı
+              {userRole === 'STAFF' ? (
+                <>
+                  ⚠️ Personeller bu sayfaya giremez, yönlendiriliyorsunuz...
+                </>
+              ) : (
+                <>✓ Giriş Başarılı</>
+              )}
             </div>
           )}
 
