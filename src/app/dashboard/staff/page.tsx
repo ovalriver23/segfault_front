@@ -430,9 +430,87 @@ export default function StaffPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {isLoading ? (
+              <div className="text-center py-8"><span className="loading loading-spinner text-[#E11383]"></span></div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">Kayıt yok.</div>
+            ) : (
+              filteredStaff.map((staff) => (
+                <div key={staff.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="avatar placeholder">
+                      {staff.profilePhotoUrl ? (
+                        <div className="rounded-full w-12 h-12">
+                          <img src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="bg-primary-50 text-text-500 rounded-full w-12 h-12 flex items-center justify-center font-bold">
+                          {staff.firstName[0]}{staff.lastName[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-800">{staff.firstName} {staff.lastName}</div>
+                      <div className="text-xs text-gray-500">@{staff.username}</div>
+                    </div>
+                    <span className="badge border-none px-2 py-1 text-xs font-medium bg-primary-50 text-text-500">
+                      {staff.gender === 'MALE' ? 'Erkek' : staff.gender === 'FEMALE' ? 'Kadın' : 'Diğer'}
+                    </span>
+                  </div>
+
+                  <div className="text-sm space-y-1 mb-3">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span>{staff.phoneNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span className="truncate">{staff.email}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-4 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => openModal('INFO', staff)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-2"
+                      title="Detaylar"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => openModal('EDIT', staff)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-2"
+                      title="Düzenle"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStaff(staff.id)}
+                      className="text-red-500 hover:text-red-700 transition-colors p-2"
+                      title="Sil"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
-
       {/* --- MODAL --- */}
       {modalType && (
         <dialog className="modal modal-open">
