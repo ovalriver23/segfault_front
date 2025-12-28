@@ -56,15 +56,26 @@ export async function GET(request: NextRequest) {
 
             if (backendResponse.ok) {
                 const data = await backendResponse.json();
-                return NextResponse.json(data);
+                return NextResponse.json(data, {
+                    headers: {
+                        'Cache-Control': 'no-store, max-age=0, must-revalidate'
+                    }
+                });
             }
         } catch (e) {
             console.warn('Backend theme fetch failed, falling back to local store');
         }
 
-        // Fallback to DEFAULT if backend fails or 404s
-        // We do NOT use local store here to avoid leaking state between different restaurants in dev
-        return NextResponse.json({ theme: 'DEFAULT' });
+        // Fallback to local store if backend fails or 404s
+        // This is necessary because the backend persistence seems unreliable for this session
+        const { getTheme } = await import('../../../lib/store/themeStore');
+        const theme = getTheme();
+
+        return NextResponse.json({ theme }, {
+            headers: {
+                'Cache-Control': 'no-store, max-age=0, must-revalidate'
+            }
+        });
 
     } catch (error) {
         return NextResponse.json(

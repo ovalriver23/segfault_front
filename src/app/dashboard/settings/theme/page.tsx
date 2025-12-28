@@ -19,7 +19,7 @@ export default function ThemePage() {
 
         const fetchCurrentTheme = async () => {
             try {
-                const res = await fetch("/api/manager/menu-theme");
+                const res = await fetch("/api/manager/menu-theme", { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.theme) {
