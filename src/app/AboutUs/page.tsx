@@ -1,6 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { Snowfall } from 'react-snowfall';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 
@@ -182,14 +184,24 @@ export default function AboutUs() {
                         {/* Leaders Row */}
                         <div className="flex flex-wrap justify-center gap-12 md:gap-20">
                            {[
-                                { name: "Tuana Melisa Aksoi", role: "Project Manager", role2: "Frontend Developer", ring: "ring-purple-400" },
-                               { name: "Mehmet Baha Keskin", role: "Product Owner", role2: "Devops/Backend Developer", ring: "ring-blue-400" }
+                                { name: "Tuana Melisa Aksoy", role: "Project Manager", role2: "Frontend Developer", ring: "ring-purple-400", photo: "/images/team/tuana.jpg" },
+                                { name: "Mehmet Baha Keskin", role: "Product Owner", role2: "Devops/Backend Developer", ring: "ring-blue-400", photo: "/images/team/baha.JPG" }
                                
                            ].map((member, i) => (
                                <motion.div variants={itemVariants} key={i} className="text-center group relative">
                                    <div className={`w-32 h-32 mx-auto mb-6 rounded-full bg-white p-1 shadow-xl ring-2 ${member.ring} ring-offset-4 ring-offset-gray-50`}>
-                                        <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                                            <span className="text-5xl opacity-50">👤</span>
+                                        <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center overflow-hidden relative">
+                                            {member.photo ? (
+                                                <Image 
+                                                    src={member.photo} 
+                                                    alt={member.name}
+                                                    width={128}
+                                                    height={128}
+                                                    className="object-cover w-full h-full"
+                                                />
+                                            ) : (
+                                                <span className="text-5xl opacity-50">👤</span>
+                                            )}
                                         </div>
                                    </div>
                                    <h3 className="text-xl font-bold text-gray-900">{member.name}</h3>
@@ -202,14 +214,24 @@ export default function AboutUs() {
                         {/* Team Members Row */}
                         <div className="flex flex-wrap justify-center gap-10 md:gap-16">
                             {[
-                                { name: "Evrim Doğa Solmaz", role: "Frontend/Backend Developer" },
-                                { name: "Ahmet Emre Kurt", role: "Frontend Developer" },
-                                { name: "Rüya Koçak", role: "Backend Developer" }
+                                { name: "Evrim Doğa Solmaz", role: "Frontend/Backend Developer", photo: "/images/team/evrim.jpg" },
+                                { name: "Ahmet Emre Kurt", role: "Frontend Developer", photo: "/images/team/ahmet.jpg" },
+                                { name: "Rüya Koçak", role: "Backend Developer", photo: "/images/team/ruya.JPG" }
                             ].map((member, i) => (
                                 <motion.div variants={itemVariants} key={i} className="text-center group">
                                     <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-linear-to-br from-orange-400 to-pink-500 p-[3px] shadow-lg">
-                                         <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-white">
-                                             <span className="text-4xl opacity-50">👨‍💻</span>
+                                         <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-white relative">
+                                             {member.photo ? (
+                                                 <Image 
+                                                     src={member.photo} 
+                                                     alt={member.name}
+                                                     width={96}
+                                                     height={96}
+                                                     className="object-cover w-full h-full"
+                                                 />
+                                             ) : (
+                                                 <span className="text-4xl opacity-50">👨‍💻</span>
+                                             )}
                                          </div>
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>

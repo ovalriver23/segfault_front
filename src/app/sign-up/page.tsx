@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import * as z from "zod";
 import { getUserLocation } from "../lib/utils/geolocation";
+import { Eye, EyeOff } from "lucide-react";
 
 const LocationPicker = dynamic(() => import("../../components/LocationPicker"), {
   ssr: false,
@@ -65,6 +66,10 @@ const SignUpPage = () => {
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
+
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   // Image upload state
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
@@ -214,7 +219,7 @@ const SignUpPage = () => {
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Find if there's an error for this specific field
-        const fieldError = error.issues.find((err: z.core.$ZodIssue) => err.path[0] === field);
+        const fieldError = error.issues.find((err: z.ZodIssue) => err.path[0] === field);
 
         if (fieldError) {
           // Set error for this field
@@ -249,7 +254,7 @@ const SignUpPage = () => {
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Find if there's an error for this specific field
-        const fieldError = error.issues.find((err: z.core.$ZodIssue) => err.path[0] === field);
+        const fieldError = error.issues.find((err: z.ZodIssue) => err.path[0] === field);
 
         if (fieldError) {
           // Set error for this field
@@ -602,19 +607,29 @@ const SignUpPage = () => {
             <label htmlFor="password" className="block mb-2 font-medium" style={{ color: "#683817" }}>
               Şifre
             </label>
-            <input
-              onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
-              onBlur={() => handleBlur('password')}
-              value={password}
-              type="password"
-              id="password"
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.password && touchedFields.has('password')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
+            <div className="relative">
+              <input
+                onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
+                onBlur={() => handleBlur('password')}
+                value={password}
+                type={showPassword ? "text" : "password"}
+                id="password"
+                className={`w-full p-3 pr-12 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.password && touchedFields.has('password')
+                  ? 'border-red-500'
+                  : 'border-[#F8645A]'
+                  }`}
+                disabled={isLoading}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-300 hover:text-text-500 transition"
+                disabled={isLoading}
+              >
+                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
+            </div>
             {errors.password && touchedFields.has('password') && (
               <p className="mt-1 text-sm text-red-600">{errors.password}</p>
             )}
@@ -623,19 +638,29 @@ const SignUpPage = () => {
             <label htmlFor="confirmPassword" className="block mb-2 font-medium" style={{ color: "#683817" }}>
               Şifre Tekrar
             </label>
-            <input
-              onChange={(e) => handleFieldChange('confirmPassword', e.target.value, setConfirmPassword)}
-              onBlur={() => handleBlur('confirmPassword')}
-              value={confirmPassword}
-              type="password"
-              id="confirmPassword"
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.confirmPassword && touchedFields.has('confirmPassword')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
+            <div className="relative">
+              <input
+                onChange={(e) => handleFieldChange('confirmPassword', e.target.value, setConfirmPassword)}
+                onBlur={() => handleBlur('confirmPassword')}
+                value={confirmPassword}
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                className={`w-full p-3 pr-12 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.confirmPassword && touchedFields.has('confirmPassword')
+                  ? 'border-red-500'
+                  : 'border-[#F8645A]'
+                  }`}
+                disabled={isLoading}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-300 hover:text-text-500 transition"
+                disabled={isLoading}
+              >
+                {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
+            </div>
             {errors.confirmPassword && touchedFields.has('confirmPassword') && (
               <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
             )}
