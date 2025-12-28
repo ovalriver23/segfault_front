@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     // Get the response body
     let responseData: ListMenuItemsResponse | { message?: string; error?: string };
-    
+
     try {
       responseData = await backendResponse.json();
     } catch (error) {
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
 
     // Organize items by category
     const categoriesMap = new Map<number, CategoryWithItems>();
-    
+
     responseData.forEach((item: MenuItemResponse) => {
       if (!categoriesMap.has(item.categoryId)) {
         categoriesMap.set(item.categoryId, {
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           items: []
         });
       }
-      
+
       const category = categoriesMap.get(item.categoryId)!;
       category.items.push({
         id: item.id,
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Convert map to array and sort by category name
-    const organizedData = Array.from(categoriesMap.values()).sort((a, b) => 
+    const organizedData = Array.from(categoriesMap.values()).sort((a, b) =>
       a.categoryName.localeCompare(b.categoryName)
     );
 
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse the incoming multipart form data
     const formData = await request.formData();
-    
+
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = formData.get('price') as string;
@@ -339,7 +339,7 @@ export async function PUT(request: NextRequest) {
 
     // Parse the incoming multipart form data
     const formData = await request.formData();
-    
+
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = formData.get('price') as string;

@@ -55,14 +55,14 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Profile Settings Card - Placeholder for future */}
-        <div className="card bg-white shadow-lg opacity-60 cursor-not-allowed">
+        {/* Profile Settings Card */}
+        <div className="card bg-white shadow-lg">
           <div className="card-body">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-gray-100 rounded-lg">
+              <div className="p-3 bg-primary-100 rounded-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-gray-600"
+                  className="h-6 w-6 text-primary-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -78,14 +78,15 @@ export default function SettingsPage() {
               <div className="flex-1">
                 <h2 className="card-title text-text-500 text-lg mb-2">
                   Profil Bilgileri
-                  <span className="badge badge-sm badge-ghost ml-2">Yakında</span>
                 </h2>
                 <p className="text-text-300 text-sm mb-4">
                   Profil bilgilerinizi ve restoran ayarlarınızı düzenleyin
                 </p>
-                <button className="btn btn-disabled" disabled>
-                  Profil Düzenle
-                </button>
+                <Link href="/dashboard/settings/edit-restaurant">
+                  <button className="btn btn-primary bg-primary-500 hover:bg-primary-600 border-none text-white">
+                    Profil Düzenle
+                  </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -123,42 +124,6 @@ export default function SettingsPage() {
                     Temayı Düzenle
                   </button>
                 </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Restaurant Settings Card - Placeholder for future */}
-        <div className="card bg-white shadow-lg opacity-60 cursor-not-allowed">
-          <div className="card-body">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h2 className="card-title text-text-500 text-lg mb-2">
-                  Restoran Ayarları
-                  <span className="badge badge-sm badge-ghost ml-2">Yakında</span>
-                </h2>
-                <p className="text-text-300 text-sm mb-4">
-                  Restoran bilgilerinizi ve işletme ayarlarınızı düzenleyin
-                </p>
-                <button className="btn btn-disabled" disabled>
-                  Restoran Düzenle
-                </button>
               </div>
             </div>
           </div>

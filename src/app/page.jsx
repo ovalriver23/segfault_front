@@ -71,8 +71,8 @@ export default function Home() {
             bir dokümantasyon sayfası hazırlanabilir */}
           <button
             onClick={() => router.push('/LearnMore')}
-            className="btn bg-accent-500 text-background-500 border-2 border-background-200 hover:bg-accent-500/90 rounded-2xl px-8 text-xl font-bold">
-            Learn More
+            className="btn bg-accent-500 text-background-500 border-2 border-background-200 hover:bg-accent-500/90 rounded-2xl px-8 text-lg font-bold">
+            Detaylı Bilgi
           </button>
         </div>
         { /* Main Features part ENDS here  */}
@@ -115,58 +115,112 @@ export default function Home() {
 
         {/* Pricing section STARTS here */}
         <div className="bg-background-500 py-16 px-4 sm:px-8 lg:px-16">
-          <h2 className="text-center text-text-500 text-4xl sm:text-5xl font-bold mb-16">
+          <h2 className="text-center text-text-500 text-4xl sm:text-5xl font-bold mb-4">
             FİYATLAR
           </h2>
+          <p className="text-center text-text-400 text-lg mb-16 max-w-2xl mx-auto">
+            İşletmenize en uygun planı seçin. Tüm planlar 14 günlük ücretsiz deneme ile başlar.
+          </p>
 
           <div className="flex flex-col lg:flex-row justify-center items-center lg:items-stretch gap-8 lg:gap-6 xl:gap-8 max-w-7xl mx-auto">
-            <PricingCard
-              title="Free Trial"
-              price="0tl"
-              period="per user, per month"
-              features={[
-                "5 Social Profiles",
-                "5 Scheduled Posts Per Profile",
-                "400+ Templates",
-                "Calendar View",
-                "24/7 Support"
-              ]}
-              buttonText="Start"
-              highlighted={false}
-              buttonStyle="outline"
-            />
+            {/* Ücretsiz Deneme - Yakında */}
+            <div className="relative opacity-60 pointer-events-none group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-orange-500 rounded-full blur-md opacity-60 animate-pulse"></div>
+                  <span className="relative flex items-center gap-2 bg-orange-500 text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-lg border border-orange-300/50">
+                    <svg className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Yakında
+                  </span>
+                </div>
+              </div>
+              <div className="pointer-events-auto opacity-100">
+                <PricingCard
+                  title="Ücretsiz Deneme"
+                  price="₺0"
+                  period="14 gün boyunca"
+                  features={[
+                    "Sınırsız masa tanımlama",
+                    "QR menü oluşturma",
+                    "Gerçek zamanlı sipariş takibi",
+                    "Detaylı analiz & raporlar",
+                    "Personel yönetimi",
+                    "7/24 destek"
+                  ]}
+                  buttonText="Ücretsiz Başla"
+                  highlighted={false}
+                  buttonStyle="outline"
+                />
+              </div>
+            </div>
 
-            <PricingCard
-              title="1 Franchise"
-              price="300tl"
-              period="per user, per month"
-              features={[
-                "10 Social Profiles",
-                "25 Scheduled Posts Per Profile",
-                "400+ Templates",
-                "Calendar View",
-                "24/7 VIP Support"
-              ]}
-              buttonText="Learn More"
-              highlighted={true}
-              buttonStyle="filled"
-            />
+            {/* Aylık Üyelik - Yakında */}
+            <div className="relative opacity-60 pointer-events-none group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-orange-500 rounded-full blur-md opacity-60 animate-pulse"></div>
+                  <span className="relative flex items-center gap-2 bg-orange-500 text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-lg border border-orange-300/50">
+                    <svg className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Yakında
+                  </span>
+                </div>
+              </div>
+              <div className="pointer-events-auto opacity-100">
+                <PricingCard
+                  title="Aylık Üyelik"
+                  price="₺499"
+                  period="aylık"
+                  features={[
+                    "Sınırsız masa tanımlama",
+                    "QR menü oluşturma",
+                    "Gerçek zamanlı sipariş takibi",
+                    "Detaylı analiz & raporlar",
+                    "Personel yönetimi",
+                    "7/24 destek"
+                  ]}
+                  buttonText="Hemen Başla"
+                  highlighted={true}
+                  buttonStyle="filled"
+                />
+              </div>
+            </div>
 
-            <PricingCard
-              title="Multiple Restoran"
-              price="1200tl"
-              period="per user, per month"
-              features={[
-                "100 Social Profiles",
-                "100 Scheduled Posts Per Profile",
-                "400+ Templates",
-                "Calendar View",
-                "24/7 VIP Support"
-              ]}
-              buttonText="Start"
-              highlighted={false}
-              buttonStyle="outline"
-            />
+            {/* Kurumsal / Anlaşmalı - Yakında */}
+            <div className="relative opacity-60 pointer-events-none group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-orange-500 rounded-full blur-md opacity-60 animate-pulse"></div>
+                  <span className="relative flex items-center gap-2 bg-orange-500 text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-lg border border-orange-300/50">
+                    <svg className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Yakında
+                  </span>
+                </div>
+              </div>
+              <div className="pointer-events-auto opacity-100">
+                <PricingCard
+                  title="Kurumsal / Anlaşmalı"
+                  price="Görüşelim"
+                  period="özel fiyatlandırma"
+                  features={[
+                    "Sınırsız masa tanımlama",
+                    "QR menü oluşturma",
+                    "Gerçek zamanlı sipariş takibi",
+                    "Detaylı analiz & raporlar",
+                    "Personel yönetimi",
+                    "7/24 destek"
+                  ]}
+                  buttonText="İletişime Geç"
+                  highlighted={false}
+                  buttonStyle="outline"
+                />
+              </div>
+            </div>
           </div>
         </div>
         {/* Pricing section ENDS here */}

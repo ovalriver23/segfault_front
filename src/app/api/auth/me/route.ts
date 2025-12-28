@@ -11,6 +11,11 @@ interface ResponseDataType {
     hasRestaurant: boolean;
     passwordChangeRequired: boolean;
     profilePhotoUrl?: string | null;
+    restaurantLogoUrl?: string | null;
+    restaurantName: string;
+    restaurantLocation: string;
+    latitude: number;
+    longitude: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -18,8 +23,8 @@ export async function GET(request: NextRequest) {
         // Get cookies from the incoming request
         const cookies = request.cookies;
         const cookieHeader = cookies.toString();
-        
-        
+
+
         // Forward the request to the backend with cookies manually added
         const backendResponse = await fetch(`${BACKEND_API_URL}/api/account/me`, {
             method: 'GET',
@@ -31,7 +36,7 @@ export async function GET(request: NextRequest) {
 
         // Get the response body
         let responseData: ResponseDataType | { message?: string; error?: string };
-        
+
         try {
             responseData = await backendResponse.json();
         } catch (error) {
@@ -70,7 +75,7 @@ export async function GET(request: NextRequest) {
             {
                 message: 'An unexpected error occurred while fetching user data',
                 error: 'INTERNAL_ERROR',
-                
+
             },
             { status: 500 }
         );

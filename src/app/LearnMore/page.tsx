@@ -22,12 +22,10 @@ export default function LearnMore() {
       title: 'QR Menü Sistemi',
       description: 'Her masa için özel QR kodları oluşturun. Müşterileriniz telefon kamerasıyla QR kodu okutarak anında menünüze erişebilir.',
       benefits: [
-        'Sınırsız ürün ekleme',
-        'Yüksek çözünürlüklü ürün görselleri',
+        'Ürün ekleme',
+        'Ürün görselleri',
         'Kategori bazlı menü düzenleme',
-        'Anlık fiyat güncellemeleri',
-        'Çoklu dil desteği',
-        'Alerjik madde uyarıları'
+        'Anlık fiyat güncellemeleri'
       ]
     },
     {
@@ -38,8 +36,6 @@ export default function LearnMore() {
         'Gerçek zamanlı sipariş bildirimleri',
         'Masa bazlı sipariş takibi',
         'Sipariş durumu güncelleme',
-        'Mutfak ve servis entegrasyonu',
-        'Ödeme takibi',
         'Sipariş geçmişi'
       ]
     },
@@ -50,10 +46,9 @@ export default function LearnMore() {
       benefits: [
         'Günlük/haftalık/aylık satış raporları',
         'En çok satan ürün analizi',
-        'Yoğun saat takibi',
+        'Restoran yoğunluğu grafiği',
         'Müşteri tercihleri analizi',
-        'Gelir-gider takibi',
-        'Personel performans raporları'
+        'Gelir takibi'
       ]
     },
     {
@@ -61,12 +56,11 @@ export default function LearnMore() {
       title: 'Masa Yönetimi',
       description: 'Tüm masalarınızı tek bir panelden yönetin. Hangi masada ne sipariş var, anlık görün.',
       benefits: [
-        'Sınırsız masa tanımlama',
+        'Masa tanımlama',
         'Her masa için özel QR kod',
-        'Masa durumu takibi (boş/dolu/rezerve)',
+        'Masa durumu takibi (boş/dolu/rezerve(Yakında))',
         'Masa geçmişi',
-        'Masa bazlı hesap özeti',
-        'Hızlı masa değiştirme'
+        'Masa bazlı hesap özeti'
       ]
     },
     {
@@ -74,45 +68,19 @@ export default function LearnMore() {
       title: 'Personel Yönetimi',
       description: 'Çalışanlarınızı sisteme ekleyin, yetkilendirin ve performanslarını takip edin.',
       benefits: [
-        'Sınırsız personel ekleme',
-        'Rol bazlı yetkilendirme (Müdür, Garson, Aşçı, Kasiyer)',
-        'Personel vardiya takibi',
-        'Personel başına sipariş sayısı',
-        'Performans raporları',
-        'Güvenli giriş sistemi'
+        'Personel ekleme',
+        'Garson Modülü',
+        'Personel akiflik durumu',
+        'Garson ona etkileşimli görev paneli'
       ]
     },
-    {
-      icon: '/images/admin/options-navbar.svg',
-      title: 'Özelleştirme & Ayarlar',
-      description: 'Sistemi restoranınıza özel olarak yapılandırın.',
-      benefits: [
-        'Marka renkleri ve logo',
-        'Özel menü tasarımları',
-        'Çalışma saatleri ayarı',
-        'Bildirim tercihleri',
-        'Dil seçenekleri',
-        'Para birimi ayarları'
-      ]
-    }
+    
   ];
 
   const faqs = [
     {
       question: 'EasyOrder nasıl çalışır?',
-      answer: 'EasyOrder, restoranınızdaki her masa için benzersiz QR kodlar oluşturur. Müşterileriniz bu QR kodları okutarak menünüze erişir, sipariş verir ve ödeme yapabilir. Siz de tüm bu süreçleri web panelinizden yönetirsiniz.'
-    },
-    {
-      question: 'Kurulum ne kadar sürer?',
-      answer: 'Kurulum çok hızlıdır! Hesap oluşturduktan sonra 15-20 dakika içinde menünüzü ekleyip QR kodlarınızı yazdırabilirsiniz. Teknik bilgi gerektirmez, her şey kullanıcı dostu arayüz üzerinden yapılır.'
-    },
-    {
-      question: 'Müşteriler uygulama indirmek zorunda mı?',
-      answer: 'Hayır! Müşterilerinizin herhangi bir uygulama indirmesine gerek yoktur. Sadece telefon kameralarıyla QR kodu okutmaları yeterli. Menü otomatik olarak mobil tarayıcıda açılır.'
-    },
-    {
-      question: 'Kaç masa için kullanabilirim?',
-      answer: 'Free Trial paketinde 5 masaya kadar, 1 Franchise paketinde 50 masaya kadar, Multiple Restoran paketinde ise sınırsız masa tanımlayabilirsiniz.'
+      answer: 'EasyOrder, restoranınızdaki her masa için benzersiz QR kodlar oluşturur. Müşterileriniz bu QR kodları okutarak menünüze erişir, sipariş verir ve garson ile ödeme yapabilir. Siz de tüm bu süreçleri web panelinizden yönetirsiniz.'
     },
     {
       question: 'Menüyü nasıl güncellerim?',
@@ -120,32 +88,24 @@ export default function LearnMore() {
     },
     {
       question: 'İnternet bağlantısı kesilirse ne olur?',
-      answer: 'Sistem bulut tabanlı çalıştığı için internet bağlantısı gereklidir. Ancak müşteriler zaten kendi mobil verilerini kullanarak menüye erişir, bu yüzden restoranınızın WiFi\'sına bağımlı değillerdir.'
+      answer: 'Müşteriler zaten kendi mobil verilerini kullanarak menüye erişir, bu yüzden restoranınızın WiFi\'sına bağımlı değillerdir.'
     },
     {
       question: 'Hangi ödeme yöntemlerini destekliyorsunuz?',
-      answer: 'Şu anda kredi kartı, banka kartı ve havale ile ödeme alıyoruz. Yakında daha fazla ödeme seçeneği eklenecektir.'
+      answer: 'Şuanlık web siteden garson çağırarak ödeme alınabiliyor fakat web siteden direkt ödeme alınabilmesi için çalışıyoruz:)'
     },
     {
       question: 'Destek hizmeti var mı?',
-      answer: 'Evet! Tüm paketlerde 7/24 müşteri desteği sunuyoruz. Telefon, email veya canlı destek ile bize ulaşabilirsiniz. Premium paketlerde özel VIP destek hattımız da mevcuttur.'
+      answer: 'Evet! Tüm paketlerde 7/24 müşteri desteği sunuyoruz. Telefon, email veya canlı destek ile bize ulaşabilirsiniz.'
     },
     {
       question: 'Ücretsiz deneme süresinde iptal edebilir miyim?',
       answer: 'Evet, ücretsiz deneme süresinde herhangi bir ücret ödemeden iptal edebilirsiniz. Kredi kartı bilgisi istenmez. İsterseniz deneme sonunda ücretli pakete geçebilirsiniz.'
     },
     {
-      question: 'Birden fazla şubem var, nasıl yönetirim?',
-      answer: 'Multiple Restoran paketi ile sınırsız şube ekleyebilir, her birini ayrı ayrı yönetebilirsiniz. Tüm şubelerinizin verilerini tek panelden takip edebilir, karşılaştırmalı raporlar alabilirsiniz.'
-    },
-    {
       question: 'Verilerim güvende mi?',
       answer: 'Evet! Tüm verileriniz şifrelenmiş olarak bulut sunucularda saklanır. Düzenli yedekleme yapılır ve güvenlik standartlarına uygun olarak korunur. Verileriniz sadece sizin erişiminize açıktır.'
     },
-    {
-      question: 'Dil desteği var mı?',
-      answer: 'Evet, menünüzü Türkçe, İngilizce ve diğer dillerde oluşturabilirsiniz. Müşterileriniz tercih ettikleri dilde menüyü görüntüleyebilir.'
-    }
   ];
 
   return (

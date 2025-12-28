@@ -1030,23 +1030,7 @@ export default function Menu() {
                                 </div>
                             </div>
 
-                            {/* Style Selection */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Görünüm Stili
-                                </label>
-                                <select
-                                    value={menuItemForm.style}
-                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, style: e.target.value }))}
-                                    className="select bg-background-500 text-text-400 border-gray-300 w-full"
-                                >
-                                    <option value="NONE">Standart</option>
-                                    <option value="FEATURED">Öne Çıkan</option>
-                                    <option value="NEW">Yeni</option>
-                                    <option value="POPULAR">Popüler</option>
-                                    <option value="SPECIAL">Özel</option>
-                                </select>
-                            </div>
+
 
                             {/* Image Upload */}
                             <div>

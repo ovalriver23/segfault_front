@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { z } from 'zod';
+import { Eye, EyeOff } from 'lucide-react';
 
 // --- TİPLER ---
 interface Staff {
@@ -20,16 +22,19 @@ const addStaffSchema = z.object({
   firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
   lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
   username: z.string().min(3, 'Kullanıcı adı en az 3 karakter').max(20),
-  email: z.string().email('Geçerli email giriniz'),
+  email: z.email('Geçerli email giriniz'),
   phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
-  password: z.string().min(8, 'Şifre en az 8 karakter'),
+  password: z.string()
+    .min(8, "Şifre en az 8 karakter uzunluğunda olmalıdır.")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
+      "Şifre en az 1 büyük harf, küçük harf, numara ve özel karakter içermelidir."),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
 });
 
 const editStaffSchema = z.object({
   firstName: z.string().min(2, 'İsim en az 2 karakter').max(50),
   lastName: z.string().min(2, 'Soyisim en az 2 karakter').max(50),
-  email: z.string().email('Geçerli email giriniz'),
+  email: z.email('Geçerli email giriniz'),
   phoneNumber: z.string().min(10, 'Telefon numarası en az 10 hane olmalıdır'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER'])
 });
@@ -65,6 +70,10 @@ export default function StaffPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // --- EFFECT ---
   useEffect(() => {
@@ -366,8 +375,8 @@ export default function StaffPage() {
                         <div className="flex items-center gap-3">
                           <div className="avatar placeholder">
                             {staff.profilePhotoUrl ? (
-                              <div className="rounded-full w-10 h-10">
-                                <img src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} className="object-cover" />
+                              <div className="rounded-full w-10 h-10 relative overflow-hidden">
+                                <Image src={staff.profilePhotoUrl} alt={`${staff.firstName} ${staff.lastName}`} fill className="object-cover" />
                               </div>
                             ) : (
                               <div className="bg-primary-50 text-text-500 rounded-full w-10 h-10 flex items-center justify-center font-bold">
@@ -534,8 +543,8 @@ export default function StaffPage() {
               <div className="p-6 flex flex-col items-center">
                 {/* Profil Resmi */}
                 {existingPhotoUrl ? (
-                  <div className="w-48 h-48 rounded-full border-4 border-white shadow-lg mb-3 overflow-hidden">
-                    <img src={existingPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <div className="w-48 h-48 rounded-full border-4 border-white shadow-lg mb-3 overflow-hidden relative">
+                    <Image src={existingPhotoUrl} alt="Profile" fill className="object-cover" />
                   </div>
                 ) : (
                   <div className="w-48 h-48 rounded-full bg-pink-50 text-[#E11383] flex items-center justify-center text-6xl font-bold mb-3 border-4 border-white shadow-lg">
@@ -587,11 +596,12 @@ export default function StaffPage() {
                     {/* Photo Preview */}
                     <div className="relative">
                       {getDisplayPhoto() ? (
-                        <div className="w-20 h-20 rounded-full border-[3px] border-[#E11383] overflow-hidden">
-                          <img
+                        <div className="w-20 h-20 rounded-full border-[3px] border-[#E11383] overflow-hidden relative">
+                          <Image
                             src={getDisplayPhoto()!}
                             alt="Preview"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         </div>
                       ) : (
@@ -733,26 +743,44 @@ export default function StaffPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre</label>
-                        <input
-                          type="password"
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder="••••••••"
-                          className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none pr-12"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition z-10"
+                          >
+                            {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                          </button>
+                        </div>
                         {errors.password && <span className="text-error text-xs">{errors.password}</span>}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-600 mb-1 block">Şifre Tekrar</label>
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          placeholder="••••••••"
-                          className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleInputChange}
+                            placeholder="••••••••"
+                            className="input input-bordered w-full bg-white rounded-md text-gray-900 placeholder:text-gray-400 focus:border-[#E11383] focus:outline-none pr-12"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition z-10"
+                          >
+                            {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                          </button>
+                        </div>
                         {errors.confirmPassword && <span className="text-error text-xs">{errors.confirmPassword}</span>}
                       </div>
                     </div>
