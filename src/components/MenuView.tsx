@@ -73,6 +73,7 @@ export type ApiResponse = {
   restaurantLatitude: number;
   restaurantLongitude: number;
   menu: Category[];
+  menuTheme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 };
 
 // --- Internal Types for UI ---
@@ -111,12 +112,14 @@ function ProductCard({
   onAddToCart,
   onUpdateQuantity,
   qrToken,
+  theme
 }: {
   product: Product;
   itemInCart?: CartItem;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
   qrToken: string;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
   const router = useRouter();
   // Check if product is popular (you can adjust this logic based on your data)
@@ -137,19 +140,49 @@ function ProductCard({
     // Store product data in sessionStorage
     sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
 
-    // Navigate to detail page
     router.push(`/table/${qrToken}/item/${product.id}`);
   };
+
+  // Theme Styles
+  const themeStyles = {
+    DEFAULT: {
+      card: "bg-white text-gray-900",
+      price: "text-gray-900",
+      buttonBg: "bg-pink-500 hover:bg-pink-600",
+      buttonHover: "hover:bg-pink-600",
+      buttonText: "text-white",
+      badge: "bg-[#E8C5B8] text-gray-800"
+    },
+    MODERN: {
+      card: "bg-[#2d2d2d] text-white",
+      price: "text-orange-500",
+      buttonBg: "bg-[#ea580c] hover:bg-[#c2410c]",
+      buttonHover: "hover:bg-[#c2410c]",
+      buttonText: "text-white",
+      badge: "bg-[#ea580c] text-white"
+    },
+    ELEGANT: {
+      card: "bg-[#fdfbf7] text-[#5c4033] border border-[#e6dcc3]",
+      price: "text-[#8b4513]",
+      // Warm milky coffee (Sıcak sütlü kahve)
+      buttonBg: "bg-[#9C6644] hover:bg-[#7f5539]",
+      buttonHover: "hover:bg-[#7f5539]",
+      buttonText: "text-[#fdfbf7]",
+      badge: "bg-[#d2b48c] text-[#5c4033]"
+    }
+  };
+
+  const styles = themeStyles[theme] || themeStyles.DEFAULT;
 
   return (
     <div
       onClick={handleCardClick}
-      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
+      className={`relative rounded-2xl shadow-md overflow-hidden w-full transition-shadow ${styles.card} ${product.available ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
         }`}
     >
       {/* Popular Badge */}
       {isPopular && (
-        <div className="absolute top-2 right-2 bg-[#E8C5B8] text-gray-800 px-3 py-1 rounded-full text-xs font-medium z-10">
+        <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-medium z-10 ${styles.badge}`}>
           Popüler
         </div>
       )}
@@ -168,17 +201,17 @@ function ProductCard({
 
       {/* Product Info */}
       <div className="p-3 pb-3">
-        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
+        <h3 className={`text-base font-semibold mb-1 min-h-10 line-clamp-2 leading-snug ${theme === 'MODERN' ? 'text-gray-100' : theme === 'ELEGANT' ? 'text-[#5c4033]' : 'text-gray-900'}`}>
           {product.name}
         </h3>
 
         {/* Price and Action */}
         <div className="flex justify-between items-center">
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-bold text-gray-900">
+            <span className={`text-lg font-bold ${styles.price}`}>
               {product.price}
             </span>
-            <span className="text-xs font-medium text-gray-500">TL</span>
+            <span className={`text-xs font-medium ${theme === 'MODERN' ? 'text-gray-400' : 'text-gray-500'}`}>TL</span>
           </div>
 
           {!product.available ? (
@@ -193,21 +226,21 @@ function ProductCard({
                     e.stopPropagation();
                     onAddToCart(product);
                   }}
-                  className="w-8 h-8 bg-pink-500 hover:bg-pink-600 rounded-xl flex items-center justify-center transition-colors shadow-md"
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors shadow-md ${styles.buttonBg}`}
                 >
-                  <span className="text-2xl text-white font-light">+</span>
+                  <span className={`text-2xl font-light ${styles.buttonText}`}>+</span>
                 </button>
               ) : (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
+                  className={`inline-flex items-center rounded-xl shadow-md h-8 ${styles.buttonBg}`}
                 >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onUpdateQuantity(product.id, itemInCart.quantity - 1);
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                    className={`w-8 h-8 flex items-center justify-center ${styles.buttonText} ${styles.buttonHover} rounded-xl transition-colors`}
                   >
                     {itemInCart.quantity === 1 ? (
                       <svg
@@ -228,7 +261,7 @@ function ProductCard({
                       <span className="text-2xl font-light">−</span>
                     )}
                   </button>
-                  <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
+                  <span className={`px-2 ${styles.buttonText} font-bold text-xs min-w-6 text-center`}>
                     {itemInCart.quantity}
                   </span>
                   <button
@@ -236,7 +269,7 @@ function ProductCard({
                       e.stopPropagation();
                       onUpdateQuantity(product.id, itemInCart.quantity + 1);
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                    className={`w-8 h-8 flex items-center justify-center ${styles.buttonText} ${styles.buttonHover} rounded-xl transition-colors`}
                   >
                     <span className="text-2xl font-light">+</span>
                   </button>
@@ -255,11 +288,39 @@ function CategoryFilter({
   categories,
   selectedCategory,
   onSelectCategory,
+  theme
 }: {
   categories: CategoryFilterItem[];
   selectedCategory: string;
   onSelectCategory: (categoryName: string) => void;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
+  const themeStyles = {
+    DEFAULT: {
+      bgActive: "#F8A45A",
+      bgInactive: "#FFC898",
+      border: "border-secondary-500",
+      text: "text-gray-800",
+      iconBg: ""
+    },
+    MODERN: {
+      bgActive: "#ea580c",
+      bgInactive: "#374151",
+      border: "border-orange-500",
+      text: "text-gray-200",
+      // Rainbow gradient for inactive state (faint)
+      iconBg: "bg-gradient-to-tr from-indigo-100/10 via-purple-100/10 to-pink-100/10"
+    },
+    ELEGANT: {
+      bgActive: "#9C6644",
+      bgInactive: "#d2b48c",
+      border: "border-[#5c4033]",
+      text: "text-[#5c4033]",
+      iconBg: ""
+    }
+  };
+  const styles = themeStyles[theme] || themeStyles.DEFAULT;
+
   return (
     <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
       {/* "All" butonu */}
@@ -271,14 +332,14 @@ function CategoryFilter({
       >
         <div
           className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
-            ? "border-2 border-secondary-500"
+            ? `border-2 ${styles.border}`
             : ""
-            }`}
-          style={{ backgroundColor: selectedCategory === "All" ? "#F8A45A" : "#FFC898" }}
+            } ${theme === 'MODERN' && selectedCategory !== "All" ? styles.iconBg : ''}`}
+          style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
         >
           <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
         </div>
-        <span className="font-semibold text-gray-800 text-sm">Tümü</span>
+        <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
       </button>
 
       {/* Dinamik kategoriler */}
@@ -291,10 +352,10 @@ function CategoryFilter({
         >
           <div
             className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
-              ? "border-2 border-secondary-500"
+              ? `border-2 ${styles.border}`
               : ""
-              }`}
-            style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
+              } ${theme === 'MODERN' && selectedCategory !== cat.name ? styles.iconBg : ''}`}
+            style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
           >
             {cat.imageUrl ? (
               <div className="relative w-16 h-16">
@@ -316,33 +377,42 @@ function CategoryFilter({
               />
             )}
           </div>
-          <span className="font-semibold text-gray-800 text-sm">{cat.name}</span>
+          <span className={`font-semibold text-sm ${styles.text}`}>{cat.name}</span>
         </button>
       ))}
     </div>
   );
 }
 
-// 3. Sepet Özeti
 function CartSummary({
   itemCount,
   totalPrice,
   onClick,
+  theme
 }: {
   itemCount: number;
   totalPrice: number;
   onClick: () => void;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
+  const bgClass = theme === 'MODERN' ? 'bg-[#ea580c] hover:bg-[#c2410c]'
+    : theme === 'ELEGANT' ? 'bg-[#9C6644] hover:bg-[#7f5539]'
+      : 'bg-pink-500 hover:bg-pink-600';
+
+  const borderClass = theme === 'MODERN' ? 'text-[#ea580c] border-[#ea580c]'
+    : theme === 'ELEGANT' ? 'text-[#9C6644] border-[#9C6644]'
+      : 'text-pink-500 border-pink-600';
+
   return (
     <button
       onClick={onClick}
-      className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
+      className={`${bgClass} text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full transition-colors`}
     >
       <div className="text-left">
         <span className="font-semibold">{itemCount} Ürün</span>
         <p className="text-lg font-bold">Toplam: {totalPrice.toFixed(2)} tl</p>
       </div>
-      <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
+      <div className={`btn btn-circle btn-lg bg-white border-2 hover:bg-gray-100 ${borderClass}`}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -663,7 +733,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const cartSummary = useMemo(() => {
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) => sum + Number(item.price) * item.quantity,
       0
     );
     return { itemCount, totalPrice };
@@ -674,20 +744,68 @@ export default function MenuView({ apiData }: MenuViewProps) {
   }, [cart]);
 
   // --- RENDER ---
+  const theme = apiData.menuTheme || 'DEFAULT';
+
+  const themeConfig = {
+    DEFAULT: {
+      bg: "bg-white",
+      headerBg: "bg-white",
+      text: "text-gray-900",
+      searchBg: "bg-orange-100/70",
+      searchInput: "placeholder-orange-900/60 text-[#6b3b1f]",
+      searchIcon: "text-orange-900",
+      callWaiterBg: "bg-secondary-100 active:bg-secondary-200 text-secondary-700",
+      categoryFilterBg: "bg-white",
+      ordersButton: "bg-primary-100 active:bg-primary-200 text-primary-700"
+    },
+    MODERN: {
+      bg: "bg-[#1f1f1f]",
+      headerBg: "bg-[#1f1f1f]",
+      text: "text-white",
+      searchBg: "bg-[#333333]", // Lighter, neutral gray
+      searchInput: "placeholder-gray-400 text-white",
+      searchIcon: "text-gray-400",
+      callWaiterBg: "bg-gray-700 active:bg-gray-600 text-white",
+      categoryFilterBg: "bg-[#1f1f1f]",
+      categoryTitleBg: "bg-[#1f1f1f]", // Fix white box
+      ordersButton: "bg-[#F8A45A] active:bg-[#e0914a] text-[#1f1f1f]" // Mustard yellow
+    },
+    ELEGANT: {
+      bg: "bg-[#f5f5dc]",
+      headerBg: "bg-[#f5f5dc]",
+      text: "text-[#5c4033] font-serif",
+      searchBg: "bg-[#e6dcc3]",
+      searchInput: "placeholder-[#8b4513]/60 text-[#5c4033]",
+      searchIcon: "text-[#8b4513]",
+      callWaiterBg: "bg-[#d2b48c] active:bg-[#c1a073] text-[#5c4033]",
+      categoryFilterBg: "bg-[#f5f5dc]",
+      separatorColor: "#8b4513", // Brown for Elegant
+      categoryTitleBg: "bg-[#f5f5dc]", // Match background
+      ordersButton: "bg-[#d2b48c] active:bg-[#c1a073] text-[#5c4033]" // Coffee/Tan
+    }
+  };
+
+  const currentThemeStyle = themeConfig[theme] || themeConfig.DEFAULT;
+  // Default fallbacks for new properties if undefined in other themes
+  const separatorColor = (currentThemeStyle as any).separatorColor || '#f8a45a';
+  const categoryTitleBg = (currentThemeStyle as any).categoryTitleBg || 'bg-white';
+  const categoryFontClass = theme === 'ELEGANT' ? 'font-serif' : '';
+  const categoryFontStyle = theme === 'ELEGANT' ? {} : { fontFamily: 'Pontano Sans, sans-serif' };
+
   return (
     <div
       ref={mainContainerRef}
-      className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth"
+      className={`max-w-md mx-auto rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 bg-white z-10 border-b border-gray-100">
+      <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
         {/* Left: Menu Title */}
-        <h1 className="text-4xl font-bold text-gray-900">Menü</h1>
+        <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
 
         {/* Center: Orders Button */}
         <button
           onClick={handleOpenOrders}
-          className="flex items-center gap-1 bg-primary-100 active:bg-primary-200 text-primary-700 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2"
+          className={`flex items-center gap-1 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -708,7 +826,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
         {/* Right: Restaurant Info */}
         <div className="flex flex-col items-end text-right">
-          <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
+          <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
             <span>{apiData.restaurantName}</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -731,16 +849,16 @@ export default function MenuView({ apiData }: MenuViewProps) {
       <main className="px-2">
 
         {/* Search Bar and Call Waiter Button */}
-        <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
           }`}>
           {/* Search Bar (60%) */}
           <div className="w-[60%]">
-            <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full">
+            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full ${currentThemeStyle.searchBg}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className="w-5 h-5 opacity-70 text-orange-900"
+                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
               >
                 <path
                   fillRule="evenodd"
@@ -750,7 +868,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </svg>
               <input
                 type="text"
-                className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f] w-full"
+                className={`grow bg-transparent w-full ${currentThemeStyle.searchInput}`}
                 placeholder="Ara"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -771,7 +889,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               <button
                 onClick={handleShowWaiterConfirm}
                 disabled={isCallingWaiter}
-                className="w-full h-full flex items-center justify-center gap-1 bg-secondary-100 active:bg-secondary-200 text-secondary-700 px-3 rounded-full transition-colors shadow-sm"
+                className={`w-full h-full flex items-center justify-center gap-1 px-3 rounded-full transition-colors shadow-sm ${currentThemeStyle.callWaiterBg}`}
               >
                 {isCallingWaiter ? (
                   <span className="loading loading-spinner loading-xs"></span>
@@ -790,12 +908,13 @@ export default function MenuView({ apiData }: MenuViewProps) {
         </div>
 
         {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
           }`}>
           <CategoryFilter
             categories={categoriesForFilter}
             selectedCategory={selectedCategory}
             onSelectCategory={handleCategoryClick}
+            theme={theme}
           />
         </div>
 
@@ -810,8 +929,8 @@ export default function MenuView({ apiData }: MenuViewProps) {
               }}
             >
               <div className="relative mb-4">
-                <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: '#f8a45a' }} />
-                <h2 className="relative inline-block bg-white pr-4 text-2xl font-normal text-gray-800" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
+                <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: separatorColor }} />
+                <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-[#f8a45a]' : 'text-gray-800'}`} style={categoryFontStyle}>
                   {section.categoryName}
                 </h2>
               </div>
@@ -824,6 +943,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
                     onAddToCart={handleAddToCart}
                     onUpdateQuantity={handleUpdateQuantity}
                     qrToken={qrToken}
+                    theme={theme}
                   />
                 ))}
               </div>
@@ -841,11 +961,13 @@ export default function MenuView({ apiData }: MenuViewProps) {
           itemCount={cartSummary.itemCount}
           totalPrice={cartSummary.totalPrice}
           onClick={handleOpenCart}
+          theme={theme}
         />
       </div>
 
+
       {/* Cart Modal */}
-      <CartModal
+      < CartModal
         modalId="cart_modal"
         qrToken={qrToken}
         items={cart}
@@ -853,52 +975,58 @@ export default function MenuView({ apiData }: MenuViewProps) {
         onUpdateQuantity={handleUpdateQuantity}
         onUpdateGeneralNote={handleUpdateGeneralNote}
         onSubmitOrder={handleSubmitOrder}
+        theme={theme}
       />
 
       {/* Orders Modal */}
-      <OrdersModal
+      < OrdersModal
         key={ordersModalKey}
         modalId="orders_modal"
         qrToken={qrToken}
+        theme={theme}
       />
 
       {/* Notification Modal */}
-      {notification && (
-        <NotificationModal
-          modalId="notification_modal"
-          type={notification.type}
-          message={notification.message}
-          onClose={() => setNotification(null)}
-        />
-      )}
+      {
+        notification && (
+          <NotificationModal
+            modalId="notification_modal"
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />
+        )
+      }
 
       {/* Waiter Confirmation Modal */}
-      {showWaiterConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
-              Garson çağırmak istediğinize emin misiniz?
-            </h3>
-            <p className="text-sm text-gray-600 mb-6 text-center">
-              Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancelWaiterConfirm}
-                className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={handleConfirmCallWaiter}
-                className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
-              >
-                Evet, Çağır
-              </button>
+      {
+        showWaiterConfirmModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
+                Garson çağırmak istediğinize emin misiniz?
+              </h3>
+              <p className="text-sm text-gray-600 mb-6 text-center">
+                Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelWaiterConfirm}
+                  className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={handleConfirmCallWaiter}
+                  className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
+                >
+                  Evet, Çağır
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

@@ -109,7 +109,8 @@ export default function TableMenuPage() {
         imageUrl: category.imageUrl || null,
         menuItems: category.menuItems,
         restaurantId: category.restaurantId
-      }))
+      })),
+      menuTheme: data.menuTheme || 'DEFAULT'
     };
   };
 

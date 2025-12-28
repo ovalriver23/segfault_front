@@ -111,14 +111,54 @@ function formatDateTime(dateString: string): string {
 export default function OrdersModal({
     modalId,
     qrToken,
-    onRefresh
-}: OrdersModalProps) {
+    onRefresh,
+    theme = 'DEFAULT'
+}: OrdersModalProps & { theme?: 'DEFAULT' | 'MODERN' | 'ELEGANT' }) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
     const [isRequestingBill, setIsRequestingBill] = useState(false);
     const [billRequested, setBillRequested] = useState(false);
+
+    // Theme Configuration
+    const themeStyles = {
+        DEFAULT: {
+            bg: "bg-white",
+            text: "text-gray-900",
+            textSecondary: "text-gray-600",
+            textMuted: "text-gray-400",
+            border: "border-gray-200",
+            cardBg: "bg-gray-50",
+            cardText: "text-gray-900",
+            iconColor: "text-gray-600",
+            buttonClose: "text-secondary-700 border-secondary-700 hover:bg-secondary-700 hover:text-white"
+        },
+        MODERN: {
+            bg: "bg-[#1f1f1f]",
+            text: "text-white",
+            textSecondary: "text-gray-300",
+            textMuted: "text-gray-500",
+            border: "border-gray-700",
+            cardBg: "bg-[#2d2d2d]",
+            cardText: "text-gray-100",
+            iconColor: "text-gray-400",
+            buttonClose: "text-[#ea580c] border-[#ea580c] hover:bg-[#ea580c] hover:text-white"
+        },
+        ELEGANT: {
+            bg: "bg-[#f5f5dc]",
+            text: "text-[#5c4033]",
+            textSecondary: "text-[#8b4513]",
+            textMuted: "text-[#8b4513]/60",
+            border: "border-[#d2b48c]",
+            cardBg: "bg-[#fdfbf7] border border-[#e6dcc3]",
+            cardText: "text-[#5c4033]",
+            iconColor: "text-[#8b4513]",
+            buttonClose: "text-[#8b4513] border-[#8b4513] hover:bg-[#8b4513] hover:text-[#fdfbf7]"
+        }
+    };
+
+    const styles = themeStyles[theme] || themeStyles.DEFAULT;
 
     const fetchOrders = async () => {
         setIsLoading(true);
@@ -204,14 +244,14 @@ export default function OrdersModal({
 
     return (
         <dialog id={modalId} className="modal modal-bottom">
-            <div className="modal-box w-full max-w-md h-[70vh] max-h-[70vh] flex flex-col p-0 bg-white rounded-t-3xl rounded-b-none m-0 mx-auto">
+            <div className={`modal-box w-full max-w-md h-[70vh] max-h-[70vh] flex flex-col p-0 rounded-t-3xl rounded-b-none m-0 mx-auto ${styles.bg}`}>
                 {/* Header */}
-                <div className="p-6 pb-4 border-b border-gray-200 flex justify-between items-center shrink-0">
-                    <h2 className="text-2xl font-bold text-gray-900">Siparişlerim</h2>
+                <div className={`p-6 pb-4 border-b flex justify-between items-center shrink-0 ${styles.border}`}>
+                    <h2 className={`text-2xl font-bold ${styles.text}`}>Siparişlerim</h2>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleRefresh}
-                            className="btn btn-ghost btn-sm btn-circle text-text-600 border-text-600 hover:bg-text-600 hover:text-white"
+                            className={`btn btn-ghost btn-sm btn-circle ${styles.iconColor} hover:bg-gray-100/10`}
                             disabled={isLoading}
                         >
                             <svg
@@ -230,7 +270,7 @@ export default function OrdersModal({
                             </svg>
                         </button>
                         <form method="dialog">
-                            <button className="btn btn-ghost btn-sm btn-circle text-secondary-700 border-secondary-700 hover:bg-secondary-700 hover:text-white">
+                            <button className={`btn btn-ghost btn-sm btn-circle ${styles.buttonClose}`}>
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     className="h-6 w-6"
@@ -274,7 +314,7 @@ export default function OrdersModal({
                                     />
                                 </svg>
                             </div>
-                            <p className="text-gray-600">{error}</p>
+                            <p className={styles.textSecondary}>{error}</p>
                             <button
                                 onClick={handleRefresh}
                                 className="btn btn-sm btn-outline mt-4"
@@ -284,7 +324,7 @@ export default function OrdersModal({
                         </div>
                     ) : orders.length === 0 ? (
                         <div className="text-center py-12">
-                            <div className="text-gray-300 mb-4">
+                            <div className={`${theme === 'MODERN' ? 'text-gray-700' : 'text-gray-300'} mb-4`}>
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     className="h-16 w-16 mx-auto"
@@ -300,8 +340,8 @@ export default function OrdersModal({
                                     />
                                 </svg>
                             </div>
-                            <p className="text-gray-400 text-lg">Henüz sipariş yok</p>
-                            <p className="text-gray-400 text-sm mt-1">Menüden ürün ekleyerek sipariş verebilirsiniz</p>
+                            <p className={`${styles.textMuted} text-lg`}>Henüz sipariş yok</p>
+                            <p className={`${styles.textMuted} text-sm mt-1`}>Menüden ürün ekleyerek sipariş verebilirsiniz</p>
                         </div>
                     ) : (
                         <>
@@ -311,13 +351,13 @@ export default function OrdersModal({
                                 return (
                                     <div
                                         key={order.id}
-                                        className="bg-gray-50 rounded-xl p-4 space-y-3"
+                                        className={`${styles.cardBg} rounded-xl p-4 space-y-3`}
                                     >
                                         {/* Order Header */}
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <span className="text-sm text-gray-500">Sipariş #{order.id}</span>
-                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                <span className={`text-sm ${styles.textSecondary}`}>Sipariş #{order.id}</span>
+                                                <p className={`text-xs ${styles.textMuted} mt-0.5`}>
                                                     {formatDateTime(order.createdAt)}
                                                 </p>
                                             </div>
@@ -333,18 +373,18 @@ export default function OrdersModal({
                                                 <div key={index} className="flex justify-between items-start">
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-gray-900 text-sm">
+                                                            <span className={`font-medium ${styles.cardText} text-sm`}>
                                                                 {item.quantity}x
                                                             </span>
-                                                            <span className="text-gray-700 text-sm">{item.menuItemName}</span>
+                                                            <span className={`${styles.textSecondary} text-sm`}>{item.menuItemName}</span>
                                                         </div>
                                                         {item.note && (
-                                                            <p className="text-xs text-gray-500 mt-0.5 ml-6">
+                                                            <p className={`text-xs ${styles.textMuted} mt-0.5 ml-6`}>
                                                                 Not: {item.note}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-900">
+                                                    <span className={`text-sm font-medium ${styles.cardText}`}>
                                                         {(item.price * item.quantity).toFixed(2)} TL
                                                     </span>
                                                 </div>
@@ -353,23 +393,23 @@ export default function OrdersModal({
 
                                         {/* General Note */}
                                         {order.generalNote && (
-                                            <div className="bg-blue-50 rounded-lg p-2">
-                                                <p className="text-xs text-blue-700">
+                                            <div className="bg-blue-50/10 rounded-lg p-2 border border-blue-100/20">
+                                                <p className="text-xs text-blue-500">
                                                     <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
                                                 </p>
                                             </div>
                                         )}
 
                                         {/* Order Total */}
-                                        <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
-                                            <span className="text-sm font-medium text-gray-600">Sipariş Tutarı</span>
-                                            <span className="font-bold text-gray-900">{order.totalAmount.toFixed(2)} TL</span>
+                                        <div className={`border-t ${theme === 'MODERN' ? 'border-gray-600' : 'border-gray-200'} pt-2 flex justify-between items-center`}>
+                                            <span className={`text-sm font-medium ${styles.textSecondary}`}>Sipariş Tutarı</span>
+                                            <span className={`font-bold ${styles.text}`}>{order.totalAmount.toFixed(2)} TL</span>
                                         </div>
 
                                         {/* Cancellation Reason */}
                                         {order.status === 'CANCELLED' && order.cancellationReason && (
-                                            <div className="bg-red-50 rounded-lg p-2">
-                                                <p className="text-xs text-red-600">
+                                            <div className="bg-red-50/10 rounded-lg p-2 border border-red-100/20">
+                                                <p className="text-xs text-red-500">
                                                     <span className="font-medium">İptal Sebebi:</span> {order.cancellationReason}
                                                 </p>
                                             </div>
@@ -397,7 +437,7 @@ export default function OrdersModal({
 
                                         {/* Show why order cannot be cancelled */}
                                         {!order.canCancel && order.status !== 'CANCELLED' && order.cancellationReason && (
-                                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                            <p className={`text-xs ${styles.textMuted} mt-2 flex items-center gap-1`}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
@@ -413,10 +453,10 @@ export default function OrdersModal({
 
                 {/* Footer - Grand Total and Request Bill */}
                 {orders.length > 0 && (
-                    <div className="p-6 pt-4 border-t border-gray-200 shrink-0 space-y-3">
+                    <div className={`p-6 pt-4 border-t ${styles.border} shrink-0 space-y-3`}>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-600 font-medium">Toplam Tutar</span>
-                            <span className="text-2xl font-bold text-gray-900">
+                            <span className={`${styles.textSecondary} font-medium`}>Toplam Tutar</span>
+                            <span className={`text-2xl font-bold ${styles.text}`}>
                                 {grandTotal.toFixed(2)} TL
                             </span>
                         </div>

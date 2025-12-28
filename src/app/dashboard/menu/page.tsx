@@ -41,6 +41,7 @@ export default function Menu() {
     const [isLoadingItems, setIsLoadingItems] = useState(false)
     const [fetchError, setFetchError] = useState("")
     const [fetchItemsError, setFetchItemsError] = useState("")
+    const [currentTheme, setCurrentTheme] = useState<'DEFAULT' | 'MODERN' | 'ELEGANT'>('DEFAULT')
 
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
@@ -128,9 +129,10 @@ export default function Menu() {
                     })),
                     restaurantId: "preview-restaurant"
                 };
-            })
+            }),
+            menuTheme: currentTheme
         };
-    }, [menuItemsByCategory, categories]);
+    }, [menuItemsByCategory, categories, currentTheme]);
 
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {
@@ -163,7 +165,22 @@ export default function Menu() {
     useEffect(() => {
         fetchCategories();
         fetchMenuItems();
+        fetchTheme();
     }, []);
+
+    const fetchTheme = async () => {
+        try {
+            const res = await fetch("/api/manager/menu-theme");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.theme) {
+                    setCurrentTheme(data.theme);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch theme", error);
+        }
+    };
 
     const fetchCategories = async () => {
         try {

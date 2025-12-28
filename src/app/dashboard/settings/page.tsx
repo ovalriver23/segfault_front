@@ -92,11 +92,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Menu Theme Settings Card - Placeholder for future */}
-        <div className="card bg-white shadow-lg opacity-60 cursor-not-allowed">
+        {/* Menu Theme Settings Card */}
+        <div className="card bg-white shadow-lg">
           <div className="card-body">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-gray-100 rounded-lg">
+              <div className="p-3 bg-gradient-to-tr from-red-100 to-blue-100 rounded-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-gray-600"
@@ -115,14 +115,15 @@ export default function SettingsPage() {
               <div className="flex-1">
                 <h2 className="card-title text-text-500 text-lg mb-2">
                   Menü Teması
-                  <span className="badge badge-sm badge-ghost ml-2">Yakında</span>
                 </h2>
                 <p className="text-text-300 text-sm mb-4">
                   Menü görünümünü ve temasını özelleştirin
                 </p>
-                <button className="btn btn-disabled" disabled>
-                  Temayı Düzenle
-                </button>
+                <Link href="/dashboard/settings/theme">
+                  <button className="btn btn-primary bg-primary-500 hover:bg-primary-600 border-none text-white">
+                    Temayı Düzenle
+                  </button>
+                </Link>
               </div>
             </div>
           </div>

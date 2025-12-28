@@ -113,11 +113,30 @@ export default function WaiterTablesPage() {
     }
   }, [router]);
 
+  // Check if password change is required before loading tables
   useEffect(() => {
-    fetchTables();
+    const checkPasswordChangeRequired = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData.passwordChangeRequired === true) {
+            router.push('/waiter/change-password?reason=forced');
+            return;
+          }
+        }
+        // If check passes or fails silently, proceed to fetch tables
+        fetchTables();
+      } catch (error) {
+        // If check fails, still try to fetch tables (backend will handle it)
+        fetchTables();
+      }
+    };
+
+    checkPasswordChangeRequired();
     const interval = setInterval(fetchTables, 30000);
     return () => clearInterval(interval);
-  }, [fetchTables]);
+  }, [fetchTables, router]);
 
   // İstatistikleri hesapla
   const totalTables = tables.length;

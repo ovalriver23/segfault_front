@@ -40,12 +40,6 @@ interface StaffStats {
 // Rezervasyon kartı için mock data
 const mockReservationCount = 0;
 
-// Mock staff data (endpoint hazır olana kadar)
-const mockStaffStats: StaffStats = {
-  activeStaff: 3,
-  totalStaff: 5
-};
-
 // --- ALT BİLEŞENLER ---
 
 // Durum Etiketi (Pill)
@@ -168,6 +162,8 @@ export default function DashboardPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [tableStats, setTableStats] = useState<TableStats>({ activeTables: 0, totalTables: 0 });
   const [tableStatsLoading, setTableStatsLoading] = useState(true);
+  const [staffStats, setStaffStats] = useState<StaffStats>({ activeStaff: 0, totalStaff: 0 });
+  const [staffStatsLoading, setStaffStatsLoading] = useState(true);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -180,6 +176,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchTableStats();
+    fetchStaffStats();
   }, []);
 
   useEffect(() => {
@@ -205,6 +202,28 @@ export default function DashboardPage() {
       console.error('Error fetching table stats:', error);
     } finally {
       setTableStatsLoading(false);
+    }
+  };
+
+  const fetchStaffStats = async () => {
+    try {
+      const response = await fetch('/api/dashboard/manager/staff-stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStaffStats(data);
+      } else {
+        console.error('Failed to fetch staff stats:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching staff stats:', error);
+    } finally {
+      setStaffStatsLoading(false);
     }
   };
 
@@ -280,8 +299,14 @@ export default function DashboardPage() {
           <RadialProgressCard activeTables={tableStats.activeTables} totalTables={tableStats.totalTables} title="Aktif Masa" />
         )}
 
-        {/* Radial Progress for Active Staff (Mock data) */}
-        <RadialProgressCard activeTables={mockStaffStats.activeStaff} totalTables={mockStaffStats.totalStaff} title="Aktif Çalışan Personel" />
+        {/* Radial Progress for Active Staff */}
+        {staffStatsLoading ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm flex items-center justify-center">
+            <span className="loading loading-spinner loading-lg text-pink-700"></span>
+          </div>
+        ) : (
+          <RadialProgressCard activeTables={staffStats.activeStaff} totalTables={staffStats.totalStaff} title="Aktif Çalışan Personel" />
+        )}
 
         {/* Coming Soon Radial Progress for Reservations */}
         <ComingSoonRadialCard title="Rezervasyon" count={mockReservationCount} />
