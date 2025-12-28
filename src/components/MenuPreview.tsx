@@ -56,32 +56,64 @@ function ProductCard({
   itemInCart,
   onAddToCart,
   onUpdateQuantity,
+  theme
 }: {
   product: Product;
   itemInCart?: CartItem;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
   const isPopular = product.style === 'popular' || false;
 
+  // Theme Styles
+  const themeStyles = {
+    DEFAULT: {
+      card: "bg-white text-gray-900",
+      price: "text-gray-900",
+      buttonBg: "bg-pink-500 hover:bg-pink-600",
+      buttonHover: "hover:bg-pink-600",
+      buttonText: "text-white",
+      badge: "bg-[#E8C5B8] text-gray-800"
+    },
+    MODERN: {
+      card: "bg-[#2d2d2d] text-white",
+      price: "text-orange-500",
+      buttonBg: "bg-[#ea580c] hover:bg-[#c2410c]",
+      buttonHover: "hover:bg-[#c2410c]",
+      buttonText: "text-white",
+      badge: "bg-[#ea580c] text-white"
+    },
+    ELEGANT: {
+      card: "bg-[#fdfbf7] text-[#5c4033] border border-[#e6dcc3]",
+      price: "text-[#8b4513]",
+      // Warm milky coffee
+      buttonBg: "bg-[#9C6644] hover:bg-[#7f5539]",
+      buttonHover: "hover:bg-[#7f5539]",
+      buttonText: "text-[#fdfbf7]",
+      badge: "bg-[#d2b48c] text-[#5c4033]"
+    }
+  };
+
+  const styles = themeStyles[theme] || themeStyles.DEFAULT;
+
   return (
-    <div 
-      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full ${
-        product.available ? '' : 'opacity-75'
-      }`}
+    <div
+      className={`relative rounded-2xl shadow-md overflow-hidden w-full ${styles.card} ${product.available ? '' : 'opacity-75'
+        }`}
     >
       {/* Popular Badge */}
       {isPopular && (
-        <div className="absolute top-2 right-2 bg-[#E8C5B8] text-gray-800 px-3 py-1 rounded-full text-xs font-medium z-10">
+        <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-medium z-10 ${styles.badge}`}>
           Popüler
         </div>
       )}
-      
+
       {/* Product Image */}
       <div className="w-full h-32 relative overflow-hidden">
-        <Image 
-          src={product.imageUrl || "/images/cappucino.webp"} 
-          alt={product.name} 
+        <Image
+          src={product.imageUrl || "/images/cappucino.webp"}
+          alt={product.name}
           fill
           className="object-cover"
           sizes="(max-width: 768px) 50vw, 25vw"
@@ -91,19 +123,19 @@ function ProductCard({
 
       {/* Product Info */}
       <div className="p-3 pb-3">
-        <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
+        <h3 className={`text-base font-semibold mb-1 min-h-10 line-clamp-2 leading-snug ${theme === 'MODERN' ? 'text-gray-100' : theme === 'ELEGANT' ? 'text-[#5c4033]' : 'text-gray-900'}`}>
           {product.name}
         </h3>
-        
+
         {/* Price and Action */}
         <div className="flex justify-between items-center">
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-bold text-gray-900">
+            <span className={`text-lg font-bold ${styles.price}`}>
               {product.price}
             </span>
-            <span className="text-xs font-medium text-gray-500">TL</span>
+            <span className={`text-xs font-medium ${theme === 'MODERN' ? 'text-gray-400' : 'text-gray-500'}`}>TL</span>
           </div>
-          
+
           {!product.available ? (
             <div className="text-red-500 text-xs font-medium px-2 py-1 bg-red-50 rounded-md">
               Tükendi
@@ -116,21 +148,21 @@ function ProductCard({
                     e.stopPropagation();
                     onAddToCart(product);
                   }}
-                  className="w-8 h-8 bg-pink-500 hover:bg-pink-600 rounded-xl flex items-center justify-center transition-colors shadow-md"
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors shadow-md ${styles.buttonBg}`}
                 >
-                  <span className="text-2xl text-white font-light">+</span>
+                  <span className={`text-2xl font-light ${styles.buttonText}`}>+</span>
                 </button>
               ) : (
-                <div 
+                <div
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
+                  className={`inline-flex items-center rounded-xl shadow-md h-8 ${styles.buttonBg}`}
                 >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onUpdateQuantity(product.id, itemInCart.quantity - 1);
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                    className={`w-8 h-8 flex items-center justify-center ${styles.buttonText} ${styles.buttonHover} rounded-xl transition-colors`}
                   >
                     {itemInCart.quantity === 1 ? (
                       <svg
@@ -151,7 +183,7 @@ function ProductCard({
                       <span className="text-2xl font-light">−</span>
                     )}
                   </button>
-                  <span className="px-2 text-white font-bold text-xs min-w-6 text-center">
+                  <span className={`px-2 ${styles.buttonText} font-bold text-xs min-w-6 text-center`}>
                     {itemInCart.quantity}
                   </span>
                   <button
@@ -159,7 +191,7 @@ function ProductCard({
                       e.stopPropagation();
                       onUpdateQuantity(product.id, itemInCart.quantity + 1);
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-pink-600 rounded-xl transition-colors"
+                    className={`w-8 h-8 flex items-center justify-center ${styles.buttonText} ${styles.buttonHover} rounded-xl transition-colors`}
                   >
                     <span className="text-2xl font-light">+</span>
                   </button>
@@ -178,32 +210,54 @@ function CategoryFilter({
   categories,
   selectedCategory,
   onSelectCategory,
+  theme
 }: {
   categories: CategoryFilterItem[];
   selectedCategory: string;
   onSelectCategory: (categoryName: string) => void;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
+  const themeStyles = {
+    DEFAULT: {
+      bgActive: "#F8A45A",
+      bgInactive: "#FFC898",
+      border: "border-secondary-500",
+      text: "text-gray-800"
+    },
+    MODERN: {
+      bgActive: "#ea580c",
+      bgInactive: "#4b5563",
+      border: "border-orange-500",
+      text: "text-gray-200"
+    },
+    ELEGANT: {
+      bgActive: "#8b4513",
+      bgInactive: "#d2b48c",
+      border: "border-[#5c4033]",
+      text: "text-[#5c4033]"
+    }
+  };
+  const styles = themeStyles[theme] || themeStyles.DEFAULT;
+
   return (
     <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
       {/* "All" button */}
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${
-          selectedCategory !== "All" ? "opacity-70" : ""
-        }`}
-      >
-        <div 
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
-            selectedCategory === "All" 
-              ? "border-2 border-secondary-500"
-              : ""
+        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
           }`}
-          style={{ backgroundColor: selectedCategory === "All" ? "#F8A45A" : "#FFC898" }}
+      >
+        <div
+          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
+            ? `border-2 ${styles.border}`
+            : ""
+            }`}
+          style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : styles.bgInactive }}
         >
-           <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
+          <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
         </div>
-        <span className="font-semibold text-gray-800 text-sm">Tümü</span>
+        <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
       </button>
 
       {/* Dynamic categories */}
@@ -211,39 +265,37 @@ function CategoryFilter({
         <button
           key={cat.id}
           onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${
-            selectedCategory !== cat.name ? "opacity-70" : ""
-          }`}
+          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
+            }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
-              selectedCategory === cat.name
-                ? "border-2 border-secondary-500"
-                : ""
-            }`}
-            style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
+              ? `border-2 ${styles.border}`
+              : ""
+              }`}
+            style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : styles.bgInactive }}
           >
             {cat.imageUrl ? (
               <div className="relative w-16 h-16">
-                <Image 
-                  src={cat.imageUrl} 
-                  alt={cat.name} 
+                <Image
+                  src={cat.imageUrl}
+                  alt={cat.name}
                   fill
                   sizes="(max-width: 768px) 50vw, 25vw"
-                  className="mask mask-squircle object-cover" 
+                  className="mask mask-squircle object-cover"
                 />
               </div>
             ) : (
-              <Image 
-                src="/images/burger.png" 
-                alt={cat.name} 
-                width={63} 
-                height={63} 
-                className="mask mask-squircle" 
+              <Image
+                src="/images/burger.png"
+                alt={cat.name}
+                width={63}
+                height={63}
+                className="mask mask-squircle"
               />
             )}
           </div>
-          <span className="font-semibold text-gray-800 text-sm">{cat.name}</span>
+          <span className={`font-semibold text-sm ${styles.text}`}>{cat.name}</span>
         </button>
       ))}
     </div>
@@ -254,17 +306,27 @@ function CategoryFilter({
 function CartSummary({
   itemCount,
   totalPrice,
+  theme
 }: {
   itemCount: number;
   totalPrice: number;
+  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }) {
+  const bgClass = theme === 'MODERN' ? 'bg-[#ea580c]'
+    : theme === 'ELEGANT' ? 'bg-[#9C6644]'
+      : 'bg-pink-500';
+
+  const borderClass = theme === 'MODERN' ? 'text-[#ea580c] border-[#ea580c]'
+    : theme === 'ELEGANT' ? 'text-[#9C6644] border-[#9C6644]'
+      : 'text-pink-500 border-pink-600';
+
   return (
-    <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full">
+    <div className={`${bgClass} text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full`}>
       <div className="text-left">
         <span className="font-semibold">{itemCount} Items</span>
         <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
       </div>
-      <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
+      <div className={`btn btn-circle btn-lg bg-white border-2 hover:bg-gray-100 ${borderClass}`}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -318,7 +380,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
       const currentScrollY = scrollContainer.scrollTop;
       const scrollDifference = currentScrollY - lastScrollY;
-      
+
       // Always show when near the top
       if (currentScrollY < 50) {
         setIsSearchVisible(true);
@@ -332,7 +394,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
         setIsSearchVisible(false);
         setIsCategoryFilterVisible(false);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -350,7 +412,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
     }
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
-  
+
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       setCart((prevCart) =>
@@ -379,7 +441,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292; 
+      const STICKY_OFFSET = 292;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const currentScrollTop = scrollContainer.scrollTop;
@@ -395,7 +457,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       name: category.name,
       imageUrl: category.imageUrl || null
     }));
-  }, [apiData]); 
+  }, [apiData]);
 
   // Filter by search query only
   const filteredMenu = useMemo(() => {
@@ -464,20 +526,63 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
     return new Map(cart.map((item) => [item.id, item]));
   }, [cart]);
 
+  // --- Theme Logic ---
+  const theme = apiData.menuTheme || 'DEFAULT';
+
+  const themeConfig = {
+    DEFAULT: {
+      bg: "bg-white",
+      headerBg: "bg-white",
+      text: "text-gray-900",
+      searchBg: "bg-orange-100/70",
+      searchInput: "placeholder-orange-900/60 text-[#6b3b1f]",
+      searchIcon: "text-orange-900",
+      categoryFilterBg: "bg-white"
+    },
+    MODERN: {
+      bg: "bg-[#1f1f1f]",
+      headerBg: "bg-[#1f1f1f]",
+      text: "text-white",
+      searchBg: "bg-[#333333]", // Lighter, neutral gray
+      searchInput: "placeholder-gray-400 text-white",
+      searchIcon: "text-gray-400",
+      categoryFilterBg: "bg-[#1f1f1f]",
+      categoryTitleBg: "bg-[#1f1f1f]" // Fix white box
+    },
+    ELEGANT: {
+      bg: "bg-[#f5f5dc]",
+      headerBg: "bg-[#f5f5dc]",
+      text: "text-[#5c4033] font-serif",
+      searchBg: "bg-[#e6dcc3]",
+      searchInput: "placeholder-[#8b4513]/60 text-[#5c4033]",
+      searchIcon: "text-[#8b4513]",
+      categoryFilterBg: "bg-[#f5f5dc]",
+      separatorColor: "#8b4513",
+      categoryTitleBg: "bg-[#f5f5dc]"
+    }
+  };
+
+  const currentThemeStyle = themeConfig[theme] || themeConfig.DEFAULT;
+  const separatorColor = (currentThemeStyle as any).separatorColor || '#f8a45a';
+  const categoryTitleBg = (currentThemeStyle as any).categoryTitleBg || 'bg-white';
+  const categoryFontClass = theme === 'ELEGANT' ? 'font-serif' : '';
+  const categoryFontStyle = theme === 'ELEGANT' ? {} : { fontFamily: 'Pontano Sans, sans-serif' };
+
   // --- RENDER ---
   return (
-    <div 
+    <div
       ref={mainContainerRef}
-      className="relative flex flex-col bg-white rounded-3xl shadow-2xl h-full w-full overflow-hidden"
+      className={`relative flex flex-col rounded-3xl shadow-2xl h-full w-full overflow-hidden ${currentThemeStyle.bg}`}
     >
       {/* Scrollable Content Area */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth pb-24">
         {/* STICKY HEADERS */}
-        <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
-          <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
-          
+        <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
+          {/* Left: Menu Title */}
+          <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
+
           <div className="flex flex-col items-end text-right">
-            <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
+            <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
               <span>{apiData.restaurantName}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -498,17 +603,16 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
         {/* Main Content Area */}
         <main className="px-2">
-          
+
           {/* Search Bar */}
-          <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
-            isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
-          }`}>
-            <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
+          <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
+            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full scale-[0.9] ${currentThemeStyle.searchBg}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className="w-5 h-5 opacity-70 text-orange-900"
+                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
               >
                 <path
                   fillRule="evenodd"
@@ -518,7 +622,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
               </svg>
               <input
                 type="text"
-                className="grow bg-transparent placeholder-orange-900/60 text-[#6b3b1f]"
+                className={`grow bg-transparent ${currentThemeStyle.searchInput}`}
                 placeholder="Ara"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -527,13 +631,13 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
           </div>
 
           {/* Category Filter */}
-          <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
-            isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
-          }`}>
+          <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
             <CategoryFilter
               categories={categoriesForFilter}
               selectedCategory={selectedCategory}
               onSelectCategory={handleCategoryClick}
+              theme={theme}
             />
           </div>
 
@@ -548,8 +652,8 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
                 }}
               >
                 <div className="relative mb-4">
-                  <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: '#f8a45a' }} />
-                  <h2 className="relative inline-block bg-white pr-4 text-2xl font-normal text-gray-800" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
+                  <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: separatorColor }} />
+                  <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-[#f8a45a]' : 'text-gray-800'}`} style={categoryFontStyle}>
                     {section.categoryName}
                   </h2>
                 </div>
@@ -561,6 +665,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
                       itemInCart={cartMap.get(product.id)}
                       onAddToCart={handleAddToCart}
                       onUpdateQuantity={handleUpdateQuantity}
+                      theme={theme}
                     />
                   ))}
                 </div>
@@ -571,14 +676,14 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       </div>
 
       {/* Cart Summary (Footer) - Absolute positioning relative to container */}
-      <div className={`absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 ease-in-out ${
-        cartSummary.itemCount > 0 
-          ? 'opacity-100 translate-y-0' 
-          : 'opacity-0 translate-y-20 pointer-events-none'
-      }`}>
+      <div className={`absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 ease-in-out ${cartSummary.itemCount > 0
+        ? 'opacity-100 translate-y-0'
+        : 'opacity-0 translate-y-20 pointer-events-none'
+        }`}>
         <CartSummary
           itemCount={cartSummary.itemCount}
           totalPrice={cartSummary.totalPrice}
+          theme={theme}
         />
       </div>
     </div>

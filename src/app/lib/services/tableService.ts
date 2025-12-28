@@ -42,6 +42,7 @@ export interface TableScanResponse {
     restaurantLatitude: number;
     restaurantLongitude: number;
     menu: MenuCategory[];
+    menuTheme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
 }
 
 export interface TableScanError {
