@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePageTitle } from '../../layout';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -70,10 +71,22 @@ export default function EditRestaurantPage() {
                 ...prev,
                 username: user.username || '',
                 email: user.email || '',
+                restaurantName: user.restaurantName || '',
+                restaurantLocation: user.restaurantLocation || '',
+                latitude: user.latitude?.toString() || '',
+                longitude: user.longitude?.toString() || '',
             }));
             // Set profile photo preview if user has one
             if (user.profilePhotoUrl) {
                 setProfilePreview(user.profilePhotoUrl);
+            }
+            // Set restaurant logo preview if user has one
+            if (user.restaurantLogoUrl) {
+                setLogoPreview(user.restaurantLogoUrl);
+            }
+            // Set map position if coordinates exist
+            if (user.latitude && user.longitude) {
+                setMapPosition([user.latitude, user.longitude]);
             }
         }
     }, [user]);
@@ -334,7 +347,7 @@ export default function EditRestaurantPage() {
                                 {profilePreview ? (
                                     <div className="avatar">
                                         <div className="w-20 h-20 rounded-full ring ring-primary-200">
-                                            <img src={profilePreview} alt="Profil önizleme" />
+                                            <Image src={profilePreview} alt="Profil önizleme" fill className="object-cover" />
                                         </div>
                                     </div>
                                 ) : (
@@ -398,7 +411,7 @@ export default function EditRestaurantPage() {
                                     {logoPreview ? (
                                         <div className="avatar">
                                             <div className="w-16 h-16 rounded-lg ring ring-primary-200">
-                                                <img src={logoPreview} alt="Logo önizleme" />
+                                                <Image src={logoPreview} alt="Logo önizleme" fill className="object-cover" />
                                             </div>
                                         </div>
                                     ) : (

@@ -7,7 +7,14 @@ interface User {
     email: string | null;
     username: string;
     role: string;
+    hasRestaurant: boolean;
+    passwordChangeRequired: boolean;
     profilePhotoUrl?: string | null;
+    restaurantLogoUrl?: string | null;
+    restaurantName: string;
+    restaurantLocation: string;
+    latitude: number;
+    longitude: number;
 }
 
 interface AuthContextType {
@@ -22,8 +29,8 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
     error: null,
-    refreshUser: async () => {},
-    logout: () => {}
+    refreshUser: async () => { },
+    logout: () => { }
 })
 
 export const useAuth = () => useContext(AuthContext);
@@ -49,13 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Clear everything
                 setUser(null);
                 sessionStorage.removeItem('user');
-                
+
                 // Clear the JWT cookie by calling logout endpoint
                 await fetch('/api/auth/logout', {
                     method: 'POST',
                     credentials: 'include'
                 });
-                
+
                 setLoading(false);
                 return;
             }
