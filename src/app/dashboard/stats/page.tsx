@@ -112,13 +112,14 @@ export default function StatsPage() {
       const response = await fetch(url);
 
       if (!response.ok) {
-        setError('Veriler yüklenirken bir hata oluştu!');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Veriler yüklenirken bir hata oluştu!');
       }
 
       const data = await response.json();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -246,9 +247,17 @@ export default function StatsPage() {
 
       {/* Error State */}
       {error ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <p className="font-semibold">Hata:</p>
-          <p>{error}</p>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-5 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="font-semibold text-lg">Hata Oluştu</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+          <button
+            onClick={fetchStats}
+            className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
+          >
+            Tekrar Dene
+          </button>
         </div>
       ) : null}
 
