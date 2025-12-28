@@ -5,7 +5,7 @@ import { Bell, Phone, ShoppingCart, DollarSign, Check, RefreshCw, Trash2, Undo2,
 import { useRouter } from 'next/navigation';
 import { usePushNotification } from '@/lib/hooks/usePushNotification';
 
-type RequestType = 'CALL_WAITER' | 'ORDER' | 'BILL_REQUEST';
+type RequestType = 'CALL_WAITER' | 'ORDER' | 'REQUEST_BILL';
 type RequestStatus = 'PENDING' | 'COMPLETED';
 type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED';
 type TabType = 'requests' | 'orders' | 'done';
@@ -267,7 +267,7 @@ export default function WaiterNotificationsPage() {
         return <Phone className="w-4 h-4 text-[#8B4513]" />;
       case 'ORDER':
         return <ShoppingCart className="w-4 h-4 text-[#8B4513]" />;
-      case 'BILL_REQUEST':
+      case 'REQUEST_BILL':
         return <DollarSign className="w-4 h-4 text-[#8B4513]" />;
       default:
         return <Bell className="w-4 h-4 text-[#8B4513]" />;
@@ -280,7 +280,7 @@ export default function WaiterNotificationsPage() {
         return 'Garson Çağrısı';
       case 'ORDER':
         return 'Sipariş Verme';
-      case 'BILL_REQUEST':
+      case 'REQUEST_BILL':
         return 'Hesap İstedi';
       default:
         return type;
@@ -291,6 +291,13 @@ export default function WaiterNotificationsPage() {
     try {
       // Önce geri alınanlardan mı kontrol et
       const isRestored = restoredRequestsRef.current.some(r => r.id === requestId);
+
+      // Request'i bul (type kontrolü için)
+      const requestToComplete = pendingRequests.find(r => r.id === requestId);
+      console.log('Request type:', requestToComplete?.type);
+      console.log('Active orders:', activeOrders);
+      console.log('Table name:', requestToComplete?.tableName);
+      console.log('Is REQUEST_BILL:', requestToComplete?.type === 'REQUEST_BILL');
 
       if (!isRestored) {
         // Sadece backend'den gelenler için API çağrısı yap
@@ -303,6 +310,44 @@ export default function WaiterNotificationsPage() {
 
         if (!response.ok) {
           throw new Error('İstek tamamlanamadı');
+        }
+      }
+
+      // REQUEST_BILL ise, o masanın tüm siparişlerini COMPLETED yap
+      if (requestToComplete?.type === 'REQUEST_BILL') {
+        const tableName = requestToComplete.tableName;
+        const tableOrders = activeOrders.filter(o => o.tableName === tableName);
+
+        // Her sipariş için COMPLETED status'a güncelle
+        for (const order of tableOrders) {
+          try {
+            const updateResponse = await fetch('/api/waiter/orders/update-status', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ orderId: order.id, status: 'COMPLETED' })
+            });
+
+            if (updateResponse.ok) {
+              // Active'den kaldır
+              setActiveOrders(prev => prev.filter(o => o.id !== order.id));
+
+              // Completed'a ekle (duplicate kontrolü ile)
+              const completedOrder: Order = {
+                ...order,
+                status: 'COMPLETED'
+              };
+              setCompletedOrders(prev => {
+                if (prev.some(o => o.id === order.id)) {
+                  return prev;
+                }
+                return [completedOrder, ...prev];
+              });
+            }
+          } catch (orderErr) {
+            console.error('Error completing order:', orderErr);
+            // Sipariş güncelleme hatası ana işlemi durdurmasın
+          }
         }
       }
 
