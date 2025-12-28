@@ -60,6 +60,7 @@ export default function WaiterNotificationsPage() {
     isSubscribed: pushSubscribed,
     isLoading: pushLoading,
     error: pushError,
+    notSupportedReason: pushNotSupportedReason,
     subscribe: pushSubscribe,
     unsubscribe: pushUnsubscribe
   } = usePushNotification();
@@ -521,26 +522,32 @@ export default function WaiterNotificationsPage() {
           Görev Paneli
         </h1>
         <div className="flex items-center gap-2">
-          {/* Push Notification Toggle */}
-          {pushSupported && (
-            <button
-              onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
-              disabled={pushLoading}
-              className={`p-2 rounded-lg transition-colors ${pushSubscribed
-                ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              title={pushSubscribed ? 'Bildirimleri Kapat' : 'Bildirimleri Aç'}
-            >
-              {pushLoading ? (
-                <RefreshCw className="w-5 h-5 animate-spin" />
-              ) : pushSubscribed ? (
-                <BellRing className="w-5 h-5" />
-              ) : (
-                <BellOff className="w-5 h-5" />
-              )}
-            </button>
-          )}
+          {/* Push Notification Toggle - Always show */}
+          <button
+            onClick={pushSupported ? (pushSubscribed ? pushUnsubscribe : pushSubscribe) : undefined}
+            disabled={pushLoading || !pushSupported}
+            className={`p-2 rounded-lg transition-colors ${!pushSupported
+                ? 'bg-orange-100 text-orange-600 cursor-not-allowed'
+                : pushSubscribed
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            title={
+              !pushSupported
+                ? (pushNotSupportedReason || 'Bildirimler desteklenmiyor')
+                : pushSubscribed
+                  ? 'Bildirimleri Kapat'
+                  : 'Bildirimleri Aç'
+            }
+          >
+            {pushLoading ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : pushSubscribed ? (
+              <BellRing className="w-5 h-5" />
+            ) : (
+              <BellOff className="w-5 h-5" />
+            )}
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -551,6 +558,14 @@ export default function WaiterNotificationsPage() {
           </button>
         </div>
       </div>
+
+      {/* Push Notification Not Supported Message */}
+      {!pushSupported && pushNotSupportedReason && (
+        <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg text-orange-700 text-sm flex items-start gap-2">
+          <BellOff className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>{pushNotSupportedReason}</span>
+        </div>
+      )}
 
       {/* Push Notification Error */}
       {pushError && (
