@@ -71,8 +71,8 @@ const ChangePill = ({ value }: ChangePillProps) => (
 // Map period to Turkish
 const periodMapping: Record<string, string> = {
   'today': 'Bugün',
-  'week': '1 Hafta',
-  'month': '1 Ay',
+  'week': 'Bu Hafta',
+  'month': 'Bu Ay',
   'custom': 'Özel Tarih'
 };
 
@@ -112,7 +112,7 @@ export default function StatsPage() {
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch statistics');
+        setError('Veriler yüklenirken bir hata oluştu!');
       }
 
       const data = await response.json();
@@ -131,11 +131,62 @@ export default function StatsPage() {
     });
   };
 
-  const salesChartData = stats?.salesTrend?.map(item => ({
+  // X-axis için gün isimleri (Pazartesi'den başlayarak)
+  const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Pazar'];
+
+  // Ayın son gününü hesapla
+  const getLastDayOfMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  };
+
+  // X-axis etiketlerini formatlama fonksiyonu
+  const formatXAxisLabel = (value: string, index: number) => {
+    if (activeTab === 'week') {
+      // Hafta görünümü: Gerçek tarihi parse edip gün ismini bul
+      // value formatı: "28 Dec" gibi olabilir
+      try {
+        const currentYear = new Date().getFullYear();
+        const dateStr = `${value} ${currentYear}`;
+        const parsedDate = new Date(dateStr);
+
+        if (!isNaN(parsedDate.getTime())) {
+          // JavaScript getDay(): 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
+          // dayNames dizisi: 0=Pzt, 1=Sal, ..., 6=Paz (Pazartesi'den başlıyor)
+          const jsDay = parsedDate.getDay();
+          // Pazar(0) -> 6, Pazartesi(1) -> 0, Salı(2) -> 1, ...
+          const adjustedIndex = jsDay === 0 ? 6 : jsDay - 1;
+          return dayNames[adjustedIndex];
+        }
+      } catch {
+        // Parse edilemezse orijinal değeri döndür
+      }
+      return value;
+    } else if (activeTab === 'month') {
+      // Ay görünümü: Tarihten gün numarasını çıkar
+      try {
+        const currentYear = new Date().getFullYear();
+        const dateStr = `${value} ${currentYear}`;
+        const parsedDate = new Date(dateStr);
+
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.getDate().toString();
+        }
+      } catch {
+        // Parse edilemezse index + 1 döndür
+      }
+      return (index + 1).toString();
+    }
+    return value;
+  };
+
+  const salesChartData = stats?.salesTrend?.map((item, index) => ({
     name: item.date,
+    index: index,
     value: item.revenue
-  })) || stats?.hourlySalesTrend?.map(item => ({
+  })) || stats?.hourlySalesTrend?.map((item, index) => ({
     name: item.hour,
+    index: index,
     value: item.revenue
   })) || [];
 
@@ -216,6 +267,7 @@ export default function StatsPage() {
                     tick={{ fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={(value, index) => formatXAxisLabel(value, index)}
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
