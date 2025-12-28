@@ -139,6 +139,9 @@ function ProductCard({
 
     // Store product data in sessionStorage
     sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
+    // Store theme for detail page
+    console.log('🎨 ProductCard: Saving theme to sessionStorage:', theme);
+    sessionStorage.setItem('menuTheme', theme);
 
     router.push(`/table/${qrToken}/item/${product.id}`);
   };
@@ -746,6 +749,11 @@ export default function MenuView({ apiData }: MenuViewProps) {
   // --- RENDER ---
   const theme = apiData.menuTheme || 'DEFAULT';
 
+  // Save theme to sessionStorage for product detail page
+  useEffect(() => {
+    sessionStorage.setItem('menuTheme', theme);
+  }, [theme]);
+
   const themeConfig = {
     DEFAULT: {
       bg: "bg-white",
@@ -793,255 +801,257 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const categoryFontStyle = theme === 'ELEGANT' ? {} : { fontFamily: 'Pontano Sans, sans-serif' };
 
   return (
-    <div
-      ref={mainContainerRef}
-      className={`max-w-md mx-auto rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
-    >
-      {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
-        {/* Left: Menu Title */}
-        <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
+    <div className={`min-h-screen ${currentThemeStyle.bg}`}>
+      <div
+        ref={mainContainerRef}
+        className={`max-w-md mx-auto h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
+      >
+        {/* YAPIŞKAN BAŞLIKLAR: */}
+        <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 z-10 border-b ${theme === 'MODERN' ? 'border-gray-700' : theme === 'ELEGANT' ? 'border-[#d2b48c]' : 'border-gray-100'} ${currentThemeStyle.headerBg}`}>
+          {/* Left: Menu Title */}
+          <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
 
-        {/* Center: Orders Button */}
-        <button
-          onClick={handleOpenOrders}
-          className={`flex items-center gap-1 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          {/* Center: Orders Button */}
+          <button
+            onClick={handleOpenOrders}
+            className={`flex items-center gap-1 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-          <span className="text-sm font-medium">Siparişlerim</span>
-        </button>
-
-        {/* Right: Restaurant Info */}
-        <div className="flex flex-col items-end text-right">
-          <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
-            <span>{apiData.restaurantName}</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-5 h-5 text-gray-400"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
               <path
-                fillRule="evenodd"
-                d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                clipRule="evenodd"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-          </div>
-          <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
-        </div>
-      </header>
+            <span className="text-sm font-medium">Siparişlerim</span>
+          </button>
 
-      {/* Ana İçerik Alanı */}
-      <main className="px-2">
-
-        {/* Search Bar and Call Waiter Button */}
-        <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
-          }`}>
-          {/* Search Bar (60%) */}
-          <div className="w-[60%]">
-            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full ${currentThemeStyle.searchBg}`}>
+          {/* Right: Restaurant Info */}
+          <div className="flex flex-col items-end text-right">
+            <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
+              <span>{apiData.restaurantName}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 16 16"
+                viewBox="0 0 20 20"
                 fill="currentColor"
-                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
+                className="w-5 h-5 text-gray-400"
               >
                 <path
                   fillRule="evenodd"
-                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
                   clipRule="evenodd"
                 />
               </svg>
-              <input
-                type="text"
-                className={`grow bg-transparent w-full ${currentThemeStyle.searchInput}`}
-                placeholder="Ara"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </label>
+            </div>
+            <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
           </div>
+        </header>
 
-          {/* Call Waiter Button (40%) */}
-          <div className="w-[40%] h-14">
-            {waiterCalled ? (
-              <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        {/* Ana İçerik Alanı */}
+        <main className="px-2">
+
+          {/* Search Bar and Call Waiter Button */}
+          <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
+            {/* Search Bar (60%) */}
+            <div className="w-[60%]">
+              <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full ${currentThemeStyle.searchBg}`}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                    clipRule="evenodd"
+                  />
                 </svg>
-                <span className="text-sm font-medium">Çağrıldı</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleShowWaiterConfirm}
-                disabled={isCallingWaiter}
-                className={`w-full h-full flex items-center justify-center gap-1 px-3 rounded-full transition-colors shadow-sm ${currentThemeStyle.callWaiterBg}`}
-              >
-                {isCallingWaiter ? (
-                  <span className="loading loading-spinner loading-xs"></span>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
-                    <g id="Group">
-                      <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </g>
-                  </svg>
-                )}
-                <span className="text-sm font-medium">Garson Çağır</span>
-              </button>
-            )}
-          </div>
-        </div>
+                <input
+                  type="text"
+                  className={`grow bg-transparent w-full ${currentThemeStyle.searchInput}`}
+                  placeholder="Ara"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </label>
+            </div>
 
-        {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            {/* Call Waiter Button (40%) */}
+            <div className="w-[40%] h-14">
+              {waiterCalled ? (
+                <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium">Çağrıldı</span>
+                </div>
+              ) : (
+                <button
+                  onClick={handleShowWaiterConfirm}
+                  disabled={isCallingWaiter}
+                  className={`w-full h-full flex items-center justify-center gap-1 px-3 rounded-full transition-colors shadow-sm ${currentThemeStyle.callWaiterBg}`}
+                >
+                  {isCallingWaiter ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
+                      <g id="Group">
+                        <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    </svg>
+                  )}
+                  <span className="text-sm font-medium">Garson Çağır</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Kategori Filtresi */}
+          <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
+            <CategoryFilter
+              categories={categoriesForFilter}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleCategoryClick}
+              theme={theme}
+            />
+          </div>
+
+          {/* Menü Bölümleri */}
+          <div className="space-y-8 pt-4 px-4 pb-32">
+            {filteredMenu.map((section) => (
+              <section
+                key={section.categoryId}
+                data-category={section.categoryName}
+                ref={(el) => {
+                  sectionRefs.current[section.categoryName] = el;
+                }}
+              >
+                <div className="relative mb-4">
+                  <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: separatorColor }} />
+                  <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-[#f8a45a]' : 'text-gray-800'}`} style={categoryFontStyle}>
+                    {section.categoryName}
+                  </h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  {section.items.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      itemInCart={cartMap.get(product.id)}
+                      onAddToCart={handleAddToCart}
+                      onUpdateQuantity={handleUpdateQuantity}
+                      qrToken={qrToken}
+                      theme={theme}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </main>
+
+        {/* Sepet Özeti (Footer) */}
+        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${cartSummary.itemCount > 0
+          ? 'opacity-100 translate-y-0'
+          : 'opacity-0 translate-y-20 pointer-events-none'
           }`}>
-          <CategoryFilter
-            categories={categoriesForFilter}
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleCategoryClick}
+          <CartSummary
+            itemCount={cartSummary.itemCount}
+            totalPrice={cartSummary.totalPrice}
+            onClick={handleOpenCart}
             theme={theme}
           />
         </div>
 
-        {/* Menü Bölümleri */}
-        <div className="space-y-8 pt-4 px-4 pb-32">
-          {filteredMenu.map((section) => (
-            <section
-              key={section.categoryId}
-              data-category={section.categoryName}
-              ref={(el) => {
-                sectionRefs.current[section.categoryName] = el;
-              }}
-            >
-              <div className="relative mb-4">
-                <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: separatorColor }} />
-                <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-[#f8a45a]' : 'text-gray-800'}`} style={categoryFontStyle}>
-                  {section.categoryName}
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4 w-full">
-                {section.items.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    itemInCart={cartMap.get(product.id)}
-                    onAddToCart={handleAddToCart}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    qrToken={qrToken}
-                    theme={theme}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </main>
 
-      {/* Sepet Özeti (Footer) */}
-      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 z-20 max-w-md w-full transition-all duration-300 ease-in-out ${cartSummary.itemCount > 0
-        ? 'opacity-100 translate-y-0'
-        : 'opacity-0 translate-y-20 pointer-events-none'
-        }`}>
-        <CartSummary
-          itemCount={cartSummary.itemCount}
-          totalPrice={cartSummary.totalPrice}
-          onClick={handleOpenCart}
+        {/* Cart Modal */}
+        < CartModal
+          modalId="cart_modal"
+          qrToken={qrToken}
+          items={cart}
+          generalNote={generalNote}
+          onUpdateQuantity={handleUpdateQuantity}
+          onUpdateGeneralNote={handleUpdateGeneralNote}
+          onSubmitOrder={handleSubmitOrder}
           theme={theme}
         />
-      </div>
 
+        {/* Orders Modal */}
+        < OrdersModal
+          key={ordersModalKey}
+          modalId="orders_modal"
+          qrToken={qrToken}
+          theme={theme}
+        />
 
-      {/* Cart Modal */}
-      < CartModal
-        modalId="cart_modal"
-        qrToken={qrToken}
-        items={cart}
-        generalNote={generalNote}
-        onUpdateQuantity={handleUpdateQuantity}
-        onUpdateGeneralNote={handleUpdateGeneralNote}
-        onSubmitOrder={handleSubmitOrder}
-        theme={theme}
-      />
+        {/* Notification Modal */}
+        {
+          notification && (
+            <NotificationModal
+              modalId="notification_modal"
+              type={notification.type}
+              message={notification.message}
+              onClose={() => setNotification(null)}
+            />
+          )
+        }
 
-      {/* Orders Modal */}
-      < OrdersModal
-        key={ordersModalKey}
-        modalId="orders_modal"
-        qrToken={qrToken}
-        theme={theme}
-      />
-
-      {/* Notification Modal */}
-      {
-        notification && (
-          <NotificationModal
-            modalId="notification_modal"
-            type={notification.type}
-            message={notification.message}
-            onClose={() => setNotification(null)}
-          />
-        )
-      }
-
-      {/* Waiter Confirmation Modal */}
-      {
-        showWaiterConfirmModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className={`rounded-2xl shadow-xl max-w-sm w-full p-6 ${theme === 'MODERN' ? 'bg-[#2d2d2d]' :
+        {/* Waiter Confirmation Modal */}
+        {
+          showWaiterConfirmModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className={`rounded-2xl shadow-xl max-w-sm w-full p-6 ${theme === 'MODERN' ? 'bg-[#2d2d2d]' :
                 theme === 'ELEGANT' ? 'bg-[#fdfbf7] border border-[#d2b48c]' :
                   'bg-white'
-              }`}>
-              <h3 className={`text-lg font-bold mb-2 text-center ${theme === 'MODERN' ? 'text-white' :
+                }`}>
+                <h3 className={`text-lg font-bold mb-2 text-center ${theme === 'MODERN' ? 'text-white' :
                   theme === 'ELEGANT' ? 'text-[#5c4033] font-serif' :
                     'text-gray-900'
-                }`}>
-                Garson çağırmak istediğinize emin misiniz?
-              </h3>
-              <p className={`text-sm mb-6 text-center ${theme === 'MODERN' ? 'text-gray-400' :
+                  }`}>
+                  Garson çağırmak istediğinize emin misiniz?
+                </h3>
+                <p className={`text-sm mb-6 text-center ${theme === 'MODERN' ? 'text-gray-400' :
                   theme === 'ELEGANT' ? 'text-[#8b4513]' :
                     'text-gray-600'
-                }`}>
-                Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelWaiterConfirm}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'border border-gray-600 text-gray-300 hover:bg-gray-700' :
+                  }`}>
+                  Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCancelWaiterConfirm}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'border border-gray-600 text-gray-300 hover:bg-gray-700' :
                       theme === 'ELEGANT' ? 'border border-[#d2b48c] text-[#5c4033] hover:bg-[#e6dcc3]' :
                         'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                >
-                  İptal
-                </button>
-                <button
-                  onClick={handleConfirmCallWaiter}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'bg-[#ea580c] text-white hover:bg-[#c2410c]' :
+                      }`}
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={handleConfirmCallWaiter}
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold transition-colors ${theme === 'MODERN' ? 'bg-[#ea580c] text-white hover:bg-[#c2410c]' :
                       theme === 'ELEGANT' ? 'bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]' :
                         'bg-secondary-500 text-white hover:bg-secondary-600'
-                    }`}
-                >
-                  Evet, Çağır
-                </button>
+                      }`}
+                  >
+                    Evet, Çağır
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )
-      }
-    </div >
+          )
+        }
+      </div >
+    </div>
   );
 }

@@ -59,6 +59,10 @@ const SignInPage = () => {
   const [apiError, setApiError] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [showForgotModal, setShowForgotModal] = useState<boolean>(false);
+  const [forgotEmail, setForgotEmail] = useState<string>("");
+  const [forgotLoading, setForgotLoading] = useState<boolean>(false);
+  const [forgotMessage, setForgotMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const {
     register,
@@ -213,6 +217,39 @@ const SignInPage = () => {
     }
   };
 
+  // Forgot password handler
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setForgotMessage({ type: 'error', text: 'E-posta adresi gereklidir.' });
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotMessage(null);
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setForgotMessage({ type: 'success', text: data.message || 'Doğrulama kodu e-posta adresinize gönderildi.' });
+        setForgotEmail('');
+      } else {
+        setForgotMessage({ type: 'error', text: data.message || 'Bir hata oluştu.' });
+      }
+    } catch {
+      setForgotMessage({ type: 'error', text: 'Sunucuya bağlanılamıyor.' });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row justify-center items-center"
       style={{
@@ -271,8 +308,8 @@ const SignInPage = () => {
           {/* General API error message */}
           {apiError && (
             <div className={`mb-5 p-3 border rounded-lg text-sm ${apiError.includes('BANLI') || apiError.toLowerCase().includes('yasaklandı')
-                ? 'bg-orange-50 border-orange-400 text-orange-800'
-                : 'bg-red-100 border-red-400 text-red-700'
+              ? 'bg-orange-50 border-orange-400 text-orange-800'
+              : 'bg-red-100 border-red-400 text-red-700'
               }`}>
               {apiError.includes('BANLI') ? (
                 <div>
@@ -340,6 +377,13 @@ const SignInPage = () => {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
+              <button
+                type="button"
+                onClick={() => { setShowForgotModal(true); setForgotMessage(null); }}
+                className="text-sm text-[#E11383] hover:underline mt-2 block text-right"
+              >
+                Şifremi Unuttum
+              </button>
             </div>
             <button
               type="submit"
@@ -416,6 +460,53 @@ const SignInPage = () => {
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-[#683817] mb-2">Şifremi Unuttum</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Kayıtlı e-posta adresinizi girin, şifre sıfırlama kodu göndereceğiz.
+            </p>
+
+            {forgotMessage && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${forgotMessage.type === 'success'
+                  ? 'bg-green-50 border border-green-400 text-green-700'
+                  : 'bg-red-50 border border-red-400 text-red-700'
+                }`}>
+                {forgotMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword}>
+              <input
+                type="email"
+                placeholder="E-posta adresiniz"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="w-full p-3 border-2 border-[#F8645A] rounded-lg mb-4 focus:border-[#E11383]"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="flex-1 py-3 bg-[#F8645A] text-white rounded-lg font-bold hover:bg-[#E11383] disabled:opacity-50"
+                >
+                  {forgotLoading ? 'Gönderiliyor...' : 'Kod Gönder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

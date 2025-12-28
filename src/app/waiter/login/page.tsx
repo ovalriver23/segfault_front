@@ -12,6 +12,10 @@ export default function WaiterLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +48,39 @@ export default function WaiterLogin() {
       setError(err.message || "Bir hata oluştu");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Forgot password handler
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setForgotMessage({ type: 'error', text: 'E-posta adresi gereklidir.' });
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotMessage(null);
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setForgotMessage({ type: 'success', text: data.message || 'Doğrulama kodu e-posta adresinize gönderildi.' });
+        setForgotEmail('');
+      } else {
+        setForgotMessage({ type: 'error', text: data.message || 'Bir hata oluştu.' });
+      }
+    } catch {
+      setForgotMessage({ type: 'error', text: 'Sunucuya bağlanılamıyor.' });
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -132,6 +169,7 @@ export default function WaiterLogin() {
         {/* Forgot Password */}
         <button
           type="button"
+          onClick={() => { setShowForgotModal(true); setForgotMessage(null); }}
           className="text-[12px] font-semibold text-[#EB5FAB] tracking-[-0.12px] leading-[16.8px] text-right"
         >
           Şifrenizi mi unuttunuz?
@@ -140,8 +178,8 @@ export default function WaiterLogin() {
         {/* Error Message */}
         {error && (
           <div className={`p-3 border rounded-lg text-sm ${error.includes('BANLI') || error.toLowerCase().includes('yasaklandı')
-              ? 'bg-orange-50 border-orange-400 text-orange-800'
-              : 'text-red-500 border-red-300 bg-red-50'
+            ? 'bg-orange-50 border-orange-400 text-orange-800'
+            : 'text-red-500 border-red-300 bg-red-50'
             }`}>
             {error.includes('BANLI') ? (
               <div>
@@ -170,6 +208,53 @@ export default function WaiterLogin() {
       <p className="text-[14px] font-medium text-black/60 tracking-[-0.14px] leading-[19.6px] text-center w-[327px] mx-auto mt-3.5">
         Yardım mı lazım? Yönetici ile iletişime geçin
       </p>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-[#1A1C1E] mb-2">Şifremi Unuttum</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Kayıtlı e-posta adresinizi girin, şifre sıfırlama kodu göndereceğiz.
+            </p>
+
+            {forgotMessage && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${forgotMessage.type === 'success'
+                  ? 'bg-green-50 border border-green-400 text-green-700'
+                  : 'bg-red-50 border border-red-400 text-red-700'
+                }`}>
+                {forgotMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword}>
+              <input
+                type="email"
+                placeholder="E-posta adresiniz"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="w-full p-3 border-2 border-[#F8A45A] rounded-lg mb-4 focus:border-[#EB5FAB]"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="flex-1 py-3 bg-[#EB5FAB] text-white rounded-lg font-bold hover:bg-[#d54f9a] disabled:opacity-50"
+                >
+                  {forgotLoading ? 'Gönderiliyor...' : 'Kod Gönder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
