@@ -228,8 +228,8 @@ export default function StaffPage() {
           <div className="stat-value text-gray-800 text-3xl">{totalStaff}</div>
         </div>
         <div className="stat bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <div className="stat-title text-gray-500">Erkek / Kadın</div>
-          <div className="stat-value text-gray-800 text-3xl">{maleStaff} / {totalStaff - maleStaff}</div>
+          <div className="stat-title text-gray-500">Aktif Çalışan</div>
+          <div className="stat-value text-gray-800 text-3xl">{totalStaff}</div>
         </div>
       </div>
 
