@@ -28,17 +28,17 @@ export default function TableMenuPage() {
 
       setIsLoadingLocation(true);
       setNeedsPermission(false);
-      
+
       try {
         const location = await getUserLocation();
         setUserLocation(location);
 
         const tableData = await scanTable(qrToken, location);
         setMenuData(tableData);
-        
+
       } catch (error) {
         const err = error as GeolocationError | TableScanError;
-        
+
         if ('code' in err) {
           const isFallbackEnabled =
             typeof process !== "undefined" &&
@@ -77,14 +77,14 @@ export default function TableMenuPage() {
           }
         } else {
           // Table scan error
-          
+
           // TEMPORARY: Skip distance validation if restaurant location is not set
           // Remove this block once backend sets restaurant coordinates
           if (err.error && (err.error.includes('null') || err.error.includes('doubleValue'))) {
             setScanError('Restaurant location not configured. Contact the restaurant to set up geolocation verification.');
             return;
           }
-          
+
           setScanError(err.error);
         }
       } finally {
@@ -99,7 +99,7 @@ export default function TableMenuPage() {
   const transformToApiResponse = (data: TableScanResponse): ApiResponse => {
     return {
       table: data.table,
-      restaurantName: data.restaurantName,
+      restaurantName: data.restaurantName.length > 5 ? data.restaurantName.substring(0, 5) + '...' : data.restaurantName,
       restaurantLocation: data.restaurantLocation,
       restaurantLatitude: data.restaurantLatitude,
       restaurantLongitude: data.restaurantLongitude,
@@ -134,11 +134,11 @@ export default function TableMenuPage() {
           <div className="text-[#FF9F5A] text-6xl mb-4">📍</div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Konum İzni Gerekli</h2>
           <p className="text-gray-600 mb-6">
-            Menüyü görüntülemek için konum izninize ihtiyacımız var. 
+            Menüyü görüntülemek için konum izninize ihtiyacımız var.
             Bu, masanızın doğruluğunu kontrol etmek içindir.
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="btn bg-[#FF9F5A] hover:bg-[#e88d48] text-white border-none"
           >
             İzin Ver
@@ -156,8 +156,8 @@ export default function TableMenuPage() {
           <div className="text-red-500 text-6xl mb-4">📍</div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Konum Erişimi Gerekli</h2>
           <p className="text-gray-600 mb-4">{locationError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="btn bg-[#FF9F5A] hover:bg-[#e88d48] text-white border-none"
           >
             Tekrar Dene
@@ -175,8 +175,8 @@ export default function TableMenuPage() {
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Masa Doğrulama Hatası</h2>
           <p className="text-gray-600 mb-4">{scanError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="btn bg-[#FF9F5A] hover:bg-[#e88d48] text-white border-none"
           >
             Tekrar Dene

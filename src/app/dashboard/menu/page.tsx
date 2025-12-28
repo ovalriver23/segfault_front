@@ -574,21 +574,21 @@ export default function Menu() {
             formData.append('name', trimmedName);
             formData.append('price', price.toString());
             formData.append('categoryId', menuItemForm.categoryId);
-            
+
             if (menuItemForm.description.trim()) {
                 formData.append('description', menuItemForm.description.trim());
             }
-            
+
             if (menuItemForm.style && menuItemForm.style !== 'NONE') {
                 formData.append('style', menuItemForm.style);
             }
-            
+
             formData.append('cancellable', menuItemForm.cancellable.toString());
-            
+
             if (menuItemForm.cancellable) {
                 formData.append('cancellationDuration', menuItemForm.cancellationDuration);
             }
-            
+
             if (menuItemForm.file) {
                 formData.append('file', menuItemForm.file);
             }
@@ -723,21 +723,21 @@ export default function Menu() {
             formData.append('name', trimmedName);
             formData.append('price', price.toString());
             formData.append('available', editMenuItemForm.available.toString());
-            
+
             if (editMenuItemForm.description.trim()) {
                 formData.append('description', editMenuItemForm.description.trim());
             }
-            
+
             if (editMenuItemForm.style && editMenuItemForm.style !== 'NONE') {
                 formData.append('style', editMenuItemForm.style);
             }
-            
+
             formData.append('cancellable', editMenuItemForm.cancellable.toString());
-            
+
             if (editMenuItemForm.cancellable) {
                 formData.append('cancellationDuration', editMenuItemForm.cancellationDuration);
             }
-            
+
             if (editMenuItemForm.file) {
                 formData.append('file', editMenuItemForm.file);
             }
@@ -1013,23 +1013,7 @@ export default function Menu() {
                                 </div>
                             </div>
 
-                            {/* Style Selection */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Görünüm Stili
-                                </label>
-                                <select
-                                    value={menuItemForm.style}
-                                    onChange={(e) => setMenuItemForm(prev => ({ ...prev, style: e.target.value }))}
-                                    className="select bg-background-500 text-text-400 border-gray-300 w-full"
-                                >
-                                    <option value="NONE">Standart</option>
-                                    <option value="FEATURED">Öne Çıkan</option>
-                                    <option value="NEW">Yeni</option>
-                                    <option value="POPULAR">Popüler</option>
-                                    <option value="SPECIAL">Özel</option>
-                                </select>
-                            </div>
+
 
                             {/* Image Upload */}
                             <div>
@@ -1089,7 +1073,7 @@ export default function Menu() {
                                         className="toggle border-gray-400 bg-gray-300 checked:bg-secondary-500 checked:border-secondary-500"
                                     />
                                 </div>
-                                
+
                                 {menuItemForm.cancellable && (
                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1409,7 +1393,7 @@ export default function Menu() {
                                         className="toggle border-gray-400 bg-gray-300 checked:bg-secondary-500 checked:border-secondary-500"
                                     />
                                 </div>
-                                
+
                                 {editMenuItemForm.cancellable && (
                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1614,7 +1598,7 @@ export default function Menu() {
                     {showPreview && (
                         <div className="mockup-phone border-primary-500 max-h-[calc(100vh-8rem)] overflow-hidden">
                             <div className="mockup-phone-display h-full overflow-hidden">
-                                   <MenuPreview apiData={menuPreviewData} />
+                                <MenuPreview apiData={menuPreviewData} />
                             </div>
                         </div>
                     )}
