@@ -51,6 +51,8 @@ export default function WaiterNotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeOrdersUnfilteredVersion, setActiveOrdersUnfilteredVersion] = useState<Order[]>([]);
+  const [tables, setTables] = useState<{ id: string; name: string }[]>([]);
 
   // Push Notification Hook
   const {
@@ -205,6 +207,7 @@ export default function WaiterNotificationsPage() {
 
       // Ref'ten güncel completed orders'ı al
       const currentCompleted = completedOrdersRef.current;
+      setActiveOrdersUnfilteredVersion(currentCompleted);
       const completedIds = currentCompleted.map(o => o.id);
 
       // SERVED ve COMPLETED siparişleri filtreleyerek sadece aktif olanları al
@@ -221,12 +224,34 @@ export default function WaiterNotificationsPage() {
     }
   };
 
+  const fetchTables = async () => {
+    try {
+      const response = await fetch('/api/waiter/tables/get', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.error('Masalar yüklenemedi');
+        return;
+      }
+
+      const data = await response.json();
+      setTables(data.map((t: any) => ({ id: t.id, name: t.name })));
+    } catch (err: any) {
+      console.error('Fetch tables error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
     fetchOrders();
+    fetchTables();
     const interval = setInterval(() => {
       fetchRequests();
       fetchOrders();
+      fetchTables();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -257,6 +282,7 @@ export default function WaiterNotificationsPage() {
     setIsRefreshing(true);
     fetchRequests();
     fetchOrders();
+    fetchTables();
   };
 
   const tableNames = [...new Set(pendingRequests.map(r => r.tableName))];
@@ -316,8 +342,8 @@ export default function WaiterNotificationsPage() {
       // REQUEST_BILL ise, o masanın tüm siparişlerini COMPLETED yap
       if (requestToComplete?.type === 'REQUEST_BILL') {
         const tableName = requestToComplete.tableName;
-        const tableOrders = activeOrders.filter(o => o.tableName === tableName);
-
+        const tableOrders = activeOrdersUnfilteredVersion.filter(o => o.tableName === tableName);
+        console.log('Table orders:', tableOrders);
         // Her sipariş için COMPLETED status'a güncelle
         for (const order of tableOrders) {
           try {
@@ -349,7 +375,32 @@ export default function WaiterNotificationsPage() {
             // Sipariş güncelleme hatası ana işlemi durdurmasın
           }
         }
+
+        // Siparişler tamamlandıktan sonra masa oturumunu kapat
+        const table = tables.find(t => t.name === tableName);
+        console.log('Table:', table);
+        if (table) {
+          try {
+            const closeSessionResponse = await fetch('/api/waiter/orders/close-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ tableId: table.id })
+            });
+
+            if (!closeSessionResponse.ok) {
+              console.error('Close session failed');
+            } else {
+              console.log('Session closed for table:', tableName);
+            }
+          } catch (sessionErr) {
+            console.error('Error closing session:', sessionErr);
+          }
+        } else {
+          console.error('Table not found for closing session:', tableName);
+        }
       }
+
 
       // Pending'den bul ve completed'a taşı
       const completedRequest = pendingRequests.find(r => r.id === requestId);
