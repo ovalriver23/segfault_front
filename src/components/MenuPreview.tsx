@@ -65,10 +65,9 @@ function ProductCard({
   const isPopular = product.style === 'popular' || false;
 
   return (
-    <div 
-      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full ${
-        product.available ? '' : 'opacity-75'
-      }`}
+    <div
+      className={`relative bg-white rounded-2xl shadow-md overflow-hidden w-full ${product.available ? '' : 'opacity-75'
+        }`}
     >
       {/* Popular Badge */}
       {isPopular && (
@@ -76,12 +75,12 @@ function ProductCard({
           Popüler
         </div>
       )}
-      
+
       {/* Product Image */}
       <div className="w-full h-32 relative overflow-hidden">
-        <Image 
-          src={product.imageUrl || "/images/cappucino.webp"} 
-          alt={product.name} 
+        <Image
+          src={product.imageUrl || "/images/cappucino.webp"}
+          alt={product.name}
           fill
           className="object-cover"
           sizes="(max-width: 768px) 50vw, 25vw"
@@ -94,7 +93,7 @@ function ProductCard({
         <h3 className="text-base font-semibold text-gray-900 mb-1 min-h-10 line-clamp-2 leading-snug">
           {product.name}
         </h3>
-        
+
         {/* Price and Action */}
         <div className="flex justify-between items-center">
           <div className="flex items-baseline gap-1">
@@ -103,7 +102,7 @@ function ProductCard({
             </span>
             <span className="text-xs font-medium text-gray-500">TL</span>
           </div>
-          
+
           {!product.available ? (
             <div className="text-red-500 text-xs font-medium px-2 py-1 bg-red-50 rounded-md">
               Tükendi
@@ -121,7 +120,7 @@ function ProductCard({
                   <span className="text-2xl text-white font-light">+</span>
                 </button>
               ) : (
-                <div 
+                <div
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center bg-pink-500 rounded-xl shadow-md h-8"
                 >
@@ -189,19 +188,17 @@ function CategoryFilter({
       <button
         key="all"
         onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${
-          selectedCategory !== "All" ? "opacity-70" : ""
-        }`}
+        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
+          }`}
       >
-        <div 
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${
-            selectedCategory === "All" 
+        <div
+          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
               ? "border-2 border-secondary-500"
               : ""
-          }`}
+            }`}
           style={{ backgroundColor: selectedCategory === "All" ? "#F8A45A" : "#FFC898" }}
         >
-           <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
+          <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
         </div>
         <span className="font-semibold text-gray-800 text-sm">Tümü</span>
       </button>
@@ -211,35 +208,33 @@ function CategoryFilter({
         <button
           key={cat.id}
           onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${
-            selectedCategory !== cat.name ? "opacity-70" : ""
-          }`}
+          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
+            }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${
-              selectedCategory === cat.name
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
                 ? "border-2 border-secondary-500"
                 : ""
-            }`}
+              }`}
             style={{ backgroundColor: selectedCategory === cat.name ? "#F8A45A" : "#FFC898" }}
           >
             {cat.imageUrl ? (
               <div className="relative w-16 h-16">
-                <Image 
-                  src={cat.imageUrl} 
-                  alt={cat.name} 
+                <Image
+                  src={cat.imageUrl}
+                  alt={cat.name}
                   fill
                   sizes="(max-width: 768px) 50vw, 25vw"
-                  className="mask mask-squircle object-cover" 
+                  className="mask mask-squircle object-cover"
                 />
               </div>
             ) : (
-              <Image 
-                src="/images/burger.png" 
-                alt={cat.name} 
-                width={63} 
-                height={63} 
-                className="mask mask-squircle" 
+              <Image
+                src="/images/burger.png"
+                alt={cat.name}
+                width={63}
+                height={63}
+                className="mask mask-squircle"
               />
             )}
           </div>
@@ -261,8 +256,8 @@ function CartSummary({
   return (
     <div className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full">
       <div className="text-left">
-        <span className="font-semibold">{itemCount} Items</span>
-        <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
+        <span className="font-semibold">{itemCount} Ürün</span>
+        <p className="text-lg font-bold">Toplam: {totalPrice.toFixed(2)} tl</p>
       </div>
       <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
         <svg
@@ -318,7 +313,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
       const currentScrollY = scrollContainer.scrollTop;
       const scrollDifference = currentScrollY - lastScrollY;
-      
+
       // Always show when near the top
       if (currentScrollY < 50) {
         setIsSearchVisible(true);
@@ -332,7 +327,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
         setIsSearchVisible(false);
         setIsCategoryFilterVisible(false);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -350,7 +345,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
     }
     setCart((prevCart) => [...prevCart, { ...product, quantity: 1 }]);
   };
-  
+
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       setCart((prevCart) =>
@@ -379,7 +374,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292; 
+      const STICKY_OFFSET = 292;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const currentScrollTop = scrollContainer.scrollTop;
@@ -395,7 +390,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       name: category.name,
       imageUrl: category.imageUrl || null
     }));
-  }, [apiData]); 
+  }, [apiData]);
 
   // Filter by search query only
   const filteredMenu = useMemo(() => {
@@ -466,7 +461,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
   // --- RENDER ---
   return (
-    <div 
+    <div
       ref={mainContainerRef}
       className="relative flex flex-col bg-white rounded-3xl shadow-2xl h-full w-full overflow-hidden"
     >
@@ -475,7 +470,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
         {/* STICKY HEADERS */}
         <header className="pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 bg-white z-10 border-b border-gray-100">
           <h1 className="text-4xl font-bold text-gray-900 mt-2">Menü</h1>
-          
+
           <div className="flex flex-col items-end text-right">
             <div className="flex items-center space-x-1 text-gray-800 font-bold text-lg">
               <span>{apiData.restaurantName}</span>
@@ -498,11 +493,10 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
         {/* Main Content Area */}
         <main className="px-2">
-          
+
           {/* Search Bar */}
-          <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${
-            isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
-          }`}>
+          <div className={`sticky w-full top-[88px] bg-white pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
             <label className="input input-bordered flex items-center gap-2 bg-orange-100/70 rounded-full h-14 border-none w-full scale-[0.9]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -527,9 +521,8 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
           </div>
 
           {/* Category Filter */}
-          <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${
-            isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
-          }`}>
+          <div className={`sticky w-full top-[168px] bg-white pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+            }`}>
             <CategoryFilter
               categories={categoriesForFilter}
               selectedCategory={selectedCategory}
@@ -571,11 +564,10 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       </div>
 
       {/* Cart Summary (Footer) - Absolute positioning relative to container */}
-      <div className={`absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 ease-in-out ${
-        cartSummary.itemCount > 0 
-          ? 'opacity-100 translate-y-0' 
+      <div className={`absolute bottom-4 left-4 right-4 z-20 transition-all duration-300 ease-in-out ${cartSummary.itemCount > 0
+          ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-20 pointer-events-none'
-      }`}>
+        }`}>
         <CartSummary
           itemCount={cartSummary.itemCount}
           totalPrice={cartSummary.totalPrice}

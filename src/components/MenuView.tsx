@@ -339,8 +339,8 @@ function CartSummary({
       className="bg-pink-500 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg w-full hover:bg-pink-600 transition-colors"
     >
       <div className="text-left">
-        <span className="font-semibold">{itemCount} Items</span>
-        <p className="text-lg font-bold">Total: {totalPrice.toFixed(2)} tl</p>
+        <span className="font-semibold">{itemCount} Ürün</span>
+        <p className="text-lg font-bold">Toplam: {totalPrice.toFixed(2)} tl</p>
       </div>
       <div className="btn btn-circle btn-lg bg-white text-pink-500 border-2 border-pink-600 hover:bg-gray-100">
         <svg
