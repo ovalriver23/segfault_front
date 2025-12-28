@@ -5,7 +5,7 @@ import { Bell, Phone, ShoppingCart, DollarSign, Check, RefreshCw, Trash2, Undo2,
 import { useRouter } from 'next/navigation';
 import { usePushNotification } from '@/lib/hooks/usePushNotification';
 
-type RequestType = 'CALL_WAITER' | 'ORDER' | 'BILL_REQUEST';
+type RequestType = 'CALL_WAITER' | 'ORDER' | 'REQUEST_BILL';
 type RequestStatus = 'PENDING' | 'COMPLETED';
 type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED';
 type TabType = 'requests' | 'orders' | 'done';
@@ -20,11 +20,10 @@ interface ServiceRequest {
 }
 
 interface OrderItem {
-  id: number;
-  itemName: string;
+  menuItemName: string;
   quantity: number;
-  unitPrice: number;
-  note?: string;
+  price: number;
+  note: string | null;
 }
 
 interface Order {
@@ -32,6 +31,7 @@ interface Order {
   tableName: string;
   status: OrderStatus;
   totalAmount: number;
+  generalNote: string | null;
   createdAt: string;
   items: OrderItem[];
 }
@@ -267,7 +267,7 @@ export default function WaiterNotificationsPage() {
         return <Phone className="w-4 h-4 text-[#8B4513]" />;
       case 'ORDER':
         return <ShoppingCart className="w-4 h-4 text-[#8B4513]" />;
-      case 'BILL_REQUEST':
+      case 'REQUEST_BILL':
         return <DollarSign className="w-4 h-4 text-[#8B4513]" />;
       default:
         return <Bell className="w-4 h-4 text-[#8B4513]" />;
@@ -280,7 +280,7 @@ export default function WaiterNotificationsPage() {
         return 'Garson Çağrısı';
       case 'ORDER':
         return 'Sipariş Verme';
-      case 'BILL_REQUEST':
+      case 'REQUEST_BILL':
         return 'Hesap İstedi';
       default:
         return type;
@@ -291,6 +291,13 @@ export default function WaiterNotificationsPage() {
     try {
       // Önce geri alınanlardan mı kontrol et
       const isRestored = restoredRequestsRef.current.some(r => r.id === requestId);
+
+      // Request'i bul (type kontrolü için)
+      const requestToComplete = pendingRequests.find(r => r.id === requestId);
+      console.log('Request type:', requestToComplete?.type);
+      console.log('Active orders:', activeOrders);
+      console.log('Table name:', requestToComplete?.tableName);
+      console.log('Is REQUEST_BILL:', requestToComplete?.type === 'REQUEST_BILL');
 
       if (!isRestored) {
         // Sadece backend'den gelenler için API çağrısı yap
@@ -303,6 +310,44 @@ export default function WaiterNotificationsPage() {
 
         if (!response.ok) {
           throw new Error('İstek tamamlanamadı');
+        }
+      }
+
+      // REQUEST_BILL ise, o masanın tüm siparişlerini COMPLETED yap
+      if (requestToComplete?.type === 'REQUEST_BILL') {
+        const tableName = requestToComplete.tableName;
+        const tableOrders = activeOrders.filter(o => o.tableName === tableName);
+
+        // Her sipariş için COMPLETED status'a güncelle
+        for (const order of tableOrders) {
+          try {
+            const updateResponse = await fetch('/api/waiter/orders/update-status', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ orderId: order.id, status: 'COMPLETED' })
+            });
+
+            if (updateResponse.ok) {
+              // Active'den kaldır
+              setActiveOrders(prev => prev.filter(o => o.id !== order.id));
+
+              // Completed'a ekle (duplicate kontrolü ile)
+              const completedOrder: Order = {
+                ...order,
+                status: 'COMPLETED'
+              };
+              setCompletedOrders(prev => {
+                if (prev.some(o => o.id === order.id)) {
+                  return prev;
+                }
+                return [completedOrder, ...prev];
+              });
+            }
+          } catch (orderErr) {
+            console.error('Error completing order:', orderErr);
+            // Sipariş güncelleme hatası ana işlemi durdurmasın
+          }
         }
       }
 
@@ -431,8 +476,8 @@ export default function WaiterNotificationsPage() {
               onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
               disabled={pushLoading}
               className={`p-2 rounded-lg transition-colors ${pushSubscribed
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               title={pushSubscribed ? 'Bildirimleri Kapat' : 'Bildirimleri Aç'}
             >
@@ -473,8 +518,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('requests')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'requests'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           İstekler
@@ -488,8 +533,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('orders')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'orders'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           Sipariş
@@ -503,8 +548,8 @@ export default function WaiterNotificationsPage() {
         <button
           onClick={() => setActiveTab('done')}
           className={`flex-1 py-2 px-1 rounded-lg font-medium text-xs transition-all ${activeTab === 'done'
-              ? 'bg-white text-[#FF9F5A] shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-white text-[#FF9F5A] shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           Tamamlandı
@@ -621,16 +666,24 @@ export default function WaiterNotificationsPage() {
                 {/* Order Items */}
                 <div className="bg-gray-50 rounded-lg p-2 mb-2">
                   {order.items.map((item, idx) => (
-                    <div key={`${order.id}-${item.id}-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
+                    <div key={`${order.id}-item-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
                       <span className="text-gray-700">
-                        {item.quantity}x {item.itemName}
+                        {item.quantity}x {item.menuItemName}
                         {item.note && <span className="text-gray-400 ml-1">({item.note})</span>}
                       </span>
-                      <span className="text-gray-500">₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      <span className="text-gray-500">₺{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
 
+                {/* General Note */}
+                {order.generalNote && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
+                    <p className="text-xs text-amber-700">
+                      <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
+                    </p>
+                  </div>
+                )}
                 {/* Servis Et Button */}
                 <button
                   onClick={() => handleServeOrder(order.id)}
@@ -723,15 +776,24 @@ export default function WaiterNotificationsPage() {
                 {/* Order Items */}
                 <div className="bg-white rounded-lg p-2">
                   {order.items.map((item, idx) => (
-                    <div key={`${order.id}-${item.id}-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
+                    <div key={`${order.id}-item-${idx}`} className={`flex justify-between text-xs ${idx > 0 ? 'mt-1 pt-1 border-t border-gray-200' : ''}`}>
                       <span className="text-gray-700">
-                        {item.quantity}x {item.itemName}
+                        {item.quantity}x {item.menuItemName}
                         {item.note && <span className="text-gray-400 ml-1">({item.note})</span>}
                       </span>
-                      <span className="text-gray-500">₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      <span className="text-gray-500">₺{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
+
+                {/* General Note */}
+                {order.generalNote && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                    <p className="text-xs text-amber-700">
+                      <span className="font-medium">Sipariş Notu:</span> {order.generalNote}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
 

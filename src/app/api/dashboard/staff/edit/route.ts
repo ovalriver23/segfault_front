@@ -5,57 +5,77 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(request: Request) {
   try {
-    // 1. ID'yi URL'den al
+    // 1. Get ID from URL
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
+    // 2. Auth check
     const cookieStore = await cookies();
     const token = cookieStore.get('JWT_TOKEN');
 
-    if (!token || !id) {
-      return NextResponse.json({ message: 'Geçersiz istek' }, { status: 400 });
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Oturum açmanız gerekiyor' },
+        { status: 401 }
+      );
     }
 
-    // 2. Body verisini al
-    const body = await request.json();
-
-    // 3. Token Formatı
-    let authHeader = token.value;
-    if (!authHeader.startsWith('Bearer ')) {
-      authHeader = `Bearer ${authHeader}`;
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Personel ID gerekli' },
+        { status: 400 }
+      );
     }
 
+    // 3. Format auth header
+    const authHeader = token.value.startsWith('Bearer ')
+      ? token.value
+      : `Bearer ${token.value}`;
+
+    // 4. Get FormData from request (frontend sends FormData directly)
+    const formData = await request.formData();
+
+    // 5. Validate required fields
+    const requiredFields = ['firstName', 'lastName', 'email', 'phoneNumber', 'gender'];
+    for (const field of requiredFields) {
+      const value = formData.get(field);
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        return NextResponse.json(
+          { error: `${field} alanı zorunludur` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 6. Send to backend (API 7.4: PUT /api/manager/staff/{staffId} with multipart/form-data)
     const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
-
-    // 4. Backend'e İlet (DOKÜMANTASYON 7.7: PUT /api/manager/staff/{staffId})
     const response = await fetch(`${backendUrl}/api/manager/staff/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        // Content-Type is automatically set by FormData with boundary
       },
-      body: JSON.stringify({
-        firstName: body.firstName,
-        lastName: body.lastName,
-        gender: body.gender,
-        email: body.email,
-        phoneNumber: body.phoneNumber
-      })
+      body: formData,
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      console.error('Backend Staff Update Error:', data);
       return NextResponse.json(
-        { message: errorData.message || 'Güncelleme başarısız' }, 
+        { error: data.error || data.message || 'Personel güncellenemedi' },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // 7. Return success
+    return NextResponse.json(data, { status: 200 });
 
   } catch (error) {
     console.error('Staff Edit Route Error:', error);
-    return NextResponse.json({ message: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Sunucu hatası' },
+      { status: 500 }
+    );
   }
 }
