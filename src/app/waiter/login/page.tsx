@@ -13,6 +13,100 @@ export default function WaiterLogin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'email' | 'reset' | 'success'>('email');
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCode, setForgotCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotError, setForgotError] = useState("");
+
+  // Step 1: Request code
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Bir hata oluştu");
+      }
+
+      setForgotMessage(data.message || "Doğrulama kodu email adresinize gönderildi.");
+      setForgotStep('reset');
+    } catch (err: any) {
+      setForgotError(err.message || "Bir hata oluştu");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 2: Reset password with code
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+
+    if (newPassword !== confirmPassword) {
+      setForgotError("Şifreler eşleşmiyor");
+      setForgotLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: forgotEmail,
+          code: forgotCode,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Bir hata oluştu");
+      }
+
+      setForgotMessage(data.message || "Şifreniz başarıyla değiştirildi.");
+      setForgotStep('success');
+    } catch (err: any) {
+      setForgotError(err.message || "Bir hata oluştu");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotModal(false);
+    setForgotStep('email');
+    setForgotEmail("");
+    setForgotCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotMessage("");
+    setForgotError("");
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -132,7 +226,8 @@ export default function WaiterLogin() {
         {/* Forgot Password */}
         <button
           type="button"
-          className="text-[12px] font-semibold text-[#EB5FAB] tracking-[-0.12px] leading-[16.8px] text-right"
+          onClick={() => setShowForgotModal(true)}
+          className="text-[12px] font-semibold text-[#EB5FAB] tracking-[-0.12px] leading-[16.8px] text-right hover:underline"
         >
           Şifrenizi mi unuttunuz?
         </button>
@@ -140,8 +235,8 @@ export default function WaiterLogin() {
         {/* Error Message */}
         {error && (
           <div className={`p-3 border rounded-lg text-sm ${error.includes('BANLI') || error.toLowerCase().includes('yasaklandı')
-              ? 'bg-orange-50 border-orange-400 text-orange-800'
-              : 'text-red-500 border-red-300 bg-red-50'
+            ? 'bg-orange-50 border-orange-400 text-orange-800'
+            : 'text-red-500 border-red-300 bg-red-50'
             }`}>
             {error.includes('BANLI') ? (
               <div>
@@ -170,6 +265,173 @@ export default function WaiterLogin() {
       <p className="text-[14px] font-medium text-black/60 tracking-[-0.14px] leading-[19.6px] text-center w-[327px] mx-auto mt-3.5">
         Yardım mı lazım? Yönetici ile iletişime geçin
       </p>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[350px] p-6 relative shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={closeForgotModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {/* Modal Header */}
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-[#FEF3F2] rounded-full flex items-center justify-center mx-auto mb-4">
+                {forgotStep === 'success' ? (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15V12M12 9H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#EB5FAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {forgotStep === 'email' && 'Şifremi Unuttum'}
+                {forgotStep === 'reset' && 'Yeni Şifre Belirle'}
+                {forgotStep === 'success' && 'Şifre Değiştirildi!'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {forgotStep === 'email' && 'Email adresinizi girin, şifre sıfırlama kodu gönderelim'}
+                {forgotStep === 'reset' && 'Email adresinize gelen kodu ve yeni şifrenizi girin'}
+                {forgotStep === 'success' && 'Yeni şifrenizle giriş yapabilirsiniz'}
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {forgotError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+                {forgotError}
+              </div>
+            )}
+
+            {/* Step 1: Email Form */}
+            {forgotStep === 'email' && (
+              <form onSubmit={handleForgotPassword}>
+                <div className="mb-4">
+                  <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px] block mb-1">
+                    Email Adresi
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="ornek@email.com"
+                    className="w-full h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] text-[14px] font-medium text-[#1A1C1E] outline-none focus:border-[#EB5FAB] transition-colors"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full h-12 bg-[#EB5FAB] rounded-[10px] flex items-center justify-center hover:bg-[#d54f9a] transition-colors disabled:opacity-50"
+                >
+                  <span className="text-[14px] font-medium text-white">
+                    {forgotLoading ? "Gönderiliyor..." : "Kod Gönder"}
+                  </span>
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: Reset Password Form */}
+            {forgotStep === 'reset' && (
+              <form onSubmit={handleResetPassword}>
+                <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs text-center">
+                  ✓ Kod {forgotEmail} adresine gönderildi
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px] block mb-1">
+                    Doğrulama Kodu (6 haneli)
+                  </label>
+                  <input
+                    type="text"
+                    value={forgotCode}
+                    onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
+                    maxLength={6}
+                    className="w-full h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] text-[14px] font-medium text-[#1A1C1E] outline-none focus:border-[#EB5FAB] transition-colors text-center tracking-[0.5em]"
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px] block mb-1">
+                    Yeni Şifre
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Yeni şifrenizi girin"
+                      className="w-full h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] text-[14px] font-medium text-[#1A1C1E] outline-none focus:border-[#EB5FAB] transition-colors pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showNewPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="#6C7278">
+                          <path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="#6C7278">
+                          <path d="m644-428-58-58q9-47-27-88t-93-32l-58-58q17-8 34.5-12t37.5-4q75 0 127.5 52.5T660-500q0 20-4 37.5T644-428Zm128 126-58-56q38-29 67.5-63.5T832-500q-50-101-143.5-160.5T480-720q-29 0-57 4t-55 12l-62-62q41-17 84-25.5t90-8.5q151 0 269 83.5T920-500q-23 59-60.5 109.5T772-302Zm20 246L624-222q-35 11-70.5 16.5T480-200q-151 0-269-83.5T40-500q21-53 53-98.5t73-81.5L56-792l56-56 736 736-56 56ZM222-624q-29 26-53 57t-41 67q50 101 143.5 160.5T480-280q20 0 39-2.5t39-5.5l-36-38q-11 3-21 4.5t-21 1.5q-75 0-127.5-52.5T300-500q0-11 1.5-21t4.5-21l-84-82Z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-[12px] font-medium text-[#6C7278] tracking-[-0.24px] leading-[19px] block mb-1">
+                    Şifre Tekrar
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Şifrenizi tekrar girin"
+                    className="w-full h-[46px] px-3.5 bg-white border border-[#F8A45A] rounded-[10px] text-[14px] font-medium text-[#1A1C1E] outline-none focus:border-[#EB5FAB] transition-colors"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full h-12 bg-[#EB5FAB] rounded-[10px] flex items-center justify-center hover:bg-[#d54f9a] transition-colors disabled:opacity-50"
+                >
+                  <span className="text-[14px] font-medium text-white">
+                    {forgotLoading ? "İşleniyor..." : "Şifreyi Değiştir"}
+                  </span>
+                </button>
+              </form>
+            )}
+
+            {/* Step 3: Success */}
+            {forgotStep === 'success' && (
+              <button
+                onClick={closeForgotModal}
+                className="w-full h-12 bg-[#EB5FAB] rounded-[10px] flex items-center justify-center hover:bg-[#d54f9a] transition-colors"
+              >
+                <span className="text-[14px] font-medium text-white">Giriş Sayfasına Dön</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
