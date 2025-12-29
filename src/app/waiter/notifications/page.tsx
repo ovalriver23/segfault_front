@@ -263,15 +263,29 @@ export default function WaiterNotificationsPage() {
     if (!isLoading) {
       // Sipariş sayısı arttıysa ve daha önce set edildiyse
       if (previousOrderCountRef.current !== null && activeOrders.length > previousOrderCountRef.current) {
-        // Browser notification
+        // Browser notification - Service Worker varsa onun üzerinden göster
         if ('Notification' in window && Notification.permission === 'granted') {
           const newOrdersCount = activeOrders.length - previousOrderCountRef.current;
-          new Notification('Yeni Sipariş!', {
-            body: `${newOrdersCount} yeni sipariş geldi`,
-            icon: '/images/landing/logo.png',
-            tag: 'new-order',
-            requireInteraction: true
-          });
+          
+          // Service Worker varsa showNotification kullan, yoksa normal Notification
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification('Yeni Sipariş!', {
+                body: `${newOrdersCount} yeni sipariş geldi`,
+                icon: '/images/landing/logo.png',
+                tag: 'new-order',
+                requireInteraction: true
+              });
+            });
+          } else {
+            // Service Worker yoksa normal Notification kullan
+            new Notification('Yeni Sipariş!', {
+              body: `${newOrdersCount} yeni sipariş geldi`,
+              icon: '/images/landing/logo.png',
+              tag: 'new-order',
+              requireInteraction: true
+            });
+          }
         }
       }
       // Ref'i güncelle
