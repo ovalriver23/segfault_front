@@ -930,7 +930,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
             >
               <div className="relative mb-4">
                 <div className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: separatorColor }} />
-                <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-[#f8a45a]' : 'text-gray-800'}`} style={categoryFontStyle}>
+                <h2 className={`relative inline-block pr-4 text-2xl font-normal ${categoryTitleBg} ${categoryFontClass} ${theme === 'MODERN' ? 'text-primary-500' : 'text-gray-800'}`} style={categoryFontStyle}>
                   {section.categoryName}
                 </h2>
               </div>

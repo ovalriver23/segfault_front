@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import * as z from "zod";
@@ -170,7 +171,7 @@ const SignUpPage = () => {
       const message = error && typeof error === "object" && "message" in error
         ? (error as { message?: string }).message
         : "Lokasyonunuz alınamıyor.";
-      
+
       // Show error message prominently
       setErrors(prev => ({ ...prev, general: message || "Lokasyonunuz alınamıyor." }));
 
@@ -381,6 +382,9 @@ const SignUpPage = () => {
       }}
     >
       <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl p-8 md:p-12 my-4">
+        <Link href='/' className="text-xl text-accent-500 font-bold hover:opacity-80 transition block text-center mb-4">
+          EasyOrder
+        </Link>
         <h1 className="text-2xl md:text-3xl mb-2 font-bold text-center text-text-500">
           Hesabını Oluştur
         </h1>
@@ -454,9 +458,8 @@ const SignUpPage = () => {
                 ) : (
                   <label
                     htmlFor="profilePhoto"
-                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${
-                      errors.profilePhoto ? 'border-red-500' : 'border-[#F8645A]'
-                    }`}
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${errors.profilePhoto ? 'border-red-500' : 'border-[#F8645A]'
+                      }`}
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -507,9 +510,8 @@ const SignUpPage = () => {
                 ) : (
                   <label
                     htmlFor="restaurantLogo"
-                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${
-                      errors.restaurantLogo ? 'border-red-500' : 'border-[#F8645A]'
-                    }`}
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${errors.restaurantLogo ? 'border-red-500' : 'border-[#F8645A]'
+                      }`}
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
