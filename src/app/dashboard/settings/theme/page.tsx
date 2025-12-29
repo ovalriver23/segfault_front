@@ -83,7 +83,7 @@ export default function ThemePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {/* DEFAULT THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "DEFAULT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "DEFAULT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
                     onClick={() => setSelectedTheme("DEFAULT")}
                 >
                     <figure className="h-48 bg-gray-100 flex items-center justify-center relative overflow-hidden group">
@@ -99,22 +99,22 @@ export default function ThemePage() {
                         <span className="badge badge-lg bg-white absolute bottom-4 shadow-sm text-gray-700">Önizleme</span>
                     </figure>
                     <div className="card-body p-6 text-center">
-                        <h2 className="card-title justify-center text-gray-800">Varsayılan</h2>
-                        <p className="text-sm text-gray-500">Standart, temiz ve kullanışlı arayüz.</p>
-                        {selectedTheme === "DEFAULT" && <div className="badge badge-primary mt-2">Seçili</div>}
+                        <h2 className="card-title justify-center text-text-800">Varsayılan</h2>
+                        <p className="text-sm text-text-500">Standart, temiz ve kullanışlı arayüz.</p>
+                        {selectedTheme === "DEFAULT" && <div className="badge bg-secondary-500 border-secondary-500 text-white mt-2">Seçili</div>}
                     </div>
                 </div>
 
                 {/* MODERN THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "MODERN" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "MODERN" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
                     onClick={() => setSelectedTheme("MODERN")}
                 >
                     <figure className="h-48 bg-gray-900 flex items-center justify-center relative overflow-hidden group">
                         <div className="absolute inset-0 bg-[#1a1a1a] opacity-90 flex flex-col items-center justify-center p-4">
                             {/* Mock UI for Modern */}
                             <div className="w-24 h-4 rounded bg-[#ea580c] mb-2"></div>
-                            <div className="w-32 h-2 rounded bg-[#f8a45a] mb-4"></div>
+                            <div className="w-32 h-2 rounded bg-primary-500 mb-4"></div>
                             <div className="w-full px-4 flex flex-col gap-2">
                                 <div className="h-12 bg-gray-800 rounded border border-gray-700 flex items-center px-2">
                                     <div className="w-8 h-8 rounded-full bg-gray-600"></div>
@@ -127,15 +127,15 @@ export default function ThemePage() {
                         <span className="badge badge-lg bg-gray-800 text-white border-none absolute bottom-4 shadow-sm">Önizleme</span>
                     </figure>
                     <div className="card-body p-6 text-center">
-                        <h2 className="card-title justify-center text-gray-800">Modern</h2>
-                        <p className="text-sm text-gray-500">Koyu mod, canlı renkler ve geniş kartlar.</p>
-                        {selectedTheme === "MODERN" && <div className="badge badge-primary mt-2">Seçili</div>}
+                        <h2 className="card-title justify-center text-text-500">Modern</h2>
+                        <p className="text-sm text-text-300">Koyu mod, canlı renkler ve geniş kartlar.</p>
+                        {selectedTheme === "MODERN" && <div className="badge bg-secondary-500 border-secondary-500 text-white mt-2">Seçili</div>}
                     </div>
                 </div>
 
                 {/* ELEGANT THEME */}
                 <div
-                    className={`card bg-base-100 shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "ELEGANT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
+                    className={`card bg-white shadow-xl cursor-pointer transition-all border-4 ${selectedTheme === "ELEGANT" ? "border-primary-500 scale-105" : "border-transparent hover:border-gray-200"}`}
                     onClick={() => setSelectedTheme("ELEGANT")}
                 >
                     <figure className="h-48 bg-[#f5f5dc] flex items-center justify-center relative overflow-hidden group">
@@ -155,9 +155,9 @@ export default function ThemePage() {
                         <span className="badge badge-lg bg-[#f0e6d2] text-[#5c4033] border-none absolute bottom-4 shadow-sm">Önizleme</span>
                     </figure>
                     <div className="card-body p-6 text-center">
-                        <h2 className="card-title justify-center text-gray-800">Elegant</h2>
-                        <p className="text-sm text-gray-500">Şık, minimalist ve sofistike tasarım.</p>
-                        {selectedTheme === "ELEGANT" && <div className="badge badge-primary mt-2">Seçili</div>}
+                        <h2 className="card-title justify-center text-text-500">Elegant</h2>
+                        <p className="text-sm text-text-300">Şık, minimalist ve sofistike tasarım.</p>
+                        {selectedTheme === "ELEGANT" && <div className="badge bg-secondary-500 border-secondary-500text-white mt-2">Seçili</div>}
                     </div>
                 </div>
 

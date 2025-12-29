@@ -99,7 +99,7 @@ export default function TableMenuPage() {
   const transformToApiResponse = (data: TableScanResponse): ApiResponse => {
     return {
       table: data.table,
-      restaurantName: data.restaurantName.length > 5 ? data.restaurantName.substring(0, 5) + '...' : data.restaurantName,
+      restaurantName: data.restaurantName.length > 5 ? data.restaurantName.substring(0, 7) + '...' : data.restaurantName,
       restaurantLocation: data.restaurantLocation,
       restaurantLatitude: data.restaurantLatitude,
       restaurantLongitude: data.restaurantLongitude,

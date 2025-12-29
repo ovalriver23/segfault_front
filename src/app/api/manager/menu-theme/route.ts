@@ -1,74 +1,128 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.easyorder.com.tr';
+export const dynamic = 'force-dynamic';
 
-export async function PUT(request: NextRequest) {
+// Valid menu themes
+const VALID_THEMES = ['DEFAULT', 'MODERN', 'ELEGANT'] as const;
+type MenuTheme = typeof VALID_THEMES[number];
+
+export async function GET() {
     try {
-        const body = await request.json();
-        const cookies = request.cookies;
-        const cookieHeader = cookies.toString();
+        // 1. Auth check
+        const cookieStore = await cookies();
+        const token = cookieStore.get('JWT_TOKEN');
 
-        const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu-theme`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cookie': cookieHeader
-            },
-            body: JSON.stringify(body)
-        });
-
-        const data = await backendResponse.json();
-
-        // Also update local store for dev fallback if needed, or remove if fully migrating
-        // For safety, let's keep local store synced just in case
-        if (backendResponse.ok && body.theme) {
-            try {
-                const { setTheme } = await import('../../../lib/store/themeStore');
-                setTheme(body.theme);
-            } catch (e) {
-                // ignore local store error
-            }
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Oturum açmanız gerekiyor' },
+                { status: 401 }
+            );
         }
 
-        return NextResponse.json(data, { status: backendResponse.status });
+        // 2. Format auth header
+        const authHeader = token.value.startsWith('Bearer ')
+            ? token.value
+            : `Bearer ${token.value}`;
+
+        // 3. Fetch from backend
+        const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
+        const response = await fetch(`${backendUrl}/api/manager/menu-theme`, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Content-Type': 'application/json;charset=UTF-8',
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Backend Menu Theme Fetch Error:', data);
+            return NextResponse.json(
+                { error: data.error || data.message || 'Menü teması getirilemedi' },
+                { status: response.status }
+            );
+        }
+
+        // 4. Return theme
+        return NextResponse.json(data, { status: 200 });
 
     } catch (error) {
-        console.error('Error updating theme:', error);
+        console.error('Menu Theme GET Route Error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Sunucu hatası' },
             { status: 500 }
         );
     }
 }
 
-export async function GET(request: NextRequest) {
+export async function PUT(request: Request) {
     try {
-        const cookies = request.cookies;
-        const cookieHeader = cookies.toString();
+        // 1. Auth check
+        const cookieStore = await cookies();
+        const token = cookieStore.get('JWT_TOKEN');
 
-        // Try getting from backend first
-        try {
-            const backendResponse = await fetch(`${BACKEND_API_URL}/api/manager/menu-theme`, {
-                headers: {
-                    'Cookie': cookieHeader
-                }
-            });
-
-            if (backendResponse.ok) {
-                const data = await backendResponse.json();
-                return NextResponse.json(data);
-            }
-        } catch (e) {
-            console.warn('Backend theme fetch failed, falling back to local store');
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Oturum açmanız gerekiyor' },
+                { status: 401 }
+            );
         }
 
-        // Fallback to DEFAULT if backend fails or 404s
-        // We do NOT use local store here to avoid leaking state between different restaurants in dev
-        return NextResponse.json({ theme: 'DEFAULT' });
+        // 2. Format auth header
+        const authHeader = token.value.startsWith('Bearer ')
+            ? token.value
+            : `Bearer ${token.value}`;
+
+        // 3. Parse request body
+        const body = await request.json();
+        const { theme } = body;
+
+        // 4. Validate theme field
+        if (!theme) {
+            return NextResponse.json(
+                { error: 'Tema alanı zorunludur' },
+                { status: 400 }
+            );
+        }
+
+        // 5. Validate theme value
+        if (!VALID_THEMES.includes(theme as MenuTheme)) {
+            return NextResponse.json(
+                { error: 'Geçersiz tema. Geçerli temalar: DEFAULT, MODERN, ELEGANT' },
+                { status: 400 }
+            );
+        }
+
+        // 6. Send to backend
+        const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8080';
+        const response = await fetch(`${backendUrl}/api/manager/menu-theme`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': authHeader,
+                'Content-Type': 'application/json;charset=UTF-8',
+            },
+            body: JSON.stringify({ theme }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Backend Menu Theme Update Error:', data);
+            return NextResponse.json(
+                { error: data.error || data.message || 'Menü teması güncellenemedi' },
+                { status: response.status }
+            );
+        }
+
+        // 7. Return success
+        return NextResponse.json(data, { status: 200 });
 
     } catch (error) {
+        console.error('Menu Theme Route Error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Sunucu hatası' },
             { status: 500 }
         );
     }
