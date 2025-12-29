@@ -69,6 +69,100 @@ const SignInPage = () => {
     resolver: zodResolver(SignInSchema),
   });
 
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'email' | 'reset' | 'success'>('email');
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCode, setForgotCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotError, setForgotError] = useState("");
+
+  // Step 1: Request code
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Bir hata oluştu");
+      }
+
+      setForgotMessage(data.message || "Doğrulama kodu email adresinize gönderildi.");
+      setForgotStep('reset');
+    } catch (err: any) {
+      setForgotError(err.message || "Bir hata oluştu");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 2: Reset password with code
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+
+    if (newPassword !== confirmPassword) {
+      setForgotError("Şifreler eşleşmiyor");
+      setForgotLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: forgotEmail,
+          code: forgotCode,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Bir hata oluştu");
+      }
+
+      setForgotMessage(data.message || "Şifreniz başarıyla değiştirildi.");
+      setForgotStep('success');
+    } catch (err: any) {
+      setForgotError(err.message || "Bir hata oluştu");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotModal(false);
+    setForgotStep('email');
+    setForgotEmail("");
+    setForgotCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotMessage("");
+    setForgotError("");
+  };
+
   // Mouse/Touch tracking and floating animation
   useEffect(() => {
     function handlePointerMove(e: MouseEvent | TouchEvent) {
@@ -348,8 +442,14 @@ const SignInPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold mb-5 hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed">
+              className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold mb-3 hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Giriş Yapılıyor" : "Giriş Yap"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              className="w-full text-center text-sm text-[#E11383] hover:underline mb-2">
+              Şifremi Unuttum
             </button>
             {/*<button type="button"
               className="w-full py-3 bg-white border-2 border-[#F8645A] rounded-lg text-[#F8645A] text-base flex items-center justify-center gap-2 hover:border-[#E11383] hover:text-[#E11383] transition">
@@ -420,6 +520,161 @@ const SignInPage = () => {
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[400px] p-6 relative shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={closeForgotModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {/* Modal Header */}
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#F8645A]/20 to-[#E11383]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                {forgotStep === 'success' ? (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15V12M12 9H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#E11383" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <h3 className="text-xl font-bold" style={{ color: "#683817" }}>
+                {forgotStep === 'email' && 'Şifremi Unuttum'}
+                {forgotStep === 'reset' && 'Yeni Şifre Belirle'}
+                {forgotStep === 'success' && 'Şifre Değiştirildi!'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-2">
+                {forgotStep === 'email' && 'Email adresinizi girin, şifre sıfırlama kodu gönderelim'}
+                {forgotStep === 'reset' && 'Email adresinize gelen kodu ve yeni şifrenizi girin'}
+                {forgotStep === 'success' && 'Yeni şifrenizle giriş yapabilirsiniz'}
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {forgotError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+                {forgotError}
+              </div>
+            )}
+
+            {/* Step 1: Email Form */}
+            {forgotStep === 'email' && (
+              <form onSubmit={handleForgotPassword}>
+                <div className="mb-5">
+                  <label className="block mb-2 font-medium" style={{ color: "#683817" }}>Email Adresi</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="ornek@email.com"
+                    className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-gray-800 focus:border-[#E11383] text-base"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {forgotLoading ? "Gönderiliyor..." : "Kod Gönder"}
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: Reset Password Form */}
+            {forgotStep === 'reset' && (
+              <form onSubmit={handleResetPassword}>
+                <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs text-center">
+                  ✓ Kod {forgotEmail} adresine gönderildi
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium" style={{ color: "#683817" }}>Doğrulama Kodu (6 haneli)</label>
+                  <input
+                    type="text"
+                    value={forgotCode}
+                    onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
+                    maxLength={6}
+                    className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-gray-800 focus:border-[#E11383] text-base text-center tracking-[0.5em]"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium" style={{ color: "#683817" }}>Yeni Şifre</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Yeni şifrenizi girin"
+                      className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-gray-800 focus:border-[#E11383] text-base pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showNewPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#6C7278">
+                          <path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#6C7278">
+                          <path d="m644-428-58-58q9-47-27-88t-93-32l-58-58q17-8 34.5-12t37.5-4q75 0 127.5 52.5T660-500q0 20-4 37.5T644-428Zm128 126-58-56q38-29 67.5-63.5T832-500q-50-101-143.5-160.5T480-720q-29 0-57 4t-55 12l-62-62q41-17 84-25.5t90-8.5q151 0 269 83.5T920-500q-23 59-60.5 109.5T772-302Zm20 246L624-222q-35 11-70.5 16.5T480-200q-151 0-269-83.5T40-500q21-53 53-98.5t73-81.5L56-792l56-56 736 736-56 56ZM222-624q-29 26-53 57t-41 67q50 101 143.5 160.5T480-280q20 0 39-2.5t39-5.5l-36-38q-11 3-21 4.5t-21 1.5q-75 0-127.5-52.5T300-500q0-11 1.5-21t4.5-21l-84-82Z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-5">
+                  <label className="block mb-2 font-medium" style={{ color: "#683817" }}>Şifre Tekrar</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Şifrenizi tekrar girin"
+                    className="w-full p-3 border-2 border-[#F8645A] rounded-lg text-gray-800 focus:border-[#E11383] text-base"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {forgotLoading ? "İşleniyor..." : "Şifreyi Değiştir"}
+                </button>
+              </form>
+            )}
+
+            {/* Step 3: Success */}
+            {forgotStep === 'success' && (
+              <button
+                onClick={closeForgotModal}
+                className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold hover:bg-[#E11383] transition"
+              >
+                Giriş Sayfasına Dön
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

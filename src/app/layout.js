@@ -14,6 +14,15 @@ const playfairDisplay = Playfair_Display({
 export const metadata = {
   title: "EasyOrder",
   description: "A new way of ordering from qr menu",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "EasyOrder",
+  },
+  icons: {
+    apple: "/images/landing/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {
