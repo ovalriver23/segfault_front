@@ -805,11 +805,11 @@ export default function MenuView({ apiData }: MenuViewProps) {
         {/* Center: Orders Button */}
         <button
           onClick={handleOpenOrders}
-          className={`flex items-center gap-1 px-3 py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
+          className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
+            className="h-4 w-4 sm:h-5 sm:w-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -821,7 +821,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
             />
           </svg>
-          <span className="text-sm font-medium">Siparişlerim</span>
+          <span className="text-xs sm:text-sm font-medium">Siparişlerim</span>
         </button>
 
         {/* Right: Restaurant Info */}
@@ -841,7 +841,9 @@ export default function MenuView({ apiData }: MenuViewProps) {
               />
             </svg>
           </div>
-          <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
+          <span className="text-sm text-gray-500 font-medium mt-1">
+            {apiData.table.name.length > 8 ? `${apiData.table.name.substring(0, 8)}...` : apiData.table.name}
+          </span>
         </div>
       </header>
 
