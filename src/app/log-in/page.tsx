@@ -6,6 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -265,14 +266,17 @@ const SignInPage = () => {
         </div>
         {/* Right Section: Login Form */}
         <div className="flex-1 p-8 md:p-16 flex flex-col justify-center">
+          <Link href='/' className="text-xl text-accent-500 font-bold hover:opacity-80 transition mb-4">
+            EasyOrder
+          </Link>
           <h1 className="text-2xl md:text-[32px] mb-2 font-bold" style={{ color: "#683817" }}>Hoşgeldin!</h1>
           <p className="subtitle mb-10 text-base md:text-lg" style={{ color: "#E11383" }}>Lütfen bilgilerini gir</p>
 
           {/* General API error message */}
           {apiError && (
             <div className={`mb-5 p-3 border rounded-lg text-sm ${apiError.includes('BANLI') || apiError.toLowerCase().includes('yasaklandı')
-                ? 'bg-orange-50 border-orange-400 text-orange-800'
-                : 'bg-red-100 border-red-400 text-red-700'
+              ? 'bg-orange-50 border-orange-400 text-orange-800'
+              : 'bg-red-100 border-red-400 text-red-700'
               }`}>
               {apiError.includes('BANLI') ? (
                 <div>
