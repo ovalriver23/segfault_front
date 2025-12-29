@@ -42,12 +42,32 @@ export function usePushNotification() {
 
         if (!hasServiceWorker || !hasPushManager || !hasNotification) {
           // Detect iOS Safari without PWA
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isStandalone = (window.navigator as any).standalone === true;
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          
+          // iOS standalone mode detection - multiple methods
+          const isStandalone = 
+            (window.navigator as any).standalone === true || // iOS Safari
+            window.matchMedia('(display-mode: standalone)').matches || // Standard PWA
+            window.matchMedia('(display-mode: fullscreen)').matches || // Fullscreen PWA
+            document.referrer.includes('android-app://'); // Android TWA
+          
+          console.log('PWA Detection:', {
+            isIOS,
+            isStandalone,
+            navigatorStandalone: (window.navigator as any).standalone,
+            displayModeStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            hasServiceWorker,
+            hasPushManager,
+            hasNotification,
+            userAgent: navigator.userAgent
+          });
 
           let reason = 'Push bildirimleri bu cihazda desteklenmiyor';
           if (isIOS && !isStandalone) {
-            reason = 'iOS cihazlarda bildirim almak için uygulamayı Ana Ekrana ekleyin (Paylaş > Ana Ekrana Ekle)';
+            reason = 'iOS cihazlarda bildirim almak için uygulamayı Ana Ekrana ekleyin. Safari\'de Paylaş butonuna (kutu+ok ikonu) tıklayın, ardından "Ana Ekrana Ekle" seçeneğini seçin. Ekleme sonrası uygulamayı Ana Ekrandan açın.';
+          } else if (isIOS && isStandalone && !hasPushManager) {
+            reason = 'iOS bildirimleri aktif etmek için: Ayarlar > Safari > Gelişmiş > Deneysel Özellikler > Notifications seçeneğini açın.';
           } else if (!hasServiceWorker) {
             reason = 'Service Worker desteklenmiyor';
           } else if (!hasPushManager) {
