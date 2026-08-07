@@ -1,28 +1,61 @@
-import Link from 'next/link';
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+
+const productLinks = [
+  { label: "Özellikler", href: "/#features" },
+  { label: "Nasıl Çalışır?", href: "/#how-it-works" },
+  { label: "Fiyatlandırma", href: "/#pricing" },
+];
+
+const companyLinks = [
+  { label: "Detaylı Bilgi", href: "/LearnMore" },
+  { label: "Hakkımızda & İletişim", href: "/AboutUs" },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-background-500 py-8 px-4">
-      {/* DaisyUI Divider at the top */}
-      <div className="divider divider-neutral"></div>
-      
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-4 py-6">
-          {/* Logo/Brand */}
-          <div className="text-3xl md:text-4xl font-bold text-accent-500">
-            EasyOrder
-          </div>
-          
-          {/* Navigation Links */}
-          <div className="flex flex-col md:flex-row gap-4 md:gap-16 text-center md:text-left">
-            <Link href="/AboutUs" className="text-accent-500 hover:text-primary-500 transition-colors text-lg">
-              Hakkımızda & İletişim
+    <footer className="border-t border-gray-200 bg-gray-950 px-4 py-14 text-white sm:px-8 lg:px-16">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 border-b border-white/10 pb-12 md:grid-cols-[1.5fr_1fr_1fr]">
+          <div className="max-w-sm">
+            <Link href="/" className="inline-flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-400" aria-label="EasyOrder ana sayfa">
+              <span className="text-3xl font-bold tracking-[-0.03em]">EasyOrder</span>
+              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-secondary-500" aria-hidden="true" />
             </Link>
+            <p className="mt-5 leading-7 text-gray-400">QR menüden sipariş yönetimine, restoranınızın ihtiyaç duyduğu dijital deneyim tek yerde.</p>
           </div>
-          
-          {/* Copyright */}
-          <div className="text-text-500 text-base md:text-lg">
-            ©2025 EasyOrder. Tüm haklar saklıdır.
+
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-gray-500">Ürün</h2>
+            <ul className="mt-5 space-y-3">
+              {productLinks.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-gray-300 transition-colors hover:text-primary-400 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-400">{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-gray-500">EasyOrder</h2>
+            <ul className="mt-5 space-y-3">
+              {companyLinks.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="inline-flex items-center gap-1.5 text-gray-300 transition-colors hover:text-primary-400 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-400">
+                    {item.label}
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 pt-7 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} EasyOrder. Tüm hakları saklıdır.</p>
+          <div className="flex gap-5">
+            <Link href="/log-in" className="transition-colors hover:text-gray-300">Giriş Yap</Link>
+            <Link href="/sign-up" className="transition-colors hover:text-gray-300">Kayıt Ol</Link>
           </div>
         </div>
       </div>

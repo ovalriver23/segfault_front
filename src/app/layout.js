@@ -13,7 +13,7 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata = {
   title: "EasyOrder",
-  description: "A new way of ordering from qr menu",
+  description: "QR menü, dijital sipariş ve restoran yönetimi tek platformda.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -27,7 +27,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <body
         className={`${pontanoSans.className} ${playfairDisplay.variable} bg-background-500 antialiased`}
       >
