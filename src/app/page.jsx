@@ -75,7 +75,7 @@ const setupSteps = [
 function DashboardPreview() {
   return (
     <figure className="relative mx-auto min-h-[390px] w-full max-w-[660px] sm:min-h-[470px]" aria-label="EasyOrder yönetim paneli ve QR menü önizlemesi">
-      <div className="absolute left-0 top-5 w-[88%] overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-[0_28px_70px_-30px_rgba(104,56,23,0.38)] sm:top-8">
+      <div className="card absolute left-0 top-5 w-[88%] overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-[0_28px_70px_-30px_rgba(104,56,23,0.38)] sm:top-8">
         <div className="flex h-11 items-center justify-between border-b border-gray-100 px-4">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-secondary-500" />
@@ -103,7 +103,7 @@ function DashboardPreview() {
                 <p className="text-[9px] text-gray-400 sm:text-[10px]">Bugünün özeti</p>
                 <p className="text-sm font-bold text-gray-800 sm:text-lg">Restoran Paneli</p>
               </div>
-              <span className="rounded-full bg-green-50 px-2 py-1 text-[8px] font-semibold text-green-700 sm:text-[9px]">Açık</span>
+              <span className="badge badge-xs border-green-200 bg-green-50 font-semibold text-green-700 sm:badge-sm">Açık</span>
             </div>
 
             <div className="mb-4 grid grid-cols-3 gap-2">
@@ -112,7 +112,7 @@ function DashboardPreview() {
                 ["8", "Sipariş"],
                 ["5", "Personel"],
               ].map(([value, label], index) => (
-                <div key={label} className="rounded-xl border border-gray-100 bg-white p-2.5 shadow-sm sm:p-3">
+                <div key={label} className="stat min-w-0 rounded-xl border border-gray-100 bg-white p-2.5 shadow-sm sm:p-3">
                   <div className={`mb-2 h-1 w-7 rounded-full ${index === 1 ? "bg-secondary-500" : "bg-primary-500"}`} />
                   <p className="text-base font-bold text-gray-800 sm:text-xl">{value}</p>
                   <p className="truncate text-[8px] text-gray-400 sm:text-[9px]">{label}</p>
@@ -120,7 +120,7 @@ function DashboardPreview() {
               ))}
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+            <div className="card rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-[10px] font-semibold text-gray-700 sm:text-xs">Son siparişler</p>
                 <span className="text-[8px] font-medium text-secondary-500 sm:text-[9px]">Tümünü gör</span>
@@ -158,7 +158,7 @@ function DashboardPreview() {
         <div className="mb-3 rounded-full bg-gray-100 px-3 py-2 text-[8px] text-gray-400">Menüde ara...</div>
         <div className="mb-3 flex gap-1.5 overflow-hidden">
           {["Tümü", "Burger", "İçecek"].map((item, index) => (
-            <span key={item} className={`whitespace-nowrap rounded-full px-2 py-1 text-[7px] ${index === 0 ? "bg-secondary-500 text-white" : "bg-gray-100 text-gray-500"}`}>
+            <span key={item} className={`badge badge-xs whitespace-nowrap border-none px-2 text-[7px] ${index === 0 ? "bg-secondary-500 text-white" : "bg-gray-100 text-gray-500"}`}>
               {item}
             </span>
           ))}
@@ -170,7 +170,7 @@ function DashboardPreview() {
             { name: "Limonata", price: "90", position: "0% 100%" },
             { name: "Cappuccino", price: "110", position: "100% 100%" },
           ].map((item) => (
-            <div key={item.name} className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+            <div key={item.name} className="card card-compact overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
               <div
                 className="aspect-square w-full bg-cover bg-no-repeat"
                 style={{
@@ -183,7 +183,7 @@ function DashboardPreview() {
                 <p className="truncate text-[7px] font-semibold text-gray-700">{item.name}</p>
                 <div className="mt-1 flex items-center justify-between">
                   <span className="text-[7px] font-bold text-gray-700">₺{item.price}</span>
-                  <span className="flex h-4 w-4 items-center justify-center rounded-md bg-secondary-500 text-[10px] leading-none text-white">+</span>
+                  <span className="btn btn-circle btn-xs pointer-events-none h-4 min-h-4 w-4 border-none bg-secondary-500 p-0 text-[10px] leading-none text-white">+</span>
                 </div>
               </div>
             </div>
@@ -246,11 +246,13 @@ export default function Home() {
             <DashboardPreview />
           </div>
 
-          <div className="mx-auto mt-14 grid max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border border-orange-100 bg-white/90 shadow-sm backdrop-blur sm:grid-cols-3">
+          <div className="stats stats-vertical mx-auto mt-14 grid max-w-5xl grid-cols-1 overflow-hidden rounded-2xl border border-orange-100 bg-white/90 shadow-sm backdrop-blur sm:stats-horizontal sm:grid-cols-3">
             {capabilities.map(({ icon: Icon, label }, index) => (
-              <div key={label} className={`flex items-center justify-center gap-3 px-5 py-4 text-sm font-semibold text-gray-700 ${index < capabilities.length - 1 ? "border-b border-orange-100 sm:border-b-0 sm:border-r" : ""}`}>
-                <Icon className="h-5 w-5 text-secondary-500" aria-hidden="true" />
-                {label}
+              <div key={label} className={`stat min-w-0 px-5 py-4 ${index < capabilities.length - 1 ? "border-b border-orange-100 sm:border-b-0 sm:border-r" : ""}`}>
+                <div className="stat-figure m-0 text-secondary-500">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="stat-title whitespace-normal text-sm font-semibold text-gray-700">{label}</div>
               </div>
             ))}
           </div>
@@ -275,7 +277,7 @@ export default function Home() {
                     <div className={`mb-6 flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-2xl ${accent}`}>
                       <Icon className="h-6 w-6" aria-hidden="true" />
                     </div>
-                    <p className="mb-2 text-sm font-bold text-secondary-600">{eyebrow}</p>
+                    <p className="badge badge-ghost mb-3 h-auto border-pink-100 bg-pink-50 px-3 py-1 text-xs font-bold text-secondary-600">{eyebrow}</p>
                     <h3 className="text-2xl font-bold leading-tight text-gray-900">{title}</h3>
                     <p className="mt-4 grow leading-7 text-gray-600">{description}</p>
                   </div>
@@ -293,7 +295,7 @@ export default function Home() {
               <p className="mt-5 max-w-xl text-lg leading-8 text-gray-300">
                 EasyOrder müşterinin menü deneyimini, garsonun servis akışını ve yöneticinin kontrol panelini aynı sistemde buluşturur.
               </p>
-              <Link href="/LearnMore" className="mt-8 inline-flex items-center gap-2 text-base font-bold text-primary-400 transition-colors hover:text-primary-300 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-400">
+              <Link href="/LearnMore" className="link link-hover mt-8 inline-flex items-center gap-2 text-base font-bold text-primary-400 hover:text-primary-300 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-400">
                 Tüm özellikleri incele
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
@@ -305,16 +307,18 @@ export default function Home() {
                 { icon: Bell, number: "02", title: "Ekip haberdar olur", text: "Yeni sipariş anında servis ekranına düşer." },
                 { icon: BarChart3, number: "03", title: "Yönetici izler", text: "Süreç ve performans tek panelden takip edilir." },
               ].map(({ icon: Icon, number, title, text }, index) => (
-                <article key={title} className="relative rounded-2xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur">
+                <article key={title} className="card relative rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur">
                   {index < 2 && <ArrowRight className="absolute -right-7 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 text-primary-400 md:block" aria-hidden="true" />}
-                  <div className="mb-8 flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-500 text-gray-950">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <span className="text-sm font-bold text-gray-500">{number}</span>
+                  <div className="card-body gap-0 p-6">
+                    <div className="mb-8 flex items-center justify-between">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-500 text-gray-950">
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <span className="badge badge-ghost border-white/10 bg-white/5 text-xs font-bold text-gray-400">{number}</span>
+                    </div>
+                    <h3 className="card-title text-lg font-bold">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-gray-400">{text}</p>
                   </div>
-                  <h3 className="text-lg font-bold">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-gray-400">{text}</p>
                 </article>
               ))}
             </div>
@@ -331,15 +335,17 @@ export default function Home() {
 
             <ol className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {setupSteps.map(({ icon: Icon, title, description }, index) => (
-                <li key={title} className="relative rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
-                  <div className="mb-8 flex items-center justify-between">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <span className="text-3xl font-bold text-orange-100">{String(index + 1).padStart(2, "0")}</span>
+                <li key={title} className="card relative rounded-3xl border border-orange-100 bg-white shadow-sm">
+                  <div className="card-body gap-0 p-6">
+                    <div className="mb-8 flex items-center justify-between">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                        <Icon className="h-6 w-6" aria-hidden="true" />
+                      </span>
+                      <span className="text-3xl font-bold text-orange-100">{String(index + 1).padStart(2, "0")}</span>
+                    </div>
+                    <h3 className="card-title text-xl font-bold text-gray-900">{title}</h3>
+                    <p className="mt-3 leading-7 text-gray-600">{description}</p>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                  <p className="mt-3 leading-7 text-gray-600">{description}</p>
                 </li>
               ))}
             </ol>
@@ -347,31 +353,35 @@ export default function Home() {
         </section>
 
         <section id="pricing" className="scroll-mt-24 px-4 py-20 sm:px-8 sm:py-24 lg:px-16">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-orange-200 bg-linear-to-br from-orange-50 via-white to-pink-50 px-6 py-12 text-center shadow-[0_24px_60px_-36px_rgba(225,19,131,0.45)] sm:px-12 sm:py-16">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-secondary-500 shadow-sm">
-              <Clock3 className="h-8 w-8" aria-hidden="true" />
+          <div className="hero mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-orange-200 bg-linear-to-br from-orange-50 via-white to-pink-50 px-6 py-12 text-center shadow-[0_24px_60px_-36px_rgba(225,19,131,0.45)] sm:px-12 sm:py-16">
+            <div className="hero-content flex-col p-0">
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-secondary-500 shadow-sm">
+                <Clock3 className="h-8 w-8" aria-hidden="true" />
+              </div>
+              <span className="badge h-auto rounded-full border-orange-200 bg-orange-100 px-4 py-2 text-sm font-bold text-orange-700">Fiyatlandırma yakında</span>
+              <h2 className="mt-1 text-balance text-3xl font-bold tracking-tight text-gray-950 sm:text-4xl">Size uygun planlar çok yakında</h2>
+              <p className="max-w-2xl text-lg leading-8 text-gray-600">Fiyatlandırma seçeneklerimizi hazırlıyoruz. Detaylar yakında burada paylaşılacak.</p>
             </div>
-            <span className="badge h-auto rounded-full border-orange-200 bg-orange-100 px-4 py-2 text-sm font-bold text-orange-700">Fiyatlandırma yakında</span>
-            <h2 className="mt-5 text-balance text-3xl font-bold tracking-tight text-gray-950 sm:text-4xl">Size uygun planlar çok yakında</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-gray-600">Fiyatlandırma seçeneklerimizi hazırlıyoruz. Detaylar yakında burada paylaşılacak.</p>
           </div>
         </section>
 
         <section className="px-4 pb-20 sm:px-8 sm:pb-24 lg:px-16">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-secondary-500 px-6 py-12 text-white sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14 lg:py-14">
+          <div className="hero relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-secondary-500 px-6 py-12 text-white sm:px-10 lg:px-14 lg:py-14">
             <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border-[38px] border-white/10" />
-            <div className="relative max-w-2xl">
-              <div className="mb-4 flex items-center gap-2 text-sm font-bold text-pink-100">
-                <Users className="h-5 w-5" aria-hidden="true" />
-                Ekibiniz için daha sade bir iş akışı
+            <div className="hero-content relative flex w-full max-w-none flex-col items-start justify-between gap-8 p-0 lg:flex-row lg:items-center">
+              <div className="max-w-2xl">
+                <div className="mb-4 flex items-center gap-2 text-sm font-bold text-pink-100">
+                  <Users className="h-5 w-5" aria-hidden="true" />
+                  Ekibiniz için daha sade bir iş akışı
+                </div>
+                <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">Restoranınızın sipariş deneyimini bugün yenileyin.</h2>
+                <p className="mt-4 text-lg leading-8 text-pink-50">Menüden masaya, siparişten rapora kadar ihtiyaç duyduğunuz araçlar EasyOrder’da.</p>
               </div>
-              <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">Restoranınızın sipariş deneyimini bugün yenileyin.</h2>
-              <p className="mt-4 text-lg leading-8 text-pink-50">Menüden masaya, siparişten rapora kadar ihtiyaç duyduğunuz araçlar EasyOrder’da.</p>
+              <Link href="/sign-up" className="btn h-12 min-h-12 shrink-0 rounded-xl border-none bg-white px-6 text-base font-bold text-secondary-600 shadow-lg hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                Hemen Başla
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
-            <Link href="/sign-up" className="btn relative mt-8 h-12 min-h-12 rounded-xl border-none bg-white px-6 text-base font-bold text-secondary-600 shadow-lg hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:mt-0">
-              Hemen Başla
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
           </div>
         </section>
       </main>

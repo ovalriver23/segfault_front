@@ -27,7 +27,7 @@ export default function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-gray-200/80 bg-white/90 backdrop-blur-xl">
-      <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-8 lg:px-10" aria-label="Ana menü">
+      <nav className="navbar mx-auto h-20 max-w-7xl justify-between px-4 sm:px-8 lg:px-10" aria-label="Ana menü">
         <Link href="/" onClick={closeMenu} className="group inline-flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary-500" aria-label="EasyOrder ana sayfa">
           <span className="text-2xl font-bold tracking-[-0.03em] text-gray-950 sm:text-[1.7rem]">EasyOrder</span>
           <span className="mt-1 h-2.5 w-2.5 rounded-full bg-secondary-500 transition-transform motion-safe:group-hover:scale-125" aria-hidden="true" />
@@ -58,13 +58,15 @@ export default function Navbar() {
 
       <div id="mobile-navigation" className={`border-t border-gray-100 bg-white px-4 transition-[max-height,opacity] duration-300 lg:hidden ${isOpen ? "max-h-[32rem] opacity-100" : "pointer-events-none max-h-0 overflow-hidden opacity-0"}`} aria-hidden={!isOpen}>
         <div className="mx-auto max-w-7xl py-4">
-          <div className="grid gap-1">
+          <ul className="menu menu-lg w-full gap-1 p-0">
             {navigation.map((item) => (
-              <Link key={item.href} href={item.href} onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="rounded-xl px-4 py-3 text-base font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-2 focus-visible:outline-primary-500">
-                {item.label}
-              </Link>
+              <li key={item.href}>
+                <Link href={item.href} onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="rounded-xl px-4 py-3 text-base font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-2 focus-visible:outline-primary-500">
+                  {item.label}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
             <Link href="/log-in" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-gray-300 bg-white text-gray-700 hover:bg-orange-50">Giriş Yap</Link>
             <Link href="/sign-up" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">Kayıt Ol</Link>

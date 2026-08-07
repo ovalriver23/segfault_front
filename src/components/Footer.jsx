@@ -16,16 +16,16 @@ export default function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-gray-950 px-4 py-14 text-white sm:px-8 lg:px-16">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 border-b border-white/10 pb-12 md:grid-cols-[1.5fr_1fr_1fr]">
-          <div className="max-w-sm">
+        <div className="footer border-b border-white/10 pb-12 sm:footer-horizontal">
+          <aside className="max-w-sm">
             <Link href="/" className="inline-flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-400" aria-label="EasyOrder ana sayfa">
               <span className="text-3xl font-bold tracking-[-0.03em]">EasyOrder</span>
               <span className="mt-1 h-2.5 w-2.5 rounded-full bg-secondary-500" aria-hidden="true" />
             </Link>
             <p className="mt-5 leading-7 text-gray-400">QR menüden sipariş yönetimine, restoranınızın ihtiyaç duyduğu dijital deneyim tek yerde.</p>
-          </div>
+          </aside>
 
-          <div>
+          <nav>
             <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-gray-500">Ürün</h2>
             <ul className="mt-5 space-y-3">
               {productLinks.map((item) => (
@@ -34,9 +34,9 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
 
-          <div>
+          <nav>
             <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-gray-500">EasyOrder</h2>
             <ul className="mt-5 space-y-3">
               {companyLinks.map((item) => (
@@ -48,7 +48,7 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
         </div>
 
         <div className="flex flex-col gap-3 pt-7 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
