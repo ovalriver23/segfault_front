@@ -96,11 +96,11 @@ export default function LearnMore() {
     },
     {
       question: 'Destek hizmeti var mı?',
-      answer: 'Evet! Tüm paketlerde 7/24 müşteri desteği sunuyoruz. Telefon, email veya canlı destek ile bize ulaşabilirsiniz.'
+      answer: 'EasyOrder kullanımına ilişkin destek seçenekleri sunulacaktır. Destek kapsamı ve iletişim kanallarıyla ilgili ayrıntılar yakında paylaşılacaktır.'
     },
     {
-      question: 'Ücretsiz deneme süresinde iptal edebilir miyim?',
-      answer: 'Evet, ücretsiz deneme süresinde herhangi bir ücret ödemeden iptal edebilirsiniz. Kredi kartı bilgisi istenmez. İsterseniz deneme sonunda ücretli pakete geçebilirsiniz.'
+      question: 'Fiyatlandırma ne zaman açıklanacak?',
+      answer: 'Fiyatlandırma seçeneklerimizi hazırlıyoruz. Plan ayrıntıları ve güncel bilgiler yakında web sitemizde paylaşılacaktır.'
     },
     {
       question: 'Verilerim güvende mi?',
@@ -111,7 +111,7 @@ export default function LearnMore() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="pt-16">
+      <div className="pt-20">
         
         {/* Hero Section */}
         <div className="bg-linear-to-r from-primary-500 to-primary-600 py-20 px-4 sm:px-8 lg:px-16">

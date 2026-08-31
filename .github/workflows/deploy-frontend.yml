@@ -2,7 +2,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [main]
+    branches: [demo]
     paths:
       - 'src/**'
       - 'public/**'
@@ -58,5 +58,6 @@ jobs:
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
           script: |
             cd /opt/easyorder
+            docker login ghcr.io -u "${{ github.repository_owner }}" -p "${{ secrets.GHCR_TOKEN }}"
             docker compose -f docker-compose.prod.yml pull frontend
             docker compose -f docker-compose.prod.yml up -d frontend
