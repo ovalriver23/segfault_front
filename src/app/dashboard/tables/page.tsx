@@ -18,6 +18,23 @@ interface Table {
     restaurantId: UUID;
 }
 
+interface OrderItem {
+    menuItemName: string;
+    quantity: number;
+    price: number;
+    note: string | null;
+}
+
+interface Order {
+    id: number;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+    generalNote: string | null;
+    cancellationReason: string | null;
+    items: OrderItem[];
+}
+
 type QRSize = 'small' | 'medium' | 'large';
 
 interface QRCustomization {
@@ -33,6 +50,42 @@ interface QRCustomization {
 }
 
 const TABLE_URL_BASE = 'https://easyorder.com.tr/table';
+
+const ORDER_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+    RECEIVED: { label: 'Alındı', className: 'bg-blue-100 text-blue-700' },
+    PENDING: { label: 'Onay Bekliyor', className: 'bg-amber-100 text-amber-700' },
+    CONFIRMED: { label: 'Hazırlanıyor', className: 'bg-orange-100 text-orange-700' },
+    PREPARING: { label: 'Hazırlanıyor', className: 'bg-orange-100 text-orange-700' },
+    READY: { label: 'Hazır', className: 'bg-purple-100 text-purple-700' },
+    DELIVERED: { label: 'Teslim Edildi', className: 'bg-cyan-100 text-cyan-700' },
+    SERVED: { label: 'Servis Edildi', className: 'bg-cyan-100 text-cyan-700' },
+    COMPLETED: { label: 'Tamamlandı', className: 'bg-green-100 text-green-700' },
+    CANCELLED: { label: 'İptal Edildi', className: 'bg-red-100 text-red-700' },
+};
+
+const formatCurrency = (value: number) => new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+}).format(value);
+
+const formatOrderDate = (value: string) => {
+    const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!parts) return value;
+
+    const [, year, month, day, hour, minute, second = '0'] = parts;
+    const date = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour) - 3,
+        Number(minute),
+        Number(second),
+    );
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+};
 
 const DEFAULT_QR_CUSTOMIZATION: QRCustomization = {
     size: 'medium',
@@ -148,6 +201,12 @@ export default function Tables() {
     const [editTableStatus, setEditTableStatus] = useState<string>('EMPTY');
     const [editFormError, setEditFormError] = useState('');
 
+    // Occupied table details modal state
+    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+    const [tableOrders, setTableOrders] = useState<Order[]>([]);
+    const [isLoadingTableOrders, setIsLoadingTableOrders] = useState(false);
+    const [tableOrdersError, setTableOrdersError] = useState('');
+
     // QR customization and PDF generation state
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [qrCustomization, setQrCustomization] = useState<QRCustomization>(DEFAULT_QR_CUSTOMIZATION);
@@ -220,6 +279,44 @@ export default function Tables() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const fetchTableOrders = async (table: Table) => {
+        setIsLoadingTableOrders(true);
+        setTableOrdersError('');
+        setTableOrders([]);
+
+        try {
+            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(table.qrToken)}`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+            const data = await response.json().catch(() => null);
+
+            if (!response.ok) {
+                const message = data?.message || data?.error || 'Siparişler yüklenirken bir hata oluştu.';
+                throw new Error(message);
+            }
+
+            setTableOrders(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setTableOrdersError(error instanceof Error ? error.message : 'Siparişler yüklenirken bir hata oluştu.');
+        } finally {
+            setIsLoadingTableOrders(false);
+        }
+    };
+
+    const openTableDetails = (table: Table) => {
+        if (table.status !== 'OCCUPIED') return;
+
+        setSelectedTable(table);
+        void fetchTableOrders(table);
+    };
+
+    const closeTableDetails = () => {
+        setSelectedTable(null);
+        setTableOrders([]);
+        setTableOrdersError('');
     };
 
     // Calculate summary stats from tableList
@@ -1041,6 +1138,161 @@ export default function Tables() {
             </dialog>
 
 
+            {/* Occupied Table Details Modal */}
+            {selectedTable && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-neutral-950/60 p-4 backdrop-blur-sm"
+                    role="presentation"
+                    onMouseDown={closeTableDetails}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="table-details-title"
+                        className="my-auto flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 sm:px-6">
+                            <div>
+                                <div className="mb-2 flex items-center gap-2">
+                                    <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-red-600">Dolu Masa</span>
+                                </div>
+                                <h2 id="table-details-title" className="text-2xl font-bold text-neutral-900">
+                                    {selectedTable.name}
+                                </h2>
+                                <p className="mt-1 text-sm text-gray-500">Masa ve mevcut sipariş detayları</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeTableDetails}
+                                aria-label="Masa detaylarını kapat"
+                                className="btn btn-sm btn-circle border border-gray-200 bg-white text-gray-500 shadow-none hover:bg-gray-100"
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </header>
+
+                        <div className="overflow-y-auto p-5 sm:p-6">
+                            <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Masa Adı</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">{selectedTable.name}</dd>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Kapasite</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">{selectedTable.capacity} kişi</dd>
+                                </div>
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                                    <dt className="text-xs font-medium text-red-600">Durum</dt>
+                                    <dd className="mt-1 font-semibold text-red-700">Dolu</dd>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Sipariş Toplamı</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">
+                                        {isLoadingTableOrders
+                                            ? '—'
+                                            : formatCurrency(tableOrders
+                                                .filter((order) => order.status !== 'CANCELLED')
+                                                .reduce((total, order) => total + order.totalAmount, 0))}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <div className="mb-3 flex items-center justify-between gap-4">
+                                <h3 className="text-lg font-semibold text-neutral-900">Siparişler</h3>
+                                {!isLoadingTableOrders && !tableOrdersError && (
+                                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                                        {tableOrders.length} sipariş
+                                    </span>
+                                )}
+                            </div>
+
+                            {isLoadingTableOrders ? (
+                                <div className="flex min-h-40 items-center justify-center rounded-xl border border-gray-200">
+                                    <span className="loading loading-spinner loading-md text-[#e63997]" />
+                                </div>
+                            ) : tableOrdersError ? (
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-center">
+                                    <p className="text-sm font-medium text-red-700">{tableOrdersError}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void fetchTableOrders(selectedTable)}
+                                        className="btn btn-sm mt-4 border-none bg-red-600 text-white hover:bg-red-700"
+                                    >
+                                        Tekrar Dene
+                                    </button>
+                                </div>
+                            ) : tableOrders.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-gray-300 px-5 py-10 text-center text-sm text-gray-500">
+                                    Bu masa için sipariş bulunamadı.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {tableOrders.map((order) => {
+                                        const status = ORDER_STATUS_CONFIG[order.status] || {
+                                            label: order.status,
+                                            className: 'bg-gray-100 text-gray-700',
+                                        };
+
+                                        return (
+                                            <article key={order.id} className="overflow-hidden rounded-xl border border-gray-200">
+                                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-neutral-900">Sipariş #{order.id}</span>
+                                                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>
+                                                            {status.label}
+                                                        </span>
+                                                    </div>
+                                                    <time className="text-xs text-gray-500" dateTime={order.createdAt}>
+                                                        {formatOrderDate(order.createdAt)}
+                                                    </time>
+                                                </div>
+
+                                                <div className="p-4">
+                                                    <div className="space-y-3">
+                                                        {order.items?.length > 0 ? order.items.map((item, index) => (
+                                                            <div key={`${order.id}-${index}`} className="flex items-start justify-between gap-4">
+                                                                <div className="min-w-0">
+                                                                    <p className="font-medium text-neutral-900">
+                                                                        <span className="mr-2 text-[#e63997]">{item.quantity}×</span>
+                                                                        {item.menuItemName}
+                                                                    </p>
+                                                                    {item.note && <p className="mt-1 text-xs text-amber-700">Not: {item.note}</p>}
+                                                                </div>
+                                                                <span className="shrink-0 text-sm font-semibold text-neutral-800">
+                                                                    {formatCurrency(item.price * item.quantity)}
+                                                                </span>
+                                                            </div>
+                                                        )) : (
+                                                            <p className="text-sm text-gray-500">Ürün detayı bulunmuyor.</p>
+                                                        )}
+                                                    </div>
+
+                                                    {order.generalNote && (
+                                                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                                            <span className="font-semibold">Genel not:</span> {order.generalNote}
+                                                        </div>
+                                                    )}
+
+
+                                                    <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3">
+                                                        <span className="text-sm font-medium text-gray-600">Sipariş Toplamı</span>
+                                                        <span className="text-lg font-bold text-[#e63997]">{formatCurrency(order.totalAmount)}</span>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </div>
+            )}
+
             {/* Summary Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                 {/* Total Tables Card */}
@@ -1127,7 +1379,19 @@ export default function Tables() {
                     tableList.map((table) => (
                         <div
                             key={table.id}
-                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${table.status === 'EMPTY' ? 'border-green-300' : 'border-red-300'
+                            role={table.status === 'OCCUPIED' ? 'button' : undefined}
+                            tabIndex={table.status === 'OCCUPIED' ? 0 : undefined}
+                            aria-label={table.status === 'OCCUPIED' ? `${table.name} sipariş detaylarını görüntüle` : undefined}
+                            onClick={() => openTableDetails(table)}
+                            onKeyDown={(event) => {
+                                if (table.status === 'OCCUPIED' && (event.key === 'Enter' || event.key === ' ')) {
+                                    event.preventDefault();
+                                    openTableDetails(table);
+                                }
+                            }}
+                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all group ${table.status === 'EMPTY'
+                                ? 'border-green-300'
+                                : 'cursor-pointer border-red-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-offset-2'
                                 }`}
                         >
                             {/* Edit Button Indicator - Shows only on hover */}
