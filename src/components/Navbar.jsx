@@ -11,7 +11,7 @@ const navigation = [
   { label: "Detaylı Bilgi", href: "/LearnMore" },
 ];
 
-export default function Navbar() {
+export default function Navbar({ isLoggedIn = false }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -42,13 +42,22 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href="/log-in" className="btn btn-ghost h-10 min-h-10 rounded-xl px-4 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
-            Giriş Yap
-          </Link>
-          <Link href="/sign-up" className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
-            Kayıt Ol
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+              Panele Git
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          ) : (
+            <>
+              <Link href="/log-in" className="btn btn-ghost h-10 min-h-10 rounded-xl px-4 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
+                Giriş Yap
+              </Link>
+              <Link href="/sign-up" className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                Kayıt Ol
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </>
+          )}
         </div>
 
         <button type="button" className="btn btn-ghost btn-square rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 lg:hidden" aria-label={isOpen ? "Menüyü kapat" : "Menüyü aç"} aria-expanded={isOpen} aria-controls="mobile-navigation" onClick={() => setIsOpen((open) => !open)}>
@@ -67,9 +76,17 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
-            <Link href="/log-in" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-gray-300 bg-white text-gray-700 hover:bg-orange-50">Giriş Yap</Link>
-            <Link href="/sign-up" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">Kayıt Ol</Link>
+          <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4">
+            {isLoggedIn ? (
+              <Link href="/dashboard" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">
+                Panele Git
+              </Link>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/log-in" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-gray-300 bg-white text-gray-700 hover:bg-orange-50">Giriş Yap</Link>
+                <Link href="/sign-up" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">Kayıt Ol</Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

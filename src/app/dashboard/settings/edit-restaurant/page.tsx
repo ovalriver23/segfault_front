@@ -41,9 +41,11 @@ interface FormData {
 export default function EditRestaurantPage() {
     const router = useRouter();
     const { setPageTitle } = usePageTitle();
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const profilePhotoRef = useRef<HTMLInputElement>(null);
     const restaurantLogoRef = useRef<HTMLInputElement>(null);
+    const feedbackRef = useRef<HTMLDivElement>(null);
+    const hasUnsavedChangesRef = useRef(false);
 
     const [formData, setFormData] = useState<FormData>({
         username: '',
@@ -64,9 +66,14 @@ export default function EditRestaurantPage() {
     const [errorMessage, setErrorMessage] = useState('');
     const [isMapReady, setIsMapReady] = useState(false);
 
-    // Pre-populate form with current user data
+    // Refresh the persistent auth context whenever this page is opened.
     useEffect(() => {
-        if (user) {
+        void refreshUser();
+    }, [refreshUser]);
+
+    // Pre-populate form with current user data without overwriting active edits.
+    useEffect(() => {
+        if (user && !hasUnsavedChangesRef.current) {
             setFormData(prev => ({
                 ...prev,
                 username: user.username || '',
@@ -76,16 +83,10 @@ export default function EditRestaurantPage() {
                 latitude: user.latitude?.toString() || '',
                 longitude: user.longitude?.toString() || '',
             }));
-            // Set profile photo preview if user has one
-            if (user.profilePhotoUrl) {
-                setProfilePreview(user.profilePhotoUrl);
-            }
-            // Set restaurant logo preview if user has one
-            if (user.restaurantLogoUrl) {
-                setLogoPreview(user.restaurantLogoUrl);
-            }
+            setProfilePreview(user.profilePhotoUrl || null);
+            setLogoPreview(user.restaurantLogoUrl || null);
             // Set map position if coordinates exist
-            if (user.latitude && user.longitude) {
+            if (user.latitude != null && user.longitude != null) {
                 setMapPosition([user.latitude, user.longitude]);
             }
         }
@@ -127,8 +128,23 @@ export default function EditRestaurantPage() {
         }));
     }, [mapPosition]);
 
+    useEffect(() => {
+        if (!successMessage && !errorMessage) return;
+
+        const animationFrame = window.requestAnimationFrame(() => {
+            feedbackRef.current?.focus({ preventScroll: true });
+            feedbackRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+        });
+
+        return () => window.cancelAnimationFrame(animationFrame);
+    }, [successMessage, errorMessage]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        hasUnsavedChangesRef.current = true;
         setFormData(prev => ({ ...prev, [name]: value }));
         setSuccessMessage('');
         setErrorMessage('');
@@ -137,6 +153,7 @@ export default function EditRestaurantPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'profilePhoto' | 'restaurantLogo') => {
         const file = e.target.files?.[0];
         if (file) {
+            hasUnsavedChangesRef.current = true;
             setFormData(prev => ({ ...prev, [field]: file }));
 
             // Create preview URL
@@ -156,6 +173,7 @@ export default function EditRestaurantPage() {
 
     const handleLatLongChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        hasUnsavedChangesRef.current = true;
         setFormData(prev => ({ ...prev, [name]: value }));
 
         // Update map position if both lat and long are valid
@@ -171,6 +189,7 @@ export default function EditRestaurantPage() {
     };
 
     const handleMapClick = (lat: number, lng: number) => {
+        hasUnsavedChangesRef.current = true;
         setMapPosition([lat, lng]);
     };
 
@@ -228,6 +247,8 @@ export default function EditRestaurantPage() {
             const data = await response.json();
 
             if (response.ok) {
+                hasUnsavedChangesRef.current = false;
+                await refreshUser();
                 setSuccessMessage(data.message || 'Profil başarıyla güncellendi');
 
                 // Redirect to settings page after 2 seconds
@@ -281,7 +302,12 @@ export default function EditRestaurantPage() {
 
             {/* Alert Messages */}
             {successMessage && (
-                <div className="alert alert-success bg-green-50 border-green-200 text-green-800 mb-6">
+                <div
+                    ref={feedbackRef}
+                    role="alert"
+                    tabIndex={-1}
+                    className="alert alert-success bg-green-50 border-green-200 text-green-800 mb-6 focus:outline-none"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -290,7 +316,12 @@ export default function EditRestaurantPage() {
             )}
 
             {errorMessage && (
-                <div className="alert alert-error bg-red-50 border-red-200 text-red-800 mb-6">
+                <div
+                    ref={feedbackRef}
+                    role="alert"
+                    tabIndex={-1}
+                    className="alert alert-error bg-red-50 border-red-200 text-red-800 mb-6 focus:outline-none"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>

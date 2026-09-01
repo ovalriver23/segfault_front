@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // Backend API base URL from environment variables
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
 
+export const dynamic = 'force-dynamic';
+
 interface ResponseDataType {
     id: number;
     username: string;
@@ -32,6 +34,7 @@ export async function GET(request: NextRequest) {
                 'Content-Type': 'application/json;charset=UTF-8',
                 'Cookie': cookieHeader,
             },
+            cache: 'no-store',
         });
 
         // Get the response body
@@ -55,7 +58,10 @@ export async function GET(request: NextRequest) {
         // Return the response with the same status code as backend
         return NextResponse.json(
             responseData,
-            { status: backendResponse.status }
+            {
+                status: backendResponse.status,
+                headers: { 'Cache-Control': 'no-store' },
+            }
         );
 
     } catch (error) {

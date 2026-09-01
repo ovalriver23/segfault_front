@@ -42,6 +42,7 @@ export default function Menu() {
     const [fetchError, setFetchError] = useState("")
     const [fetchItemsError, setFetchItemsError] = useState("")
     const [currentTheme, setCurrentTheme] = useState<'DEFAULT' | 'MODERN' | 'ELEGANT'>('DEFAULT')
+    const [restaurantName, setRestaurantName] = useState<string>("")
 
     // Edit category state
     const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null)
@@ -105,7 +106,7 @@ export default function Menu() {
                 status: "available",
                 restaurantId: "preview-restaurant"
             },
-            restaurantName: "En İyi Restoran",
+            restaurantName: restaurantName || "Restoranım",
             restaurantLocation: "Preview Location",
             restaurantLatitude: 0,
             restaurantLongitude: 0,
@@ -166,6 +167,7 @@ export default function Menu() {
         fetchCategories();
         fetchMenuItems();
         fetchTheme();
+        fetchRestaurantName();
     }, []);
 
     const fetchTheme = async () => {
@@ -179,6 +181,20 @@ export default function Menu() {
             }
         } catch (error) {
             console.error("Failed to fetch theme", error);
+        }
+    };
+
+    const fetchRestaurantName = async () => {
+        try {
+            const res = await fetch("/api/auth/me");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.restaurantName) {
+                    setRestaurantName(data.restaurantName);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch restaurant name", error);
         }
     };
 

@@ -388,7 +388,7 @@ const SignInPage = () => {
             <div className="mb-5 p-4 bg-green-50 border-2 border-green-400 rounded-lg text-green-700 text-sm font-medium text-center">
               {userRole === 'STAFF' ? (
                 <>
-                  ⚠️ Personeller bu sayfaya giremez, yönlendiriliyorsunuz...
+                  ⚠️ Personel girişi, ilgili sayfaya yönlendiriliyorsunuz...
                 </>
               ) : (
                 <>✓ Giriş Başarılı</>

@@ -121,7 +121,7 @@ export default function TableMenuPage() {
         <div className="text-center p-6">
           <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
           <p className="text-gray-600 text-lg">Konum alınıyor...</p>
-          <p className="text-gray-400 text-sm mt-2">Lütfen konum erişimine izin verin</p>
+          <p className="text-gray-400 text-sm mt-2">Lütfen bekleyin</p>
         </div>
       </div>
     );

@@ -137,8 +137,9 @@ function ProductCard({
       return;
     }
 
-    // Store product data in sessionStorage
+    // Store product data and theme in sessionStorage
     sessionStorage.setItem(`menuItem_${product.id}`, JSON.stringify(product));
+    sessionStorage.setItem('menuTheme', theme);
 
     router.push(`/table/${qrToken}/item/${product.id}`);
   };
