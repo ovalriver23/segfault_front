@@ -2,8 +2,11 @@
 
 'use client';
 
-import { UUID } from 'crypto';
+import type { UUID } from 'crypto';
+import type QRCodeStyling from 'qr-code-styling';
+import type { CornerDotType, CornerSquareType, DotType, DrawType, Options } from 'qr-code-styling';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/app/lib/context/AuthContext';
 import jsPDF from 'jspdf';
 
 interface Table {
@@ -15,7 +18,120 @@ interface Table {
     restaurantId: UUID;
 }
 
+type QRSize = 'small' | 'medium' | 'large';
+
+interface QRCustomization {
+    size: QRSize;
+    dotsType: DotType;
+    cornersSquareType: CornerSquareType;
+    cornersDotType: CornerDotType;
+    dotsColor: string;
+    cornersSquareColor: string;
+    cornersDotColor: string;
+    backgroundColor: string;
+    includeRestaurantLogo: boolean;
+}
+
+const TABLE_URL_BASE = 'https://easyorder.com.tr/table';
+
+const DEFAULT_QR_CUSTOMIZATION: QRCustomization = {
+    size: 'medium',
+    dotsType: 'square',
+    cornersSquareType: 'square',
+    cornersDotType: 'square',
+    dotsColor: '#171717',
+    cornersSquareColor: '#171717',
+    cornersDotColor: '#171717',
+    backgroundColor: '#ffffff',
+    includeRestaurantLogo: false,
+};
+
+const QR_SIZE_CONFIG: Record<QRSize, {
+    label: string;
+    sizeCm: number;
+    pdfSizeMm: number;
+    previewSizePx: number;
+    columns: number;
+}> = {
+    small: { label: 'Küçük', sizeCm: 4, pdfSizeMm: 40, previewSizePx: 180, columns: 3 },
+    medium: { label: 'Orta', sizeCm: 6, pdfSizeMm: 60, previewSizePx: 220, columns: 2 },
+    large: { label: 'Büyük', sizeCm: 8, pdfSizeMm: 80, previewSizePx: 260, columns: 1 },
+};
+
+const QR_SIZE_OPTIONS: QRSize[] = ['small', 'medium', 'large'];
+
+const DOT_STYLE_OPTIONS: Array<{ value: DotType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'rounded', label: 'Yuvarlatılmış' },
+    { value: 'dots', label: 'Nokta' },
+    { value: 'classy', label: 'Modern' },
+    { value: 'classy-rounded', label: 'Modern yuvarlak' },
+    { value: 'extra-rounded', label: 'Ekstra yuvarlak' },
+];
+
+const CORNER_SQUARE_STYLE_OPTIONS: Array<{ value: CornerSquareType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'dot', label: 'Daire' },
+    { value: 'extra-rounded', label: 'Yuvarlatılmış' },
+];
+
+const CORNER_DOT_STYLE_OPTIONS: Array<{ value: CornerDotType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'dot', label: 'Daire' },
+];
+
+const getTableUrl = (qrToken: UUID) => `${TABLE_URL_BASE}/${qrToken}`;
+
+const getQRCodeOptions = (
+    data: string,
+    customization: QRCustomization,
+    size: number,
+    type: DrawType,
+    restaurantLogoUrl?: string | null,
+): Options => ({
+    width: size,
+    height: size,
+    type,
+    data,
+    image: customization.includeRestaurantLogo && restaurantLogoUrl ? restaurantLogoUrl : undefined,
+    margin: Math.round(size * 0.05),
+    qrOptions: {
+        errorCorrectionLevel: 'H',
+    },
+    imageOptions: {
+        hideBackgroundDots: true,
+        imageSize: 0.35,
+        margin: Math.round(size * 0.015),
+        crossOrigin: 'anonymous',
+        saveAsBlob: true,
+    },
+    dotsOptions: {
+        type: customization.dotsType,
+        color: customization.dotsColor,
+    },
+    cornersSquareOptions: {
+        type: customization.cornersSquareType,
+        color: customization.cornersSquareColor,
+    },
+    cornersDotOptions: {
+        type: customization.cornersDotType,
+        color: customization.cornersDotColor,
+    },
+    backgroundOptions: {
+        color: customization.backgroundColor,
+    },
+});
+
+const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('QR kodu görsele dönüştürülemedi.'));
+    reader.readAsDataURL(blob);
+});
+
 export default function Tables() {
+    const { user } = useAuth();
+
     // State management
     const [tableList, setTableList] = useState<Table[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,23 +148,54 @@ export default function Tables() {
     const [editTableStatus, setEditTableStatus] = useState<string>('EMPTY');
     const [editFormError, setEditFormError] = useState('');
 
-    // PDF generation state
+    // QR customization and PDF generation state
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-    const pdfDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
+    const [qrCustomization, setQrCustomization] = useState<QRCustomization>(DEFAULT_QR_CUSTOMIZATION);
+    const qrPreviewContainerRef = useRef<HTMLDivElement>(null);
+    const qrPreviewRef = useRef<QRCodeStyling | null>(null);
 
     // Fetch tables on component mount
     useEffect(() => {
         fetchTables();
     }, []);
 
-    // Cleanup debounce timeout on unmount
+    // Keep the modal preview in sync with the selected QR appearance.
     useEffect(() => {
-        return () => {
-            if (pdfDebounceTimeout.current) {
-                clearTimeout(pdfDebounceTimeout.current);
+        let isCancelled = false;
+
+        const renderPreview = async () => {
+            const container = qrPreviewContainerRef.current;
+            if (!container) return;
+
+            const { default: QRCodeStylingClass } = await import('qr-code-styling');
+            if (isCancelled) return;
+
+            const previewToken = tableList[0]?.qrToken ?? ('preview' as UUID);
+            const sizeConfig = QR_SIZE_CONFIG[qrCustomization.size];
+            const options = getQRCodeOptions(
+                getTableUrl(previewToken),
+                qrCustomization,
+                sizeConfig.previewSizePx,
+                'svg',
+                user?.restaurantLogoUrl,
+            );
+
+            if (qrPreviewRef.current) {
+                qrPreviewRef.current.update(options);
+            } else {
+                qrPreviewRef.current = new QRCodeStylingClass(options);
+                qrPreviewRef.current.append(container);
             }
         };
-    }, []);
+
+        renderPreview().catch((error) => {
+            console.error('Error rendering QR preview:', error);
+        });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [qrCustomization, tableList, user?.restaurantLogoUrl]);
 
     const fetchTables = async () => {
         try {
@@ -113,6 +260,19 @@ export default function Tables() {
         setEditTableCapacity('4');
         setEditTableStatus('EMPTY');
         setEditFormError('');
+    };
+
+    const openQrCustomizationModal = () => {
+        if (tableList.length === 0) {
+            alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
+            return;
+        }
+
+        (document.getElementById('QR_Customization') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeQrCustomizationModal = () => {
+        (document.getElementById('QR_Customization') as HTMLDialogElement)?.close();
     };
 
     // Add table handler
@@ -280,142 +440,117 @@ export default function Tables() {
         }
     };
 
-    // Generate PDF with QR codes
-    const handleGeneratePDF = () => {
-        // Clear existing timeout
-        if (pdfDebounceTimeout.current) {
-            clearTimeout(pdfDebounceTimeout.current);
+    // Generate the styled QR codes locally and place them into the existing PDF layout.
+    const handleGeneratePDF = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (tableList.length === 0) {
+            alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
+            return;
         }
 
-        // Set new timeout for debouncing (500ms)
-        pdfDebounceTimeout.current = setTimeout(async () => {
-            if (tableList.length === 0) {
-                alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
-                return;
-            }
+        if (isGeneratingPDF) return;
 
-            if (isGeneratingPDF) {
-                return;
-            }
+        setIsGeneratingPDF(true);
 
-            setIsGeneratingPDF(true);
+        try {
+            const { default: QRCodeStylingClass } = await import('qr-code-styling');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-            try {
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const sizeConfig = QR_SIZE_CONFIG[qrCustomization.size];
+            const margin = 20;
+            const qrSize = sizeConfig.pdfSizeMm;
+            const spacing = 15;
+            const cols = sizeConfig.columns;
+            const itemWidth = (pageWidth - (2 * margin) - (spacing * (cols - 1))) / cols;
+            const itemHeight = qrSize + 25;
 
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const margin = 20;
-                const qrSize = 60;
-                const spacing = 15;
-                const cols = 2;
-                const itemWidth = (pageWidth - (2 * margin) - spacing) / cols;
-                const itemHeight = qrSize + 25;
+            let itemsOnPage = 0;
+            const itemsPerPage = Math.floor((pageHeight - 2 * margin) / (itemHeight + spacing)) * cols;
 
-                let currentX = margin;
-                let currentY = margin;
-                let itemsOnPage = 0;
-                const itemsPerPage = Math.floor((pageHeight - 2 * margin) / (itemHeight + spacing)) * cols;
+            pdf.setFontSize(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Masa QR Kodlari', pageWidth / 2, margin, { align: 'center' });
 
-                // Add title to first page
-                pdf.setFontSize(20);
-                pdf.setFont('helvetica', 'bold');
-                // Use text rendering mode for better UTF-8 support
-                const title = 'Masa QR Kodlari';
-                pdf.text(title, pageWidth / 2, currentY, { align: 'center' });
-                currentY += 15;
-
-                for (let i = 0; i < tableList.length; i++) {
-                    const table = tableList[i];
-
-                    // Check if we need a new page
-                    if (itemsOnPage > 0 && itemsOnPage % itemsPerPage === 0) {
-                        pdf.addPage();
-                        currentY = margin;
-                        currentX = margin;
-                        itemsOnPage = 0;
-                    }
-
-                    // Fetch QR code image
-                    try {
-                        const response = await fetch(`/api/dashboard/qr?tableId=${table.id}&size=300`);
-
-                        if (!response.ok) {
-                            console.error(`Failed to fetch QR code for table ${table.name}`);
-                            continue;
-                        }
-
-                        const blob = await response.blob();
-                        const imageDataUrl = await new Promise<string>((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result as string);
-                            reader.readAsDataURL(blob);
-                        });
-
-                        // Calculate position
-                        const col = itemsOnPage % cols;
-                        const row = Math.floor(itemsOnPage / cols);
-                        currentX = margin + col * (itemWidth + spacing);
-                        currentY = margin + 15 + row * (itemHeight + spacing);
-
-                        // Draw border
-                        pdf.setDrawColor(200);
-                        pdf.setLineWidth(0.5);
-                        pdf.rect(currentX, currentY, itemWidth, itemHeight);
-
-                        // Add table name - convert Turkish chars
-                        pdf.setFontSize(12);
-                        pdf.setFont('helvetica', 'bold');
-                        const textY = currentY + 8;
-                        // Convert Turkish characters for PDF compatibility
-                        const tableName = table.name
-                            .replace(/İ/g, 'I')
-                            .replace(/ı/g, 'i')
-                            .replace(/Ş/g, 'S')
-                            .replace(/ş/g, 's')
-                            .replace(/Ğ/g, 'G')
-                            .replace(/ğ/g, 'g')
-                            .replace(/Ü/g, 'U')
-                            .replace(/ü/g, 'u')
-                            .replace(/Ö/g, 'O')
-                            .replace(/ö/g, 'o')
-                            .replace(/Ç/g, 'C')
-                            .replace(/ç/g, 'c');
-                        pdf.text(tableName, currentX + itemWidth / 2, textY, { align: 'center' });
-
-                        // Add QR code
-                        const qrX = currentX + (itemWidth - qrSize) / 2;
-                        const qrY = currentY + 12;
-                        pdf.addImage(imageDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-
-                        // Add capacity info - convert Turkish chars
-                        pdf.setFontSize(9);
-                        pdf.setFont('helvetica', 'normal');
-                        const capacityY = qrY + qrSize + 5;
-                        const capacityText = `Kapasite: ${table.capacity} kisi`;
-                        pdf.text(capacityText, currentX + itemWidth / 2, capacityY, { align: 'center' });
-
-                        itemsOnPage++;
-                    } catch (error) {
-                        console.error(`Error processing QR code for table ${table.name}:`, error);
-                    }
+            for (const table of tableList) {
+                if (itemsOnPage > 0 && itemsOnPage % itemsPerPage === 0) {
+                    pdf.addPage();
+                    itemsOnPage = 0;
                 }
 
-                // Save PDF
-                const timestamp = new Date().toISOString().split('T')[0];
-                pdf.save(`masa-qr-kodlari-${timestamp}.pdf`);
+                const qrCode = new QRCodeStylingClass(
+                    getQRCodeOptions(
+                        getTableUrl(table.qrToken),
+                        qrCustomization,
+                        600,
+                        'canvas',
+                        user?.restaurantLogoUrl,
+                    )
+                );
+                const rawQrImage = await qrCode.getRawData('png');
 
-            } catch (error) {
-                console.error('Error generating PDF:', error);
-                alert('PDF oluşturulurken bir hata oluştu.');
-            } finally {
-                setIsGeneratingPDF(false);
+                if (!(rawQrImage instanceof Blob)) {
+                    throw new Error(`QR code could not be generated for table ${table.name}.`);
+                }
+
+                const imageDataUrl = await blobToDataUrl(rawQrImage);
+                const col = itemsOnPage % cols;
+                const row = Math.floor(itemsOnPage / cols);
+                const currentX = margin + col * (itemWidth + spacing);
+                const currentY = margin + 15 + row * (itemHeight + spacing);
+
+                pdf.setDrawColor(200);
+                pdf.setLineWidth(0.5);
+                pdf.rect(currentX, currentY, itemWidth, itemHeight);
+
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                const tableName = table.name
+                    .replace(/İ/g, 'I')
+                    .replace(/ı/g, 'i')
+                    .replace(/Ş/g, 'S')
+                    .replace(/ş/g, 's')
+                    .replace(/Ğ/g, 'G')
+                    .replace(/ğ/g, 'g')
+                    .replace(/Ü/g, 'U')
+                    .replace(/ü/g, 'u')
+                    .replace(/Ö/g, 'O')
+                    .replace(/ö/g, 'o')
+                    .replace(/Ç/g, 'C')
+                    .replace(/ç/g, 'c');
+                pdf.text(tableName, currentX + itemWidth / 2, currentY + 8, { align: 'center' });
+
+                const qrX = currentX + (itemWidth - qrSize) / 2;
+                const qrY = currentY + 12;
+                pdf.addImage(imageDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(
+                    `Kapasite: ${table.capacity} kisi`,
+                    currentX + itemWidth / 2,
+                    qrY + qrSize + 5,
+                    { align: 'center' }
+                );
+
+                itemsOnPage++;
             }
-        }, 800);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            pdf.save(`masa-qr-kodlari-${timestamp}.pdf`);
+            closeQrCustomizationModal();
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('PDF oluşturulurken bir hata oluştu. Lütfen QR tasarımını kontrol edip tekrar deneyin.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
     };
 
     return (
@@ -428,7 +563,7 @@ export default function Tables() {
                 <div className="flex gap-3">
                     {/* QR Code Button */}
                     <button
-                        onClick={handleGeneratePDF}
+                        onClick={openQrCustomizationModal}
                         disabled={isGeneratingPDF || tableList.length === 0}
                         className="btn btn-primary bg-orange-500 hover:bg-orange-600 border-none text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -477,6 +612,265 @@ export default function Tables() {
 
             </div>
 
+
+            {/* QR Customization Modal */}
+            <dialog
+                id="QR_Customization"
+                className="modal"
+                onCancel={(event) => {
+                    if (isGeneratingPDF) event.preventDefault();
+                }}
+            >
+                <div className="modal-box max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-xl p-6">
+                    <form onSubmit={handleGeneratePDF}>
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                                <h3 className="font-bold text-2xl text-neutral-900">QR Kodlarını Özelleştir</h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Tüm masa QR kodlarına uygulanacak tasarımı seçin.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setQrCustomization(DEFAULT_QR_CUSTOMIZATION)}
+                                disabled={isGeneratingPDF}
+                                className="btn btn-sm bg-white border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg"
+                            >
+                                Sıfırla
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_300px] gap-6">
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">QR Boyutu</h4>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {QR_SIZE_OPTIONS.map((size) => {
+                                            const option = QR_SIZE_CONFIG[size];
+                                            const isSelected = qrCustomization.size === size;
+
+                                            return (
+                                                <button
+                                                    key={size}
+                                                    type="button"
+                                                    onClick={() => setQrCustomization((current) => ({ ...current, size }))}
+                                                    disabled={isGeneratingPDF}
+                                                    aria-pressed={isSelected}
+                                                    className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isSelected
+                                                        ? 'border-[#e63997] bg-pink-50 ring-2 ring-[#e63997]/20'
+                                                        : 'border-gray-300 bg-white hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <span className={`block text-sm font-semibold ${isSelected ? 'text-[#e63997]' : 'text-neutral-900'}`}>
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="block text-xs text-gray-500 mt-1">
+                                                        {option.sizeCm} × {option.sizeCm} cm
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">Şekil</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">Kod deseni</span>
+                                            <select
+                                                value={qrCustomization.dotsType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    dotsType: event.target.value as DotType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {DOT_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">Dış köşeler</span>
+                                            <select
+                                                value={qrCustomization.cornersSquareType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    cornersSquareType: event.target.value as CornerSquareType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {CORNER_SQUARE_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">İç köşeler</span>
+                                            <select
+                                                value={qrCustomization.cornersDotType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    cornersDotType: event.target.value as CornerDotType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {CORNER_DOT_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">Renkler</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Kod rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.dotsColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.dotsColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, dotsColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Dış köşe rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.cornersSquareColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.cornersSquareColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, cornersSquareColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>İç köşe rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.cornersDotColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.cornersDotColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, cornersDotColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Arka plan</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.backgroundColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.backgroundColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, backgroundColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-3">
+                                        Kolay tarama için kod ve arka plan arasında yüksek kontrast kullanın.
+                                    </p>
+                                </div>
+
+                                {user?.restaurantLogoUrl && (
+                                    <div>
+                                        <h4 className="font-semibold text-neutral-900 mb-3">Restoran Logosu</h4>
+                                        <label className="flex items-center justify-between gap-4 border border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                                            <span className="flex items-center gap-3">
+                                                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-50 text-[#e63997]">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l3.5-4.5 2.5 3 1.5-2L16 15zM13.5 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" clipRule="evenodd" />
+                                                    </svg>
+                                                </span>
+                                                <span>
+                                                    <span className="block text-sm font-medium text-neutral-900">Logoyu QR koduna ekle</span>
+                                                    <span className="block text-xs text-gray-500 mt-1">Logo, QR kodlarının merkezinde gösterilir.</span>
+                                                </span>
+                                            </span>
+                                            <input
+                                                type="checkbox"
+                                                checked={qrCustomization.includeRestaurantLogo}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    includeRestaurantLogo: event.target.checked,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="checkbox checkbox-sm border-gray-400 checked:border-[#e63997] checked:bg-[#e63997]"
+                                            />
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center self-start">
+                                <div className="w-full flex items-center justify-between gap-3 mb-3">
+                                    <p className="text-sm font-semibold text-neutral-900">Canlı Önizleme</p>
+                                    <span className="badge border-pink-200 bg-pink-50 text-[#e63997] font-medium">
+                                        {QR_SIZE_CONFIG[qrCustomization.size].sizeCm} × {QR_SIZE_CONFIG[qrCustomization.size].sizeCm} cm
+                                    </span>
+                                </div>
+                                <div
+                                    ref={qrPreviewContainerRef}
+                                    className="w-full min-h-[260px] flex items-center justify-center overflow-hidden [&>svg]:h-auto [&>svg]:max-w-full"
+                                />
+                                <p className="text-sm font-medium text-neutral-900 mt-3">
+                                    {tableList[0]?.name ?? 'Örnek Masa'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">PDF&apos;te tüm masalara uygulanır</p>
+                            </div>
+                        </div>
+
+                        <div className="modal-action mt-8">
+                            <div className="flex gap-3 w-full sm:w-auto sm:min-w-80">
+                                <button
+                                    type="button"
+                                    onClick={closeQrCustomizationModal}
+                                    disabled={isGeneratingPDF}
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isGeneratingPDF}
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingPDF ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Oluşturuluyor...
+                                        </>
+                                    ) : 'PDF Oluştur'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeQrCustomizationModal} disabled={isGeneratingPDF}>close</button>
+                </form>
+            </dialog>
 
             {/* Adding Table Modal */}
             <dialog id="Add_Table" className="modal">
