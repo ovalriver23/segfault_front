@@ -57,15 +57,27 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // Handle 400 error from backend
-        if (backendResponse.status === 400) {
-            const errorMessage = 'error' in responseData ? responseData.error : 'Masa silinirken bir hata oluştu.';
+        // Handle validation errors and conflicts returned by the backend
+        if (backendResponse.status === 400 || backendResponse.status === 409) {
+            const backendError = 'error' in responseData && typeof responseData.error === 'string'
+                ? responseData.error
+                : undefined;
+            const backendMessage = 'message' in responseData && typeof responseData.message === 'string'
+                ? responseData.message
+                : undefined;
+            const isActiveOrderConflict = backendResponse.status === 409;
+            const errorMessage = backendError
+                || backendMessage
+                || (isActiveOrderConflict
+                    ? 'Masada aktif sipariş bulunduğu için masa silinemez.'
+                    : 'Masa silinirken bir hata oluştu.');
+
             return NextResponse.json(
                 {
                     message: errorMessage,
-                    error: 'TABLE_DELETE_ERROR'
+                    error: isActiveOrderConflict ? 'TABLE_HAS_ACTIVE_ORDERS' : 'TABLE_DELETE_ERROR'
                 },
-                { status: 400 }
+                { status: backendResponse.status }
             );
         }
 
