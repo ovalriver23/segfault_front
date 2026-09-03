@@ -9,6 +9,9 @@ type RequestType = 'CALL_WAITER' | 'ORDER' | 'REQUEST_BILL';
 type RequestStatus = 'PENDING' | 'COMPLETED';
 type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED';
 type TabType = 'requests' | 'orders' | 'done';
+type ConfirmationAction =
+  | { type: 'SERVE_ORDER'; id: number; tableName: string }
+  | { type: 'COMPLETE_BILL'; id: number; tableName: string };
 
 interface ServiceRequest {
   id: number;
@@ -53,6 +56,8 @@ export default function WaiterNotificationsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeOrdersUnfilteredVersion, setActiveOrdersUnfilteredVersion] = useState<Order[]>([]);
   const [tables, setTables] = useState<{ id: string; name: string }[]>([]);
+  const [confirmationAction, setConfirmationAction] = useState<ConfirmationAction | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Push Notification Hook
   const {
@@ -512,7 +517,21 @@ export default function WaiterNotificationsPage() {
     }
   };
 
+  const handleConfirmAction = async () => {
+    if (!confirmationAction || isConfirming) return;
 
+    setIsConfirming(true);
+    try {
+      if (confirmationAction.type === 'SERVE_ORDER') {
+        await handleServeOrder(confirmationAction.id);
+      } else {
+        await handleMarkAsDone(confirmationAction.id);
+      }
+      setConfirmationAction(null);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -695,7 +714,17 @@ export default function WaiterNotificationsPage() {
                   </div>
 
                   <button
-                    onClick={() => handleMarkAsDone(request.id)}
+                    onClick={() => {
+                      if (request.type === 'REQUEST_BILL') {
+                        setConfirmationAction({
+                          type: 'COMPLETE_BILL',
+                          id: request.id,
+                          tableName: request.tableName
+                        });
+                      } else {
+                        handleMarkAsDone(request.id);
+                      }
+                    }}
                     className="shrink-0 p-2 bg-[#FF9F5A] hover:bg-[#e88d48] text-white rounded-lg transition-colors"
                     title="Tamamlandı"
                   >
@@ -766,7 +795,11 @@ export default function WaiterNotificationsPage() {
                 )}
                 {/* Servis Et Button */}
                 <button
-                  onClick={() => handleServeOrder(order.id)}
+                  onClick={() => setConfirmationAction({
+                    type: 'SERVE_ORDER',
+                    id: order.id,
+                    tableName: order.tableName
+                  })}
                   className="w-full py-2 bg-[#FF9F5A] hover:bg-[#e88d48] text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   <CheckCircle className="w-4 h-4" />
@@ -817,13 +850,15 @@ export default function WaiterNotificationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleUndoComplete(request.id)}
-                      className="shrink-0 p-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-lg transition-colors"
-                      title="Geri Al"
-                    >
-                      <Undo2 className="w-4 h-4" />
-                    </button>
+                    {request.type !== 'REQUEST_BILL' && (
+                      <button
+                        onClick={() => handleUndoComplete(request.id)}
+                        className="shrink-0 p-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-lg transition-colors"
+                        title="Geri Al"
+                      >
+                        <Undo2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <div className="shrink-0 p-2 bg-green-100 text-green-600 rounded-lg">
                       <Check className="w-4 h-4" />
                     </div>
@@ -886,6 +921,66 @@ export default function WaiterNotificationsPage() {
           </>
         )}
       </div>
+
+      {confirmationAction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={() => {
+            if (!isConfirming) setConfirmationAction(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmation-title"
+            aria-describedby="confirmation-description"
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-[#FF9F5A]">
+                {confirmationAction.type === 'SERVE_ORDER' ? (
+                  <CheckCircle className="h-6 w-6" />
+                ) : (
+                  <DollarSign className="h-6 w-6" />
+                )}
+              </div>
+            </div>
+            <h2 id="confirmation-title" className="mb-2 text-center text-lg font-bold text-gray-900">
+              {confirmationAction.type === 'SERVE_ORDER'
+                ? 'Siparişi servis etmek istediğinize emin misiniz?'
+                : 'Hesap isteğini tamamlamak istediğinize emin misiniz?'}
+            </h2>
+            <p id="confirmation-description" className="mb-6 text-center text-sm leading-5 text-gray-600">
+              {confirmationAction.type === 'SERVE_ORDER'
+                ? `${confirmationAction.tableName} masasındaki sipariş servis edildi olarak işaretlenecek.`
+                : `${confirmationAction.tableName} masasındaki tüm siparişler tamamlanacak ve masa oturumu kapatılacak.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmationAction(null)}
+                disabled={isConfirming}
+                className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={isConfirming}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#FF9F5A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#e88d48] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isConfirming && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                {confirmationAction.type === 'SERVE_ORDER' ? 'Servis Et' : 'Tamamla'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

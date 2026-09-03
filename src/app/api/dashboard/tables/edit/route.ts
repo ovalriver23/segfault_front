@@ -80,15 +80,27 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Handle 400 error from backend (table not found or other validation errors)
-        if (backendResponse.status === 400) {
-            const errorMessage = 'error' in responseData ? responseData.error : 'Masa güncellenirken bir hata oluştu.';
+        // Handle validation errors and conflicts returned by the backend
+        if (backendResponse.status === 400 || backendResponse.status === 409) {
+            const backendError = 'error' in responseData && typeof responseData.error === 'string'
+                ? responseData.error
+                : undefined;
+            const backendMessage = 'message' in responseData && typeof responseData.message === 'string'
+                ? responseData.message
+                : undefined;
+            const isActiveOrderConflict = backendResponse.status === 409 && body.status === 'EMPTY';
+            const errorMessage = backendError
+                || backendMessage
+                || (isActiveOrderConflict
+                    ? 'Masada aktif sipariş bulunduğu için masa durumu boş olarak değiştirilemez.'
+                    : 'Masa güncellenirken bir hata oluştu.');
+
             return NextResponse.json(
                 {
                     message: errorMessage,
-                    error: 'TABLE_UPDATE_ERROR'
+                    error: isActiveOrderConflict ? 'TABLE_HAS_ACTIVE_ORDERS' : 'TABLE_UPDATE_ERROR'
                 },
-                { status: 400 }
+                { status: backendResponse.status }
             );
         }
 

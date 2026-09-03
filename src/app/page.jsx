@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import {
   ArrowRight,
   BarChart3,
@@ -198,10 +199,13 @@ function DashboardPreview() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies();
+  const isLoggedIn = !!cookieStore.get('JWT_TOKEN')?.value;
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-white text-gray-900">
-      <Navbar />
+      <Navbar isLoggedIn={isLoggedIn} />
 
       <main>
         <section className="relative isolate overflow-hidden bg-[#fffaf6] px-4 pb-16 pt-28 sm:px-8 sm:pb-20 sm:pt-32 lg:px-16 lg:pb-24 lg:pt-36">
@@ -222,13 +226,22 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/sign-up" className="btn h-12 min-h-12 rounded-xl border-none bg-secondary-500 px-6 text-base font-semibold text-white shadow-lg shadow-pink-200/70 hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
-                  Hemen Başla
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <Link href="/#how-it-works" className="btn h-12 min-h-12 rounded-xl border-gray-300 bg-white px-6 text-base font-semibold text-gray-800 shadow-sm hover:border-primary-400 hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
-                  Nasıl Çalışır?
-                </Link>
+                {isLoggedIn ? (
+                  <Link href="/dashboard" className="btn h-12 min-h-12 rounded-xl border-none bg-secondary-500 px-6 text-base font-semibold text-white shadow-lg shadow-pink-200/70 hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                    Panele Git
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/sign-up" className="btn h-12 min-h-12 rounded-xl border-none bg-secondary-500 px-6 text-base font-semibold text-white shadow-lg shadow-pink-200/70 hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                      Hemen Başla
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                    <Link href="/#how-it-works" className="btn h-12 min-h-12 rounded-xl border-gray-300 bg-white px-6 text-base font-semibold text-gray-800 shadow-sm hover:border-primary-400 hover:bg-orange-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
+                      Nasıl Çalışır?
+                    </Link>
+                  </>
+                )}
               </div>
 
               <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-sm text-gray-600">
@@ -377,8 +390,11 @@ export default function Home() {
                 <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">Restoranınızın sipariş deneyimini bugün yenileyin.</h2>
                 <p className="mt-4 text-lg leading-8 text-pink-50">Menüden masaya, siparişten rapora kadar ihtiyaç duyduğunuz araçlar EasyOrder’da.</p>
               </div>
-              <Link href="/sign-up" className="btn h-12 min-h-12 shrink-0 rounded-xl border-none bg-white px-6 text-base font-bold text-secondary-600 shadow-lg hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                Hemen Başla
+              <Link
+                href={isLoggedIn ? "/dashboard" : "/sign-up"}
+                className="btn h-12 min-h-12 shrink-0 rounded-xl border-none bg-white px-6 text-base font-bold text-secondary-600 shadow-lg hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                {isLoggedIn ? "Panele Git" : "Hemen Başla"}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>

@@ -20,17 +20,22 @@ interface OrderItem {
 
 interface Order {
   id: number;
-  status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'CANCELLED';
+  status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'CANCELLED' | 'RECEIVED' | 'SERVED';
   totalAmount: number;
   createdAt: string;
+  generalNote?: string | null;
+  canCancel?: boolean;
+  cancellationReason?: string | null;
   items: OrderItem[];
 }
 
 const statusLabels: Record<string, string> = {
+  RECEIVED: 'Alındı',
   PENDING: 'Onay Bekliyor',
   CONFIRMED: 'Hazırlanıyor',
   DELIVERED: 'Teslim Edildi',
   CANCELLED: 'İptal Edildi',
+  SERVED: 'Servis Edildi',
 };
 
 export default function WaiterTablesPage() {
@@ -376,6 +381,19 @@ export default function WaiterTablesPage() {
                             </div>
                           ))}
                         </div>
+
+                        {/* General Note */}
+                        {order.generalNote && (
+                          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            <div>
+                              <p className="text-xs font-semibold text-amber-700 mb-0.5">Genel Not</p>
+                              <p className="text-sm text-amber-800">{order.generalNote}</p>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Order Total */}
                         <div className="border-t mt-3 pt-3 flex justify-between items-center">

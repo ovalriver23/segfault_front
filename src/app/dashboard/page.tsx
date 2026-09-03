@@ -43,30 +43,203 @@ const mockReservationCount = 0;
 // --- ALT BİLEŞENLER ---
 
 // Durum Etiketi (Pill)
+const statusLabels: Record<string, string> = {
+  RECEIVED: "Alındı",
+  PREPARING: "Hazırlanıyor",
+  READY: "Hazır",
+  SERVED: "Servis Edildi",
+  COMPLETED: "Tamamlandı",
+  CANCELLED: "İptal",
+};
+
 const StatusPill = ({ status }: { status: string }) => {
   const baseClasses = "px-3 py-1 text-xs font-semibold rounded-full";
   const statusClasses: Record<string, string> = {
-    "RECEIVED": "bg-blue-100 text-blue-600",
-    "PREPARING": "bg-orange-100 text-orange-600",
-    "READY": "bg-purple-100 text-purple-600",
-    "SERVED": "bg-cyan-100 text-cyan-600",
-    "COMPLETED": "bg-green-100 text-green-600",
-    "CANCELLED": "bg-red-100 text-red-600",
-  };
-
-  const statusLabels: Record<string, string> = {
-    "RECEIVED": "Alındı",
-    "PREPARING": "Hazırlanıyor",
-    "READY": "Hazır",
-    "SERVED": "Servis Edildi",
-    "COMPLETED": "Tamamlandı",
-    "CANCELLED": "İptal",
+    RECEIVED: "bg-blue-100 text-blue-600",
+    PREPARING: "bg-orange-100 text-orange-600",
+    READY: "bg-purple-100 text-purple-600",
+    SERVED: "bg-cyan-100 text-cyan-600",
+    COMPLETED: "bg-green-100 text-green-600",
+    CANCELLED: "bg-red-100 text-red-600",
   };
 
   return (
-    <span className={`${baseClasses} ${statusClasses[status] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`${baseClasses} ${statusClasses[status] || "bg-gray-100 text-gray-600"}`}>
       {statusLabels[status] || status}
     </span>
+  );
+};
+
+const parseOrderDate = (value: string) => {
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+
+  if (!parts) return null;
+
+  const [, year, month, day, hour, minute, second = "0"] = parts;
+  // The backend clock is three hours ahead; Date handles day/month rollover.
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour) - 3,
+    Number(minute),
+    Number(second),
+  );
+};
+
+const formatOrderDateTime = (value: string) => {
+  const date = parseOrderDate(value);
+
+  if (!date || Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "long",
+    timeStyle: "medium",
+  }).format(date);
+};
+
+const getOrderElapsedMinutes = (value: string) => {
+  const date = parseOrderDate(value);
+
+  if (!date || Number.isNaN(date.getTime())) return 0;
+
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 60_000));
+};
+
+const formatOrderElapsedTime = (minutes: number) => {
+  if (minutes < 1) return "Az önce";
+  if (minutes < 60) return `${minutes} dakika önce`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} saat önce`;
+
+  return `${Math.floor(hours / 24)} gün önce`;
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+  }).format(value);
+
+const OrderInvoiceModal = ({ order, onClose }: { order: Order; onClose: () => void }) => {
+  const items = order.itemNames
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const elapsedMinutes = getOrderElapsedMinutes(order.createdAt);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-invoice-title"
+        className="relative my-auto w-full max-w-lg overflow-hidden rounded-2xl bg-[#fffdf8] text-gray-800 shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Sipariş detayını kapat"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="border-b border-dashed border-gray-300 px-6 pb-6 pt-8 text-center sm:px-8">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-pink-100 text-pink-700">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 14l2 2 4-4m5-3.5A5.5 5.5 0 0114.5 3h-5A5.5 5.5 0 004 8.5v7A5.5 5.5 0 009.5 21h5a5.5 5.5 0 005.5-5.5v-7z" />
+            </svg>
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-pink-700">Sipariş Faturası</p>
+          <h2 id="order-invoice-title" className="mt-2 text-2xl font-bold text-gray-900">
+            Sipariş #{order.id}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">{formatOrderDateTime(order.createdAt)}</p>
+        </div>
+
+        <div className="space-y-6 px-6 py-6 sm:px-8">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Masa</dt>
+              <dd className="mt-1 font-semibold text-gray-800">{order.tableName || "Belirtilmedi"}</dd>
+            </div>
+            <div className="text-right">
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Durum</dt>
+              <dd className="mt-1"><StatusPill status={order.status} /></dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Sipariş No</dt>
+              <dd className="mt-1 font-medium">#{order.id}</dd>
+            </div>
+            <div className="text-right">
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Geçen Süre</dt>
+              <dd className="mt-1 font-medium">{formatOrderElapsedTime(elapsedMinutes)}</dd>
+            </div>
+          </dl>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <span>Ürünler</span>
+              <span>Detay</span>
+            </div>
+            {items.length > 0 ? (
+              <ul className="space-y-3">
+                {items.map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex items-start justify-between gap-4 text-sm">
+                    <span className="flex min-w-0 items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+                        {index + 1}
+                      </span>
+                      <span className="wrap-break-word pt-0.5 text-gray-700">{item}</span>
+                    </span>
+                    <span className="shrink-0 pt-0.5 text-gray-400">—</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-white/60 px-4 py-5 text-center text-sm text-gray-500">
+                Bu sipariş için ürün bilgisi bulunmuyor.
+              </div>
+            )}
+          </div>
+
+          <div className="border-y border-dashed border-gray-300 py-4">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-gray-700">Toplam Tutar</span>
+              <span className="text-2xl font-bold text-gray-900">{formatCurrency(order.totalAmount)}</span>
+            </div>
+          </div>
+
+          <dl className="space-y-2 text-xs text-gray-500">
+            <div className="flex justify-between gap-4">
+              <dt>Oluşturulma zamanı</dt>
+              <dd className="text-right font-medium text-gray-600">{formatOrderDateTime(order.createdAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt>Geçen dakika</dt>
+              <dd className="text-right font-medium text-gray-600">{elapsedMinutes} dakika</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt>Durum kodu</dt>
+              <dd className="text-right font-mono font-medium text-gray-600">{order.status}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="border-t border-dashed border-gray-300 bg-white/50 px-6 py-4 text-center text-xs text-gray-400">
+          Sipariş detayları sistemde kayıtlı bilgilere göre hazırlanmıştır.
+        </div>
+      </section>
+    </div>
   );
 };
 
@@ -173,6 +346,7 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<string>("DESC");
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchTableStats();
@@ -182,6 +356,23 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchOrders();
   }, [currentPage, statusFilter, tableNameFilter, startDateFilter, endDateFilter, sortBy, sortDirection]);
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedOrder(null);
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedOrder]);
 
   const fetchTableStats = async () => {
     try {
@@ -454,6 +645,7 @@ export default function DashboardPage() {
                     <th className="py-3 px-2">Tutar</th>
                     <th className="py-3 px-2">Durum</th>
                     <th className="py-3 px-2">Zaman</th>
+                    <th className="py-3 px-2 text-center"><span className="sr-only">Detay</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -464,7 +656,22 @@ export default function DashboardPage() {
                       <td className="py-4 px-2 text-gray-600">{order.itemNames}</td>
                       <td className="py-4 px-2 font-semibold text-gray-700">₺{order.totalAmount.toFixed(2)}</td>
                       <td className="py-4 px-2"><StatusPill status={order.status} /></td>
-                      <td className="py-4 px-2 text-gray-500">{order.timeAgo}</td>
+                      <td className="py-4 px-2 text-gray-500">
+                                              {formatOrderElapsedTime(getOrderElapsedMinutes(order.createdAt))}
+                                            </td>
+                      <td className="py-4 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrder(order)}
+                          aria-label={`Sipariş #${order.id} detaylarını göster`}
+                          title="Sipariş detayını göster"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-pink-200 bg-pink-50 text-pink-700 transition hover:border-pink-300 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17v-6m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -496,6 +703,10 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {selectedOrder && (
+        <OrderInvoiceModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 interface User {
     id: number;
@@ -41,14 +41,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchUser = async () => {
+    const fetchUser = useCallback(async (showLoading = false) => {
         try {
-            setLoading(true);
+            if (showLoading) {
+                setLoading(true);
+            }
             setError(null);
 
             const response = await fetch('/api/auth/me', {
                 method: "GET",
-                credentials: "include"
+                credentials: "include",
+                cache: "no-store"
             })
 
             // If unauthorized or not found, the backend session is invalid
@@ -77,12 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Unknown error');
-            setUser(null);
-            sessionStorage.removeItem('user');
+
+            // Keep the current session during a transient background refresh failure.
+            if (showLoading) {
+                setUser(null);
+                sessionStorage.removeItem('user');
+            }
         } finally {
-            setLoading(false);
+            if (showLoading) {
+                setLoading(false);
+            }
         }
-    }
+    }, [])
+
+    const refreshUser = useCallback(() => fetchUser(false), [fetchUser]);
 
     const logout = () => {
         setUser(null);
@@ -92,11 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Always fetch from server to ensure we have the latest user data
         // This is important for role-based access control
-        fetchUser();
-    }, [])
+        fetchUser(true);
+    }, [fetchUser])
 
     return (
-        <AuthContext.Provider value={{ user, loading, error, refreshUser: fetchUser, logout }}>
+        <AuthContext.Provider value={{ user, loading, error, refreshUser, logout }}>
             {children}
         </AuthContext.Provider>
     )

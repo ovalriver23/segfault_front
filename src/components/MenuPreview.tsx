@@ -249,13 +249,66 @@ function CategoryFilter({
           }`}
       >
         <div
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
+          className={`w-20 h-20 rounded-2xl shadow-md mb-2 overflow-hidden ${selectedCategory === "All"
             ? `border-2 ${styles.border}`
             : ""
             }`}
           style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : styles.bgInactive }}
         >
-          <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
+          {(() => {
+            const imgs = categories.filter(c => c.imageUrl).slice(0, 4);
+            if (imgs.length === 0) {
+              return (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
+                </div>
+              );
+            }
+            if (imgs.length === 1) {
+              return (
+                <div className="relative w-full h-full">
+                  <Image src={imgs[0].imageUrl!} alt={imgs[0].name} fill sizes="80px" className="object-cover" />
+                </div>
+              );
+            }
+            if (imgs.length === 2) {
+              return (
+                <div className="w-full h-full flex">
+                  {imgs.map((c) => (
+                    <div key={c.id} className="relative flex-1 h-full">
+                      <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            if (imgs.length === 3) {
+              return (
+                <div className="w-full h-full flex">
+                  <div className="relative w-1/2 h-full">
+                    <Image src={imgs[0].imageUrl!} alt={imgs[0].name} fill sizes="40px" className="object-cover" />
+                  </div>
+                  <div className="flex flex-col flex-1 h-full">
+                    {imgs.slice(1).map((c) => (
+                      <div key={c.id} className="relative flex-1">
+                        <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            // 4 images — 2×2 grid
+            return (
+              <div className="w-full h-full grid grid-cols-2 grid-rows-2">
+                {imgs.map((c) => (
+                  <div key={c.id} className="relative">
+                    <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
       </button>

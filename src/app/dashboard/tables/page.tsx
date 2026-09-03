@@ -2,8 +2,11 @@
 
 'use client';
 
-import { UUID } from 'crypto';
+import type { UUID } from 'crypto';
+import type QRCodeStyling from 'qr-code-styling';
+import type { CornerDotType, CornerSquareType, DotType, DrawType, Options } from 'qr-code-styling';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/app/lib/context/AuthContext';
 import jsPDF from 'jspdf';
 
 interface Table {
@@ -15,7 +18,173 @@ interface Table {
     restaurantId: UUID;
 }
 
+interface OrderItem {
+    menuItemName: string;
+    quantity: number;
+    price: number;
+    note: string | null;
+}
+
+interface Order {
+    id: number;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+    generalNote: string | null;
+    cancellationReason: string | null;
+    items: OrderItem[];
+}
+
+type QRSize = 'small' | 'medium' | 'large';
+
+interface QRCustomization {
+    size: QRSize;
+    dotsType: DotType;
+    cornersSquareType: CornerSquareType;
+    cornersDotType: CornerDotType;
+    dotsColor: string;
+    cornersSquareColor: string;
+    cornersDotColor: string;
+    backgroundColor: string;
+    includeRestaurantLogo: boolean;
+}
+
+const TABLE_URL_BASE = 'https://easyorder.com.tr/table';
+
+const ORDER_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+    RECEIVED: { label: 'Alındı', className: 'bg-blue-100 text-blue-700' },
+    PENDING: { label: 'Onay Bekliyor', className: 'bg-amber-100 text-amber-700' },
+    CONFIRMED: { label: 'Hazırlanıyor', className: 'bg-orange-100 text-orange-700' },
+    PREPARING: { label: 'Hazırlanıyor', className: 'bg-orange-100 text-orange-700' },
+    READY: { label: 'Hazır', className: 'bg-purple-100 text-purple-700' },
+    DELIVERED: { label: 'Teslim Edildi', className: 'bg-cyan-100 text-cyan-700' },
+    SERVED: { label: 'Servis Edildi', className: 'bg-cyan-100 text-cyan-700' },
+    COMPLETED: { label: 'Tamamlandı', className: 'bg-green-100 text-green-700' },
+    CANCELLED: { label: 'İptal Edildi', className: 'bg-red-100 text-red-700' },
+};
+
+const formatCurrency = (value: number) => new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+}).format(value);
+
+const formatOrderDate = (value: string) => {
+    const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!parts) return value;
+
+    const [, year, month, day, hour, minute, second = '0'] = parts;
+    const date = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour) - 3,
+        Number(minute),
+        Number(second),
+    );
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+};
+
+const DEFAULT_QR_CUSTOMIZATION: QRCustomization = {
+    size: 'medium',
+    dotsType: 'square',
+    cornersSquareType: 'square',
+    cornersDotType: 'square',
+    dotsColor: '#171717',
+    cornersSquareColor: '#171717',
+    cornersDotColor: '#171717',
+    backgroundColor: '#ffffff',
+    includeRestaurantLogo: false,
+};
+
+const QR_SIZE_CONFIG: Record<QRSize, {
+    label: string;
+    sizeCm: number;
+    pdfSizeMm: number;
+    previewSizePx: number;
+    columns: number;
+}> = {
+    small: { label: 'Küçük', sizeCm: 4, pdfSizeMm: 40, previewSizePx: 180, columns: 3 },
+    medium: { label: 'Orta', sizeCm: 6, pdfSizeMm: 60, previewSizePx: 220, columns: 2 },
+    large: { label: 'Büyük', sizeCm: 8, pdfSizeMm: 80, previewSizePx: 260, columns: 1 },
+};
+
+const QR_SIZE_OPTIONS: QRSize[] = ['small', 'medium', 'large'];
+
+const DOT_STYLE_OPTIONS: Array<{ value: DotType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'rounded', label: 'Yuvarlatılmış' },
+    { value: 'dots', label: 'Nokta' },
+    { value: 'classy', label: 'Modern' },
+    { value: 'classy-rounded', label: 'Modern yuvarlak' },
+    { value: 'extra-rounded', label: 'Ekstra yuvarlak' },
+];
+
+const CORNER_SQUARE_STYLE_OPTIONS: Array<{ value: CornerSquareType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'dot', label: 'Daire' },
+    { value: 'extra-rounded', label: 'Yuvarlatılmış' },
+];
+
+const CORNER_DOT_STYLE_OPTIONS: Array<{ value: CornerDotType; label: string }> = [
+    { value: 'square', label: 'Kare' },
+    { value: 'dot', label: 'Daire' },
+];
+
+const getTableUrl = (qrToken: UUID) => `${TABLE_URL_BASE}/${qrToken}`;
+
+const getQRCodeOptions = (
+    data: string,
+    customization: QRCustomization,
+    size: number,
+    type: DrawType,
+    restaurantLogoUrl?: string | null,
+): Options => ({
+    width: size,
+    height: size,
+    type,
+    data,
+    image: customization.includeRestaurantLogo && restaurantLogoUrl ? restaurantLogoUrl : undefined,
+    margin: Math.round(size * 0.05),
+    qrOptions: {
+        errorCorrectionLevel: 'H',
+    },
+    imageOptions: {
+        hideBackgroundDots: true,
+        imageSize: 0.35,
+        margin: Math.round(size * 0.015),
+        crossOrigin: 'anonymous',
+        saveAsBlob: true,
+    },
+    dotsOptions: {
+        type: customization.dotsType,
+        color: customization.dotsColor,
+    },
+    cornersSquareOptions: {
+        type: customization.cornersSquareType,
+        color: customization.cornersSquareColor,
+    },
+    cornersDotOptions: {
+        type: customization.cornersDotType,
+        color: customization.cornersDotColor,
+    },
+    backgroundOptions: {
+        color: customization.backgroundColor,
+    },
+});
+
+const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('QR kodu görsele dönüştürülemedi.'));
+    reader.readAsDataURL(blob);
+});
+
 export default function Tables() {
+    const { user } = useAuth();
+
     // State management
     const [tableList, setTableList] = useState<Table[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,23 +201,60 @@ export default function Tables() {
     const [editTableStatus, setEditTableStatus] = useState<string>('EMPTY');
     const [editFormError, setEditFormError] = useState('');
 
-    // PDF generation state
+    // Occupied table details modal state
+    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+    const [tableOrders, setTableOrders] = useState<Order[]>([]);
+    const [isLoadingTableOrders, setIsLoadingTableOrders] = useState(false);
+    const [tableOrdersError, setTableOrdersError] = useState('');
+
+    // QR customization and PDF generation state
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-    const pdfDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
+    const [qrCustomization, setQrCustomization] = useState<QRCustomization>(DEFAULT_QR_CUSTOMIZATION);
+    const qrPreviewContainerRef = useRef<HTMLDivElement>(null);
+    const qrPreviewRef = useRef<QRCodeStyling | null>(null);
 
     // Fetch tables on component mount
     useEffect(() => {
         fetchTables();
     }, []);
 
-    // Cleanup debounce timeout on unmount
+    // Keep the modal preview in sync with the selected QR appearance.
     useEffect(() => {
-        return () => {
-            if (pdfDebounceTimeout.current) {
-                clearTimeout(pdfDebounceTimeout.current);
+        let isCancelled = false;
+
+        const renderPreview = async () => {
+            const container = qrPreviewContainerRef.current;
+            if (!container) return;
+
+            const { default: QRCodeStylingClass } = await import('qr-code-styling');
+            if (isCancelled) return;
+
+            const previewToken = tableList[0]?.qrToken ?? ('preview' as UUID);
+            const sizeConfig = QR_SIZE_CONFIG[qrCustomization.size];
+            const options = getQRCodeOptions(
+                getTableUrl(previewToken),
+                qrCustomization,
+                sizeConfig.previewSizePx,
+                'svg',
+                user?.restaurantLogoUrl,
+            );
+
+            if (qrPreviewRef.current) {
+                qrPreviewRef.current.update(options);
+            } else {
+                qrPreviewRef.current = new QRCodeStylingClass(options);
+                qrPreviewRef.current.append(container);
             }
         };
-    }, []);
+
+        renderPreview().catch((error) => {
+            console.error('Error rendering QR preview:', error);
+        });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [qrCustomization, tableList, user?.restaurantLogoUrl]);
 
     const fetchTables = async () => {
         try {
@@ -73,6 +279,44 @@ export default function Tables() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const fetchTableOrders = async (table: Table) => {
+        setIsLoadingTableOrders(true);
+        setTableOrdersError('');
+        setTableOrders([]);
+
+        try {
+            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(table.qrToken)}`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+            const data = await response.json().catch(() => null);
+
+            if (!response.ok) {
+                const message = data?.message || data?.error || 'Siparişler yüklenirken bir hata oluştu.';
+                throw new Error(message);
+            }
+
+            setTableOrders(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setTableOrdersError(error instanceof Error ? error.message : 'Siparişler yüklenirken bir hata oluştu.');
+        } finally {
+            setIsLoadingTableOrders(false);
+        }
+    };
+
+    const openTableDetails = (table: Table) => {
+        if (table.status !== 'OCCUPIED') return;
+
+        setSelectedTable(table);
+        void fetchTableOrders(table);
+    };
+
+    const closeTableDetails = () => {
+        setSelectedTable(null);
+        setTableOrders([]);
+        setTableOrdersError('');
     };
 
     // Calculate summary stats from tableList
@@ -113,6 +357,19 @@ export default function Tables() {
         setEditTableCapacity('4');
         setEditTableStatus('EMPTY');
         setEditFormError('');
+    };
+
+    const openQrCustomizationModal = () => {
+        if (tableList.length === 0) {
+            alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
+            return;
+        }
+
+        (document.getElementById('QR_Customization') as HTMLDialogElement)?.showModal();
+    };
+
+    const closeQrCustomizationModal = () => {
+        (document.getElementById('QR_Customization') as HTMLDialogElement)?.close();
     };
 
     // Add table handler
@@ -280,142 +537,117 @@ export default function Tables() {
         }
     };
 
-    // Generate PDF with QR codes
-    const handleGeneratePDF = () => {
-        // Clear existing timeout
-        if (pdfDebounceTimeout.current) {
-            clearTimeout(pdfDebounceTimeout.current);
+    // Generate the styled QR codes locally and place them into the existing PDF layout.
+    const handleGeneratePDF = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (tableList.length === 0) {
+            alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
+            return;
         }
 
-        // Set new timeout for debouncing (500ms)
-        pdfDebounceTimeout.current = setTimeout(async () => {
-            if (tableList.length === 0) {
-                alert('QR kodu oluşturmak için en az bir masa bulunmalıdır.');
-                return;
-            }
+        if (isGeneratingPDF) return;
 
-            if (isGeneratingPDF) {
-                return;
-            }
+        setIsGeneratingPDF(true);
 
-            setIsGeneratingPDF(true);
+        try {
+            const { default: QRCodeStylingClass } = await import('qr-code-styling');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-            try {
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const sizeConfig = QR_SIZE_CONFIG[qrCustomization.size];
+            const margin = 20;
+            const qrSize = sizeConfig.pdfSizeMm;
+            const spacing = 15;
+            const cols = sizeConfig.columns;
+            const itemWidth = (pageWidth - (2 * margin) - (spacing * (cols - 1))) / cols;
+            const itemHeight = qrSize + 25;
 
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const margin = 20;
-                const qrSize = 60;
-                const spacing = 15;
-                const cols = 2;
-                const itemWidth = (pageWidth - (2 * margin) - spacing) / cols;
-                const itemHeight = qrSize + 25;
+            let itemsOnPage = 0;
+            const itemsPerPage = Math.floor((pageHeight - 2 * margin) / (itemHeight + spacing)) * cols;
 
-                let currentX = margin;
-                let currentY = margin;
-                let itemsOnPage = 0;
-                const itemsPerPage = Math.floor((pageHeight - 2 * margin) / (itemHeight + spacing)) * cols;
+            pdf.setFontSize(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Masa QR Kodlari', pageWidth / 2, margin, { align: 'center' });
 
-                // Add title to first page
-                pdf.setFontSize(20);
-                pdf.setFont('helvetica', 'bold');
-                // Use text rendering mode for better UTF-8 support
-                const title = 'Masa QR Kodlari';
-                pdf.text(title, pageWidth / 2, currentY, { align: 'center' });
-                currentY += 15;
-
-                for (let i = 0; i < tableList.length; i++) {
-                    const table = tableList[i];
-
-                    // Check if we need a new page
-                    if (itemsOnPage > 0 && itemsOnPage % itemsPerPage === 0) {
-                        pdf.addPage();
-                        currentY = margin;
-                        currentX = margin;
-                        itemsOnPage = 0;
-                    }
-
-                    // Fetch QR code image
-                    try {
-                        const response = await fetch(`/api/dashboard/qr?tableId=${table.id}&size=300`);
-
-                        if (!response.ok) {
-                            console.error(`Failed to fetch QR code for table ${table.name}`);
-                            continue;
-                        }
-
-                        const blob = await response.blob();
-                        const imageDataUrl = await new Promise<string>((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result as string);
-                            reader.readAsDataURL(blob);
-                        });
-
-                        // Calculate position
-                        const col = itemsOnPage % cols;
-                        const row = Math.floor(itemsOnPage / cols);
-                        currentX = margin + col * (itemWidth + spacing);
-                        currentY = margin + 15 + row * (itemHeight + spacing);
-
-                        // Draw border
-                        pdf.setDrawColor(200);
-                        pdf.setLineWidth(0.5);
-                        pdf.rect(currentX, currentY, itemWidth, itemHeight);
-
-                        // Add table name - convert Turkish chars
-                        pdf.setFontSize(12);
-                        pdf.setFont('helvetica', 'bold');
-                        const textY = currentY + 8;
-                        // Convert Turkish characters for PDF compatibility
-                        const tableName = table.name
-                            .replace(/İ/g, 'I')
-                            .replace(/ı/g, 'i')
-                            .replace(/Ş/g, 'S')
-                            .replace(/ş/g, 's')
-                            .replace(/Ğ/g, 'G')
-                            .replace(/ğ/g, 'g')
-                            .replace(/Ü/g, 'U')
-                            .replace(/ü/g, 'u')
-                            .replace(/Ö/g, 'O')
-                            .replace(/ö/g, 'o')
-                            .replace(/Ç/g, 'C')
-                            .replace(/ç/g, 'c');
-                        pdf.text(tableName, currentX + itemWidth / 2, textY, { align: 'center' });
-
-                        // Add QR code
-                        const qrX = currentX + (itemWidth - qrSize) / 2;
-                        const qrY = currentY + 12;
-                        pdf.addImage(imageDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-
-                        // Add capacity info - convert Turkish chars
-                        pdf.setFontSize(9);
-                        pdf.setFont('helvetica', 'normal');
-                        const capacityY = qrY + qrSize + 5;
-                        const capacityText = `Kapasite: ${table.capacity} kisi`;
-                        pdf.text(capacityText, currentX + itemWidth / 2, capacityY, { align: 'center' });
-
-                        itemsOnPage++;
-                    } catch (error) {
-                        console.error(`Error processing QR code for table ${table.name}:`, error);
-                    }
+            for (const table of tableList) {
+                if (itemsOnPage > 0 && itemsOnPage % itemsPerPage === 0) {
+                    pdf.addPage();
+                    itemsOnPage = 0;
                 }
 
-                // Save PDF
-                const timestamp = new Date().toISOString().split('T')[0];
-                pdf.save(`masa-qr-kodlari-${timestamp}.pdf`);
+                const qrCode = new QRCodeStylingClass(
+                    getQRCodeOptions(
+                        getTableUrl(table.qrToken),
+                        qrCustomization,
+                        600,
+                        'canvas',
+                        user?.restaurantLogoUrl,
+                    )
+                );
+                const rawQrImage = await qrCode.getRawData('png');
 
-            } catch (error) {
-                console.error('Error generating PDF:', error);
-                alert('PDF oluşturulurken bir hata oluştu.');
-            } finally {
-                setIsGeneratingPDF(false);
+                if (!(rawQrImage instanceof Blob)) {
+                    throw new Error(`QR code could not be generated for table ${table.name}.`);
+                }
+
+                const imageDataUrl = await blobToDataUrl(rawQrImage);
+                const col = itemsOnPage % cols;
+                const row = Math.floor(itemsOnPage / cols);
+                const currentX = margin + col * (itemWidth + spacing);
+                const currentY = margin + 15 + row * (itemHeight + spacing);
+
+                pdf.setDrawColor(200);
+                pdf.setLineWidth(0.5);
+                pdf.rect(currentX, currentY, itemWidth, itemHeight);
+
+                pdf.setFontSize(12);
+                pdf.setFont('helvetica', 'bold');
+                const tableName = table.name
+                    .replace(/İ/g, 'I')
+                    .replace(/ı/g, 'i')
+                    .replace(/Ş/g, 'S')
+                    .replace(/ş/g, 's')
+                    .replace(/Ğ/g, 'G')
+                    .replace(/ğ/g, 'g')
+                    .replace(/Ü/g, 'U')
+                    .replace(/ü/g, 'u')
+                    .replace(/Ö/g, 'O')
+                    .replace(/ö/g, 'o')
+                    .replace(/Ç/g, 'C')
+                    .replace(/ç/g, 'c');
+                pdf.text(tableName, currentX + itemWidth / 2, currentY + 8, { align: 'center' });
+
+                const qrX = currentX + (itemWidth - qrSize) / 2;
+                const qrY = currentY + 12;
+                pdf.addImage(imageDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(
+                    `Kapasite: ${table.capacity} kisi`,
+                    currentX + itemWidth / 2,
+                    qrY + qrSize + 5,
+                    { align: 'center' }
+                );
+
+                itemsOnPage++;
             }
-        }, 800);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            pdf.save(`masa-qr-kodlari-${timestamp}.pdf`);
+            closeQrCustomizationModal();
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('PDF oluşturulurken bir hata oluştu. Lütfen QR tasarımını kontrol edip tekrar deneyin.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
     };
 
     return (
@@ -428,7 +660,7 @@ export default function Tables() {
                 <div className="flex gap-3">
                     {/* QR Code Button */}
                     <button
-                        onClick={handleGeneratePDF}
+                        onClick={openQrCustomizationModal}
                         disabled={isGeneratingPDF || tableList.length === 0}
                         className="btn btn-primary bg-orange-500 hover:bg-orange-600 border-none text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -477,6 +709,265 @@ export default function Tables() {
 
             </div>
 
+
+            {/* QR Customization Modal */}
+            <dialog
+                id="QR_Customization"
+                className="modal"
+                onCancel={(event) => {
+                    if (isGeneratingPDF) event.preventDefault();
+                }}
+            >
+                <div className="modal-box max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-xl p-6">
+                    <form onSubmit={handleGeneratePDF}>
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                                <h3 className="font-bold text-2xl text-neutral-900">QR Kodlarını Özelleştir</h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Tüm masa QR kodlarına uygulanacak tasarımı seçin.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setQrCustomization(DEFAULT_QR_CUSTOMIZATION)}
+                                disabled={isGeneratingPDF}
+                                className="btn btn-sm bg-white border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg"
+                            >
+                                Sıfırla
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_300px] gap-6">
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">QR Boyutu</h4>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {QR_SIZE_OPTIONS.map((size) => {
+                                            const option = QR_SIZE_CONFIG[size];
+                                            const isSelected = qrCustomization.size === size;
+
+                                            return (
+                                                <button
+                                                    key={size}
+                                                    type="button"
+                                                    onClick={() => setQrCustomization((current) => ({ ...current, size }))}
+                                                    disabled={isGeneratingPDF}
+                                                    aria-pressed={isSelected}
+                                                    className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isSelected
+                                                        ? 'border-[#e63997] bg-pink-50 ring-2 ring-[#e63997]/20'
+                                                        : 'border-gray-300 bg-white hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <span className={`block text-sm font-semibold ${isSelected ? 'text-[#e63997]' : 'text-neutral-900'}`}>
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="block text-xs text-gray-500 mt-1">
+                                                        {option.sizeCm} × {option.sizeCm} cm
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">Şekil</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">Kod deseni</span>
+                                            <select
+                                                value={qrCustomization.dotsType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    dotsType: event.target.value as DotType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {DOT_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">Dış köşeler</span>
+                                            <select
+                                                value={qrCustomization.cornersSquareType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    cornersSquareType: event.target.value as CornerSquareType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {CORNER_SQUARE_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            <span className="block mb-2">İç köşeler</span>
+                                            <select
+                                                value={qrCustomization.cornersDotType}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    cornersDotType: event.target.value as CornerDotType,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="select select-bordered text-text-500 w-full bg-white border-gray-300 focus:border-[#e63997] focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-opacity-20"
+                                            >
+                                                {CORNER_DOT_STYLE_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-semibold text-neutral-900 mb-3">Renkler</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Kod rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.dotsColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.dotsColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, dotsColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Dış köşe rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.cornersSquareColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.cornersSquareColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, cornersSquareColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>İç köşe rengi</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.cornersDotColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.cornersDotColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, cornersDotColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-center justify-between gap-3 border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700">
+                                            <span>Arka plan</span>
+                                            <span className="flex items-center gap-2 font-mono text-xs uppercase text-gray-500">
+                                                {qrCustomization.backgroundColor}
+                                                <input
+                                                    type="color"
+                                                    value={qrCustomization.backgroundColor}
+                                                    onChange={(event) => setQrCustomization((current) => ({ ...current, backgroundColor: event.target.value }))}
+                                                    disabled={isGeneratingPDF}
+                                                    className="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
+                                                />
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-3">
+                                        Kolay tarama için kod ve arka plan arasında yüksek kontrast kullanın.
+                                    </p>
+                                </div>
+
+                                {user?.restaurantLogoUrl && (
+                                    <div>
+                                        <h4 className="font-semibold text-neutral-900 mb-3">Restoran Logosu</h4>
+                                        <label className="flex items-center justify-between gap-4 border border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                                            <span className="flex items-center gap-3">
+                                                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-50 text-[#e63997]">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l3.5-4.5 2.5 3 1.5-2L16 15zM13.5 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" clipRule="evenodd" />
+                                                    </svg>
+                                                </span>
+                                                <span>
+                                                    <span className="block text-sm font-medium text-neutral-900">Logoyu QR koduna ekle</span>
+                                                    <span className="block text-xs text-gray-500 mt-1">Logo, QR kodlarının merkezinde gösterilir.</span>
+                                                </span>
+                                            </span>
+                                            <input
+                                                type="checkbox"
+                                                checked={qrCustomization.includeRestaurantLogo}
+                                                onChange={(event) => setQrCustomization((current) => ({
+                                                    ...current,
+                                                    includeRestaurantLogo: event.target.checked,
+                                                }))}
+                                                disabled={isGeneratingPDF}
+                                                className="checkbox checkbox-sm border-gray-400 checked:border-[#e63997] checked:bg-[#e63997]"
+                                            />
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center self-start">
+                                <div className="w-full flex items-center justify-between gap-3 mb-3">
+                                    <p className="text-sm font-semibold text-neutral-900">Canlı Önizleme</p>
+                                    <span className="badge border-pink-200 bg-pink-50 text-[#e63997] font-medium">
+                                        {QR_SIZE_CONFIG[qrCustomization.size].sizeCm} × {QR_SIZE_CONFIG[qrCustomization.size].sizeCm} cm
+                                    </span>
+                                </div>
+                                <div
+                                    ref={qrPreviewContainerRef}
+                                    className="w-full min-h-[260px] flex items-center justify-center overflow-hidden [&>svg]:h-auto [&>svg]:max-w-full"
+                                />
+                                <p className="text-sm font-medium text-neutral-900 mt-3">
+                                    {tableList[0]?.name ?? 'Örnek Masa'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">PDF&apos;te tüm masalara uygulanır</p>
+                            </div>
+                        </div>
+
+                        <div className="modal-action mt-8">
+                            <div className="flex gap-3 w-full sm:w-auto sm:min-w-80">
+                                <button
+                                    type="button"
+                                    onClick={closeQrCustomizationModal}
+                                    disabled={isGeneratingPDF}
+                                    className="btn flex-1 bg-white shadow-2xs border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isGeneratingPDF}
+                                    className="btn shadow-sm flex-1 bg-[#e63997] hover:bg-[#d12e86] border-none text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingPDF ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Oluşturuluyor...
+                                        </>
+                                    ) : 'PDF Oluştur'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button onClick={closeQrCustomizationModal} disabled={isGeneratingPDF}>close</button>
+                </form>
+            </dialog>
 
             {/* Adding Table Modal */}
             <dialog id="Add_Table" className="modal">
@@ -647,6 +1138,161 @@ export default function Tables() {
             </dialog>
 
 
+            {/* Occupied Table Details Modal */}
+            {selectedTable && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-neutral-950/60 p-4 backdrop-blur-sm"
+                    role="presentation"
+                    onMouseDown={closeTableDetails}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="table-details-title"
+                        className="my-auto flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 sm:px-6">
+                            <div>
+                                <div className="mb-2 flex items-center gap-2">
+                                    <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-red-600">Dolu Masa</span>
+                                </div>
+                                <h2 id="table-details-title" className="text-2xl font-bold text-neutral-900">
+                                    {selectedTable.name}
+                                </h2>
+                                <p className="mt-1 text-sm text-gray-500">Masa ve mevcut sipariş detayları</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeTableDetails}
+                                aria-label="Masa detaylarını kapat"
+                                className="btn btn-sm btn-circle border border-gray-200 bg-white text-gray-500 shadow-none hover:bg-gray-100"
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </header>
+
+                        <div className="overflow-y-auto p-5 sm:p-6">
+                            <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Masa Adı</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">{selectedTable.name}</dd>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Kapasite</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">{selectedTable.capacity} kişi</dd>
+                                </div>
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                                    <dt className="text-xs font-medium text-red-600">Durum</dt>
+                                    <dd className="mt-1 font-semibold text-red-700">Dolu</dd>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <dt className="text-xs font-medium text-gray-500">Sipariş Toplamı</dt>
+                                    <dd className="mt-1 font-semibold text-neutral-900">
+                                        {isLoadingTableOrders
+                                            ? '—'
+                                            : formatCurrency(tableOrders
+                                                .filter((order) => order.status !== 'CANCELLED')
+                                                .reduce((total, order) => total + order.totalAmount, 0))}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <div className="mb-3 flex items-center justify-between gap-4">
+                                <h3 className="text-lg font-semibold text-neutral-900">Siparişler</h3>
+                                {!isLoadingTableOrders && !tableOrdersError && (
+                                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                                        {tableOrders.length} sipariş
+                                    </span>
+                                )}
+                            </div>
+
+                            {isLoadingTableOrders ? (
+                                <div className="flex min-h-40 items-center justify-center rounded-xl border border-gray-200">
+                                    <span className="loading loading-spinner loading-md text-[#e63997]" />
+                                </div>
+                            ) : tableOrdersError ? (
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-center">
+                                    <p className="text-sm font-medium text-red-700">{tableOrdersError}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void fetchTableOrders(selectedTable)}
+                                        className="btn btn-sm mt-4 border-none bg-red-600 text-white hover:bg-red-700"
+                                    >
+                                        Tekrar Dene
+                                    </button>
+                                </div>
+                            ) : tableOrders.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-gray-300 px-5 py-10 text-center text-sm text-gray-500">
+                                    Bu masa için sipariş bulunamadı.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {tableOrders.map((order) => {
+                                        const status = ORDER_STATUS_CONFIG[order.status] || {
+                                            label: order.status,
+                                            className: 'bg-gray-100 text-gray-700',
+                                        };
+
+                                        return (
+                                            <article key={order.id} className="overflow-hidden rounded-xl border border-gray-200">
+                                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-neutral-900">Sipariş #{order.id}</span>
+                                                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>
+                                                            {status.label}
+                                                        </span>
+                                                    </div>
+                                                    <time className="text-xs text-gray-500" dateTime={order.createdAt}>
+                                                        {formatOrderDate(order.createdAt)}
+                                                    </time>
+                                                </div>
+
+                                                <div className="p-4">
+                                                    <div className="space-y-3">
+                                                        {order.items?.length > 0 ? order.items.map((item, index) => (
+                                                            <div key={`${order.id}-${index}`} className="flex items-start justify-between gap-4">
+                                                                <div className="min-w-0">
+                                                                    <p className="font-medium text-neutral-900">
+                                                                        <span className="mr-2 text-[#e63997]">{item.quantity}×</span>
+                                                                        {item.menuItemName}
+                                                                    </p>
+                                                                    {item.note && <p className="mt-1 text-xs text-amber-700">Not: {item.note}</p>}
+                                                                </div>
+                                                                <span className="shrink-0 text-sm font-semibold text-neutral-800">
+                                                                    {formatCurrency(item.price * item.quantity)}
+                                                                </span>
+                                                            </div>
+                                                        )) : (
+                                                            <p className="text-sm text-gray-500">Ürün detayı bulunmuyor.</p>
+                                                        )}
+                                                    </div>
+
+                                                    {order.generalNote && (
+                                                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                                            <span className="font-semibold">Genel not:</span> {order.generalNote}
+                                                        </div>
+                                                    )}
+
+
+                                                    <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3">
+                                                        <span className="text-sm font-medium text-gray-600">Sipariş Toplamı</span>
+                                                        <span className="text-lg font-bold text-[#e63997]">{formatCurrency(order.totalAmount)}</span>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </div>
+            )}
+
             {/* Summary Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                 {/* Total Tables Card */}
@@ -733,7 +1379,19 @@ export default function Tables() {
                     tableList.map((table) => (
                         <div
                             key={table.id}
-                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all hover:shadow-md cursor-pointer group ${table.status === 'EMPTY' ? 'border-green-300' : 'border-red-300'
+                            role={table.status === 'OCCUPIED' ? 'button' : undefined}
+                            tabIndex={table.status === 'OCCUPIED' ? 0 : undefined}
+                            aria-label={table.status === 'OCCUPIED' ? `${table.name} sipariş detaylarını görüntüle` : undefined}
+                            onClick={() => openTableDetails(table)}
+                            onKeyDown={(event) => {
+                                if (table.status === 'OCCUPIED' && (event.key === 'Enter' || event.key === ' ')) {
+                                    event.preventDefault();
+                                    openTableDetails(table);
+                                }
+                            }}
+                            className={`indicator w-full min-w-34 bg-white rounded-xl p-6 relative border transition-all group ${table.status === 'EMPTY'
+                                ? 'border-green-300'
+                                : 'cursor-pointer border-red-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#e63997] focus:ring-offset-2'
                                 }`}
                         >
                             {/* Edit Button Indicator - Shows only on hover */}
