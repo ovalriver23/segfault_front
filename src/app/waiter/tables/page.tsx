@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Table {
@@ -38,11 +38,16 @@ const statusLabels: Record<string, string> = {
   SERVED: 'Servis Edildi',
 };
 
+const POLLING_INTERVAL_MS = 30_000;
+
 export default function WaiterTablesPage() {
   const router = useRouter();
   const [tables, setTables] = useState<Table[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Polling guards
+  const isPollingRef = useRef(false);
 
   // Modal state
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -83,9 +88,21 @@ export default function WaiterTablesPage() {
     setOrders([]);
   };
 
-  const fetchTables = useCallback(async () => {
+  /**
+   * Fetch tables from the API.
+   * @param silent – when true, loading/error UI is not triggered (used by the poller).
+   */
+  const fetchTables = useCallback(async (silent = false) => {
+    // Guard against overlapping silent polls.
+    if (silent && isPollingRef.current) return;
+    if (silent) isPollingRef.current = true;
+
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+        setError(null);
+      }
+
       const response = await fetch('/api/waiter/tables/get', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -109,12 +126,17 @@ export default function WaiterTablesPage() {
 
       const data = await response.json();
       setTables(data);
+      // Clear any previous error once a fetch succeeds.
       setError(null);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Bağlantı hatası. Lütfen sayfayı yenileyin.');
+      // Only surface errors on the initial (non-silent) load.
+      if (!silent) {
+        setError(err.message || 'Bağlantı hatası. Lütfen sayfayı yenileyin.');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
+      if (silent) isPollingRef.current = false;
     }
   }, [router]);
 
@@ -139,9 +161,43 @@ export default function WaiterTablesPage() {
     };
 
     checkPasswordChangeRequired();
-    const interval = setInterval(fetchTables, 30000);
-    return () => clearInterval(interval);
   }, [fetchTables, router]);
+
+  // Background polling – pauses when the order modal is open or the tab is hidden.
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      stopPolling();
+      intervalId = setInterval(() => {
+        if (document.hidden || isModalOpen) return;
+        fetchTables(true);
+      }, POLLING_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab just became visible – fetch immediately, then restart the interval.
+        fetchTables(true);
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startPolling();
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchTables, isModalOpen]);
 
   // İstatistikleri hesapla
   const totalTables = tables.length;
@@ -161,7 +217,7 @@ export default function WaiterTablesPage() {
       <div className="flex flex-col justify-center items-center h-screen px-6 text-center pb-20">
         <p className="text-red-500 mb-4 font-medium">{error}</p>
         <button
-          onClick={fetchTables}
+          onClick={() => fetchTables()}
           className="btn bg-[#E11383] text-white hover:bg-[#c00f6f] border-none"
         >
           Tekrar Dene
@@ -177,7 +233,7 @@ export default function WaiterTablesPage() {
         <h1 className="text-3xl font-normal text-black" style={{ fontFamily: 'Pontano Sans, sans-serif' }}>
           Masalar
         </h1>
-        <button onClick={fetchTables} className="btn btn-sm btn-ghost btn-circle text-[#E11383] hover:bg-pink-50">
+        <button onClick={() => fetchTables(true)} className="btn btn-sm btn-ghost btn-circle text-[#E11383] hover:bg-pink-50">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
           </svg>
