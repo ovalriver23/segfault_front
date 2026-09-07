@@ -37,7 +37,7 @@ const LocationPicker = ({ latitude, longitude, onChange }: LocationPickerProps) 
   }, [hasLocation, latitude, longitude]);
 
   return (
-    <div className="w-full h-80 rounded-xl overflow-hidden border-2 border-[#F8645A]">
+    <div className="h-80 w-full overflow-hidden rounded-2xl border border-orange-200 bg-orange-50 shadow-inner">
       <MapContainer
         center={center}
         zoom={13}

@@ -1,747 +1,672 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  CircleUserRound,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LocateFixed,
+  LockKeyhole,
+  Mail,
+  MapPin,
+  Pencil,
+  ShieldCheck,
+  Store,
+  Upload,
+  UserRound,
+  X,
+} from "lucide-react";
 import { getUserLocation } from "../lib/utils/geolocation";
-import { Eye, EyeOff } from "lucide-react";
 
 const LocationPicker = dynamic(() => import("../../components/LocationPicker"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-80 rounded-xl overflow-hidden border-2 border-dashed border-[#F8645A] flex items-center justify-center text-text-300 text-sm">
+    <div className="flex h-80 w-full items-center justify-center rounded-2xl border border-dashed border-orange-300 bg-orange-50/60 text-sm font-medium text-gray-500">
+      <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-secondary-500" aria-hidden="true" />
       Harita yükleniyor...
     </div>
   ),
 });
 
-// Allowed image types and max size (5MB)
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-// Zod schema for form validation
-const signUpSchema = z.object({
-  restaurantName: z.string().min(1, "Restoran adı gereklidir.").trim(),
-  restaurantLocation: z.string().min(1, "Restoran lokasyonu gereklidir.").trim(),
-  userName: z.string().min(1, "Kullanıcı Adı gereklidir.").trim(),
-  email: z.email("Geçersiz email adresi"),
-  password: z.string()
-    .min(8, "Şifre en az 8 karakter uzunluğunda olmalıdır.")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
-      "Şifre en az 1 büyük harf, küçük harf, numara ve özel karakter içermelidir."),
-  confirmPassword: z.string().min(8, "Lütfen şifrenizi doğrulayın"),
-  latitude: z.preprocess(
-    (val) => val === "" || val === undefined || val === null ? undefined : Number(val),
-    z.number({ error: "Enlem bilgisi gereklidir." })
-      .refine((val) => !Number.isNaN(val), { message: "Enlem bilgisi gereklidir." })
-      .min(-90, "Latitude must be at least -90")
-      .max(90, "Latitude cannot exceed 90"),
-  ),
-  longitude: z.preprocess(
-    (val) => val === "" || val === undefined || val === null ? undefined : Number(val),
-    z.number({ error: "Boylam bilgisi gereklidir." })
-      .refine((val) => !Number.isNaN(val), { message: "Boylam bilgisi gereklidir." })
-      .min(-180, "Longitude must be at least -180")
-      .max(180, "Longitude cannot exceed 180"),
-  ),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Şifreler eşleşmiyor.",
-  path: ["confirmPassword"],
-});
+const coordinateSchema = (label: string, min: number, max: number) =>
+  z
+    .string()
+    .min(1, `${label} bilgisi gereklidir.`)
+    .refine((value) => !Number.isNaN(Number(value)), `${label} bilgisi geçersiz.`)
+    .refine((value) => Number(value) >= min && Number(value) <= max, `${label} bilgisi geçersiz.`);
+
+const signUpSchema = z
+  .object({
+    userName: z.string().trim().min(1, "Kullanıcı adı gereklidir."),
+    email: z.string().trim().email("Geçerli bir e-posta adresi girin."),
+    password: z
+      .string()
+      .min(8, "Şifre en az 8 karakter uzunluğunda olmalıdır.")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/,
+        "Şifre tüm güvenlik koşullarını karşılamalıdır.",
+      ),
+    confirmPassword: z.string().min(1, "Şifrenizi tekrar girin."),
+    restaurantName: z.string().trim().min(1, "Restoran adı gereklidir."),
+    restaurantLocation: z.string().trim().min(1, "Restoran adresi gereklidir."),
+    latitude: coordinateSchema("Enlem", -90, 90),
+    longitude: coordinateSchema("Boylam", -180, 180),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Şifreler eşleşmiyor.",
+    path: ["confirmPassword"],
+  });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
-type FormErrors = Partial<Record<keyof SignUpFormData | 'general' | 'profilePhoto' | 'restaurantLogo', string>>;
+type UploadKind = "profilePhoto" | "restaurantLogo";
 
-const SignUpPage = () => {
+const steps: Array<{
+  title: string;
+  shortTitle: string;
+  description: string;
+  fields: Array<keyof SignUpFormData>;
+}> = [
+  {
+    title: "Hesap bilgilerinizi oluşturun",
+    shortTitle: "Hesap",
+    description: "Başvurunuzu takip etmek için kullanacağınız giriş bilgilerini belirleyin.",
+    fields: ["userName", "email", "password", "confirmPassword"],
+  },
+  {
+    title: "Restoranınızı tanıyalım",
+    shortTitle: "Restoran",
+    description: "İşletmenizin temel bilgilerini ve dilerseniz görsellerini ekleyin.",
+    fields: ["restaurantName", "restaurantLocation"],
+  },
+  {
+    title: "Restoran konumunu seçin",
+    shortTitle: "Konum",
+    description: "Haritadan işletmenizin konumunu işaretleyin veya mevcut konumunuzu kullanın.",
+    fields: ["latitude", "longitude"],
+  },
+  {
+    title: "Bilgilerinizi kontrol edin",
+    shortTitle: "Kontrol",
+    description: "Başvuruyu göndermeden önce verdiğiniz bilgileri son kez gözden geçirin.",
+    fields: [],
+  },
+];
+
+const fieldBaseClass =
+  "h-12 w-full rounded-xl border bg-white px-4 text-base text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-secondary-500 focus:ring-4 focus:ring-pink-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500";
+
+const inputClass = (hasError: boolean) =>
+  `${fieldBaseClass} pl-11 ${hasError ? "border-red-400 focus:border-red-500 focus:ring-red-100" : "border-gray-200"}`;
+
+const validateImageFile = (file: File) => {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return "Yalnızca JPEG, PNG, GIF veya WebP dosyaları yükleyebilirsiniz.";
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    return "Dosya boyutu 5 MB'dan küçük olmalıdır.";
+  }
+  return null;
+};
+
+export default function SignUpPage() {
   const router = useRouter();
-
-  // Form state
-  const [restaurantName, setRestaurantName] = useState<string>("");
-  const [restaurantLocation, setRestaurantLocation] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [latitude, setLatitude] = useState<string>("");
-  const [longitude, setLongitude] = useState<string>("");
-
-  // Password visibility state
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-
-  // Image upload state
+  const [currentStep, setCurrentStep] = useState(0);
+  const [highestStep, setHighestStep] = useState(0);
+  const [isLocating, setIsLocating] = useState(false);
+  const [generalError, setGeneralError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [restaurantLogo, setRestaurantLogo] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [restaurantLogoPreview, setRestaurantLogoPreview] = useState<string | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<Partial<Record<UploadKind, string>>>({});
 
-  // File input refs
   const profilePhotoRef = useRef<HTMLInputElement>(null);
   const restaurantLogoRef = useRef<HTMLInputElement>(null);
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // UI state
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  const [touchedFields, setTouchedFields] = useState<Set<keyof SignUpFormData>>(new Set());
+  const {
+    register,
+    handleSubmit,
+    trigger,
+    setValue,
+    clearErrors,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: {
+      userName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      restaurantName: "",
+      restaurantLocation: "",
+      latitude: "",
+      longitude: "",
+    },
+  });
 
-  // Validate image file
-  const validateImageFile = (file: File): string | null => {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      return "Sadece JPEG, PNG, GIF veya WebP formatları kabul edilmektedir.";
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      return "Dosya boyutu 5MB'dan küçük olmalıdır.";
-    }
-    return null;
+  const values = watch();
+  const progress = ((currentStep + 1) / steps.length) * 100;
+  const passwordChecks = [
+    { label: "En az 8 karakter", valid: values.password.length >= 8 },
+    { label: "Büyük ve küçük harf", valid: /[A-Z]/.test(values.password) && /[a-z]/.test(values.password) },
+    { label: "En az bir rakam", valid: /\d/.test(values.password) },
+    { label: "En az bir özel karakter", valid: /[^a-zA-Z0-9]/.test(values.password) },
+  ];
+
+  useEffect(() => {
+    return () => {
+      if (profilePhotoPreview) URL.revokeObjectURL(profilePhotoPreview);
+    };
+  }, [profilePhotoPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (restaurantLogoPreview) URL.revokeObjectURL(restaurantLogoPreview);
+    };
+  }, [restaurantLogoPreview]);
+
+  useEffect(() => {
+    if (!showSuccess) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    successButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showSuccess]);
+
+  const focusStepHeading = () => {
+    window.requestAnimationFrame(() => stepHeadingRef.current?.focus());
   };
 
-  // Handle profile photo selection
-  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const error = validateImageFile(file);
-      if (error) {
-        setErrors(prev => ({ ...prev, profilePhoto: error }));
-        return;
-      }
-      setErrors(prev => ({ ...prev, profilePhoto: undefined }));
+  const goToStep = (stepIndex: number) => {
+    if (stepIndex > highestStep || isSubmitting) return;
+    setGeneralError("");
+    setReviewError("");
+    if (stepIndex < steps.length - 1) setReviewConfirmed(false);
+    setCurrentStep(stepIndex);
+    focusStepHeading();
+  };
+
+  const handleNext = async () => {
+    setGeneralError("");
+    const isStepValid = await trigger(steps[currentStep].fields, { shouldFocus: true });
+    if (!isStepValid) return;
+
+    const nextStep = Math.min(currentStep + 1, steps.length - 1);
+    setHighestStep((step) => Math.max(step, nextStep));
+    setCurrentStep(nextStep);
+    focusStepHeading();
+  };
+
+  const handleBack = () => {
+    setGeneralError("");
+    setReviewError("");
+    setReviewConfirmed(false);
+    setCurrentStep((step) => Math.max(0, step - 1));
+    focusStepHeading();
+  };
+
+  const handleImageChange = (kind: UploadKind, file?: File) => {
+    if (!file) return;
+    const error = validateImageFile(file);
+    if (error) {
+      setUploadErrors((current) => ({ ...current, [kind]: error }));
+      const input = kind === "profilePhoto" ? profilePhotoRef.current : restaurantLogoRef.current;
+      if (input) input.value = "";
+      return;
+    }
+
+    setUploadErrors((current) => ({ ...current, [kind]: undefined }));
+    const preview = URL.createObjectURL(file);
+    if (kind === "profilePhoto") {
       setProfilePhoto(file);
-      setProfilePhotoPreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Handle restaurant logo selection
-  const handleRestaurantLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const error = validateImageFile(file);
-      if (error) {
-        setErrors(prev => ({ ...prev, restaurantLogo: error }));
-        return;
-      }
-      setErrors(prev => ({ ...prev, restaurantLogo: undefined }));
+      setProfilePhotoPreview(preview);
+    } else {
       setRestaurantLogo(file);
-      setRestaurantLogoPreview(URL.createObjectURL(file));
+      setRestaurantLogoPreview(preview);
     }
   };
 
-  // Remove profile photo
-  const handleRemoveProfilePhoto = () => {
-    setProfilePhoto(null);
-    setProfilePhotoPreview(null);
-    if (profilePhotoRef.current) {
-      profilePhotoRef.current.value = '';
+  const removeImage = (kind: UploadKind) => {
+    setUploadErrors((current) => ({ ...current, [kind]: undefined }));
+    if (kind === "profilePhoto") {
+      setProfilePhoto(null);
+      setProfilePhotoPreview(null);
+      if (profilePhotoRef.current) profilePhotoRef.current.value = "";
+    } else {
+      setRestaurantLogo(null);
+      setRestaurantLogoPreview(null);
+      if (restaurantLogoRef.current) restaurantLogoRef.current.value = "";
     }
   };
 
-  // Remove restaurant logo
-  const handleRemoveRestaurantLogo = () => {
-    setRestaurantLogo(null);
-    setRestaurantLogoPreview(null);
-    if (restaurantLogoRef.current) {
-      restaurantLogoRef.current.value = '';
-    }
-  };
-
-  // Handle location selection from map
-  const handleLocationSelect = (lat: string, lng: string) => {
-    setLatitude(lat);
-    setLongitude(lng);
-    setTouchedFields(prev => new Set(prev).add("latitude").add("longitude"));
-    validateFieldWithValue("latitude", lat);
-    validateFieldWithValue("longitude", lng);
+  const handleLocationSelect = (latitude: string, longitude: string) => {
+    setValue("latitude", latitude, { shouldDirty: true, shouldValidate: true });
+    setValue("longitude", longitude, { shouldDirty: true, shouldValidate: true });
+    clearErrors(["latitude", "longitude"]);
+    setGeneralError("");
   };
 
   const handleUseCurrentLocation = async () => {
-    setIsLoading(true);
+    setIsLocating(true);
+    setGeneralError("");
     try {
-      const coords = await getUserLocation();
-      handleLocationSelect(coords.latitude.toFixed(6), coords.longitude.toFixed(6));
-      // Clear any previous errors
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.general;
-        return newErrors;
-      });
+      const coordinates = await getUserLocation();
+      handleLocationSelect(coordinates.latitude.toFixed(6), coordinates.longitude.toFixed(6));
     } catch (error) {
-      const message = error && typeof error === "object" && "message" in error
-        ? (error as { message?: string }).message
-        : "Lokasyonunuz alınamıyor.";
-
-      // Show error message prominently
-      setErrors(prev => ({ ...prev, general: message || "Lokasyonunuz alınamıyor." }));
-
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: string }).message)
+          : "Konumunuz alınamadı.";
+      setGeneralError(message || "Konumunuz alınamadı.");
     } finally {
-      setIsLoading(false);
+      setIsLocating(false);
     }
   };
 
-  // Mark field as touched on blur
-  const handleBlur = (field: keyof SignUpFormData) => {
-    setTouchedFields(prev => new Set(prev).add(field));
-    validateField(field);
-  };
-
-  // Handle field change - validate if already touched
-  const handleFieldChange = (field: keyof SignUpFormData, value: string, setter: (val: string) => void) => {
-    setter(value);
-
-    // If field has been touched, validate on change
-    if (touchedFields.has(field)) {
-      // Validate with the new value
-      validateFieldWithValue(field, value);
-    }
-  };
-
-  // Validate field with a specific value (for onChange validation)
-  const validateFieldWithValue = (field: keyof SignUpFormData, value: string) => {
-    try {
-      const formData = {
-        restaurantName,
-        restaurantLocation,
-        userName,
-        email,
-        password,
-        confirmPassword,
-        latitude,
-        longitude,
-        [field]: value, // Override with new value
-      };
-
-      // Validate the entire form to get all errors
-      signUpSchema.parse(formData);
-
-      // If validation passes, clear the error for this field
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Find if there's an error for this specific field
-        const fieldError = error.issues.find((err: z.ZodIssue) => err.path[0] === field);
-
-        if (fieldError) {
-          // Set error for this field
-          setErrors(prev => ({ ...prev, [field]: fieldError.message }));
-        } else {
-          // Clear error for this field if it's now valid
-          setErrors(prev => ({ ...prev, [field]: undefined }));
-        }
-      }
-    }
-  };
-
-  // Validate individual field
-  const validateField = (field: keyof SignUpFormData) => {
-    try {
-      const formData = {
-        restaurantName,
-        restaurantLocation,
-        userName,
-        email,
-        password,
-        confirmPassword,
-        latitude,
-        longitude,
-      };
-
-      // Validate the entire form to get all errors
-      signUpSchema.parse(formData);
-
-      // If validation passes, clear the error for this field
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Find if there's an error for this specific field
-        const fieldError = error.issues.find((err: z.ZodIssue) => err.path[0] === field);
-
-        if (fieldError) {
-          // Set error for this field
-          setErrors(prev => ({ ...prev, [field]: fieldError.message }));
-        } else {
-          // Clear error for this field if it's now valid
-          setErrors(prev => ({ ...prev, [field]: undefined }));
-        }
-      }
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setErrors({});
-
-    const formData = {
-      restaurantName,
-      restaurantLocation,
-      userName,
-      email,
-      password,
-      confirmPassword,
-      latitude,
-      longitude,
-    };
-
-    // Validate all fields
-    try {
-      signUpSchema.parse(formData);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: FormErrors = {};
-        error.issues.forEach((err: z.ZodIssue) => {
-          const field = err.path[0] as keyof SignUpFormData;
-          newErrors[field] = err.message;
-        });
-        setErrors(newErrors);
-        return;
-      }
-    }
-
-    // Submit to API using FormData
-    setIsLoading(true);
+  const onSubmit = async (data: SignUpFormData) => {
+    setGeneralError("");
+    const formData = new FormData();
+    formData.append("username", data.userName.trim());
+    formData.append("email", data.email.trim());
+    formData.append("password", data.password);
+    formData.append("restaurantName", data.restaurantName.trim());
+    formData.append("restaurantLocation", data.restaurantLocation.trim());
+    formData.append("latitude", data.latitude);
+    formData.append("longitude", data.longitude);
+    if (profilePhoto) formData.append("profilePhoto", profilePhoto);
+    if (restaurantLogo) formData.append("restaurantLogo", restaurantLogo);
 
     try {
-      const formData = new FormData();
-      formData.append('username', userName);
-      formData.append('email', email);
-      formData.append('password', password);
-      formData.append('restaurantName', restaurantName);
-      formData.append('restaurantLocation', restaurantLocation);
-      formData.append('latitude', latitude);
-      formData.append('longitude', longitude);
-
-      // Add optional image files
-      if (profilePhoto) {
-        formData.append('profilePhoto', profilePhoto);
-      }
-      if (restaurantLogo) {
-        formData.append('restaurantLogo', restaurantLogo);
-      }
-
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
+      const response = await fetch("/api/auth/signup", { method: "POST", body: formData });
+      const responseData = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        // Handle API errors - backend returns error message in "error" field
-        const errorMessage = data.error || data.message || "An error occurred. Please try again.";
-        setErrors({ general: errorMessage });
+        setGeneralError(responseData.error || responseData.message || "Başvuru gönderilemedi. Lütfen tekrar deneyin.");
         return;
       }
 
-      // Success - HTTP-only cookie is automatically set by the backend
-      // No need to manually store the token - it's already in the secure cookie
-
-      // Clear form
-      setRestaurantName("");
-      setRestaurantLocation("");
-      setUserName("");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setLatitude("");
-      setLongitude("");
-      setProfilePhoto(null);
-      setProfilePhotoPreview(null);
-      setRestaurantLogo(null);
-      setRestaurantLogoPreview(null);
-
-      // Show success message
       setShowSuccess(true);
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        router.replace('/dashboard');
-      }, 1500);
-
-    } catch (error) {
-      setErrors({
-        general: "Ağ Hatası. Lütfen daha sonra tekrar deneyin."
-      });
-    } finally {
-      setIsLoading(false);
+    } catch {
+      setGeneralError("Ağ bağlantısı kurulamadı. Lütfen daha sonra tekrar deneyin.");
     }
   };
 
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-  // Let the form's onSubmit handle the actual submission.
-  // If you prefer to programmatically submit after validation, uncomment:
-  // form.requestSubmit();
+    // Never allow an implicit submit (for example Enter or a reconciled button)
+    // to bypass the review step.
+    if (currentStep !== steps.length - 1) {
+      void handleNext();
+      return;
+    }
+
+    if (!reviewConfirmed) {
+      setReviewError("Başvuruyu göndermeden önce bilgilerin doğru olduğunu onaylayın.");
+      return;
+    }
+
+    setReviewError("");
+    void handleSubmit(onSubmit)(event);
+  };
+
+  const renderUploadCard = (
+    kind: UploadKind,
+    label: string,
+    description: string,
+    preview: string | null,
+    file: File | null,
+    inputRef: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    const inputId = `${kind}-input`;
+    const errorId = `${kind}-error`;
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="font-bold text-gray-900">{label}</p>
+            <p className="mt-1 text-sm leading-5 text-gray-500">{description}</p>
+          </div>
+          <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-500 shadow-sm">Opsiyonel</span>
+        </div>
+
+        {preview ? (
+          <div className="relative h-40 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <Image src={preview} alt={`${label} önizlemesi`} fill unoptimized className="object-cover" />
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent px-3 pb-3 pt-8 text-white">
+              <span className="min-w-0 truncate text-sm font-medium">{file?.name}</span>
+              <div className="flex shrink-0 gap-2">
+                <button type="button" onClick={() => inputRef.current?.click()} disabled={isSubmitting} className="inline-flex h-9 items-center justify-center rounded-lg bg-white/95 px-3 text-xs font-bold text-gray-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                  Değiştir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeImage(kind)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 text-gray-800 transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  aria-label={`${label} görselini kaldır`}
+                  disabled={isSubmitting}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={isSubmitting}
+            aria-describedby={uploadErrors[kind] ? errorId : undefined}
+            className={`flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed bg-white px-4 text-center transition hover:border-secondary-400 hover:bg-pink-50/40 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500 ${uploadErrors[kind] ? "border-red-400" : "border-orange-300"}`}
+          >
+            <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+              <Upload className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="font-semibold text-gray-800">Görsel seçin</span>
+            <span className="mt-1 text-sm text-gray-500">JPEG, PNG, GIF veya WebP · Maks. 5 MB</span>
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          id={inputId}
+          type="file"
+          className="hidden"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={(event) => handleImageChange(kind, event.target.files?.[0])}
+          aria-describedby={uploadErrors[kind] ? errorId : undefined}
+          disabled={isSubmitting}
+        />
+        {uploadErrors[kind] && (
+          <p id={errorId} className="mt-2 text-sm font-medium text-red-600" role="alert">
+            {uploadErrors[kind]}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div
-      className="min-h-screen flex justify-center items-center"
-      style={{
-        fontFamily: "'Pontano Sans', sans-serif",
-        background: "linear-gradient(135deg, #f8a45a 0%, #fbd0a9 35%, #ee46a2 100%)",
-      }}
-    >
-      <div className="w-full max-w-md bg-white/95 rounded-2xl shadow-2xl p-8 md:p-12 my-4">
-        <Link href='/' className="text-xl text-accent-500 font-bold hover:opacity-80 transition block text-center mb-4">
-          EasyOrder
-        </Link>
-        <h1 className="text-2xl md:text-3xl mb-2 font-bold text-center text-text-500">
-          Hesabını Oluştur
-        </h1>
-        <h2 className="subtitle mb-8 text-base md:text-lg text-center text-secondary-500" >
-          Lütfen Aşağıdaki Bilgileri Doldurun
-        </h2>
+    <div className="relative min-h-screen overflow-hidden bg-[#fffaf6] px-4 py-6 text-gray-900 sm:px-6 sm:py-10 lg:px-8">
+      <div className="pointer-events-none absolute -left-32 top-12 h-80 w-80 rounded-full bg-primary-200/45 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute -right-36 bottom-10 h-96 w-96 rounded-full bg-secondary-100/60 blur-3xl" aria-hidden="true" />
 
-        {/* General error message */}
-        {errors.general && (
-          <div className="mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg text-red-700 text-sm">
-            {errors.general}
-          </div>
-        )}
+      <div className="relative mx-auto max-w-6xl">
+        <header className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
+          <Link href="/" className="group inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary-500" aria-label="EasyOrder ana sayfa">
+            <span className="text-2xl font-bold tracking-[-0.03em] text-gray-950 sm:text-[1.7rem]">EasyOrder</span>
+            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-secondary-500 transition-transform motion-safe:group-hover:scale-125" aria-hidden="true" />
+          </Link>
+          <Link href="/log-in" className="rounded-lg px-2 py-2 text-right text-sm font-bold text-gray-600 transition hover:bg-white hover:text-secondary-600 focus-visible:outline-2 focus-visible:outline-secondary-500">
+            <span className="hidden sm:inline">Zaten hesabınız var mı? </span><span className="text-secondary-600">Giriş yapın</span>
+          </Link>
+        </header>
 
-        {/* Success message */}
-        {showSuccess && (
-          <div className="mb-6 p-4 bg-green-50 border-2 border-green-400 rounded-lg text-green-700 text-sm font-medium text-center">
-            ✓ Hesabınız Başarıyla Oluşturuldu
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group mb-5">
-            <label htmlFor="restaurantName" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Restoran Adı
-            </label>
-            <input
-              onChange={(e) => handleFieldChange('restaurantName', e.target.value, setRestaurantName)}
-              onBlur={() => handleBlur('restaurantName')}
-              value={restaurantName}
-              type="text"
-              id="restaurantName"
-              placeholder="Cafe Amo"
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.restaurantName && touchedFields.has('restaurantName')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
-            {errors.restaurantName && touchedFields.has('restaurantName') && (
-              <p className="mt-1 text-sm text-red-600">{errors.restaurantName}</p>
-            )}
-          </div>
-
-          {/* Image Upload Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            {/* Profile Photo Upload */}
-            <div className="form-group">
-              <label className="block mb-2 font-medium" style={{ color: "#683817" }}>
-                Profil Fotoğrafı <span className="text-text-300 text-sm">(Opsiyonel)</span>
-              </label>
-              <div className="relative">
-                {profilePhotoPreview ? (
-                  <div className="relative w-full h-32 border-2 border-[#F8645A] rounded-lg overflow-hidden">
-                    <Image
-                      src={profilePhotoPreview}
-                      alt="Profile preview"
-                      fill
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveProfilePhoto}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition"
-                      disabled={isLoading}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="profilePhoto"
-                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${errors.profilePhoto ? 'border-red-500' : 'border-[#F8645A]'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <p className="text-xs text-text-300">Yüklemek için tıklayın</p>
-                    </div>
-                    <input
-                      ref={profilePhotoRef}
-                      id="profilePhoto"
-                      type="file"
-                      className="hidden"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleProfilePhotoChange}
-                      disabled={isLoading}
-                    />
-                  </label>
-                )}
-              </div>
-              {errors.profilePhoto && (
-                <p className="mt-1 text-sm text-red-600">{errors.profilePhoto}</p>
-              )}
-            </div>
-
-            {/* Restaurant Logo Upload */}
-            <div className="form-group">
-              <label className="block mb-2 font-medium" style={{ color: "#683817" }}>
-                Restoran Logosu <span className="text-text-300 text-sm">(Opsiyonel)</span>
-              </label>
-              <div className="relative">
-                {restaurantLogoPreview ? (
-                  <div className="relative w-full h-32 border-2 border-[#F8645A] rounded-lg overflow-hidden">
-                    <Image
-                      src={restaurantLogoPreview}
-                      alt="Restaurant logo preview"
-                      fill
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveRestaurantLogo}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition"
-                      disabled={isLoading}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="restaurantLogo"
-                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-[#E11383] transition ${errors.restaurantLogo ? 'border-red-500' : 'border-[#F8645A]'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg className="w-8 h-8 mb-2 text-[#F8645A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="text-xs text-text-300">Yüklemek için tıklayın</p>
-                    </div>
-                    <input
-                      ref={restaurantLogoRef}
-                      id="restaurantLogo"
-                      type="file"
-                      className="hidden"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleRestaurantLogoChange}
-                      disabled={isLoading}
-                    />
-                  </label>
-                )}
-              </div>
-              {errors.restaurantLogo && (
-                <p className="mt-1 text-sm text-red-600">{errors.restaurantLogo}</p>
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-text-300 mb-5 -mt-3">Maksimum dosya boyutu: 5MB. Desteklenen formatlar: JPEG, PNG, GIF, WebP</p>
-
-          <div className="form-group mb-5">
-            <label htmlFor="restaurantLocation" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Restoran Lokasyonu
-            </label>
-            <input
-              onChange={(e) => handleFieldChange('restaurantLocation', e.target.value, setRestaurantLocation)}
-              onBlur={() => handleBlur('restaurantLocation')}
-              value={restaurantLocation}
-              type="text"
-              id="restaurantLocation"
-              placeholder="Örnek: Istanbul, Besiktas"
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.restaurantLocation && touchedFields.has('restaurantLocation')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
-            {errors.restaurantLocation && touchedFields.has('restaurantLocation') && (
-              <p className="mt-1 text-sm text-red-600">{errors.restaurantLocation}</p>
-            )}
-          </div>
-
-          <div className="form-group mb-5">
-            <label htmlFor="ownerName" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Kullanıcı Adı
-            </label>
-            <input
-              onChange={(e) => handleFieldChange('userName', e.target.value, setUserName)}
-              onBlur={() => handleBlur('userName')}
-              value={userName}
-              type="text"
-              id="ownerName"
-              placeholder=" "
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.userName && touchedFields.has('userName')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
-            {errors.userName && touchedFields.has('userName') && (
-              <p className="mt-1 text-sm text-red-600">{errors.userName}</p>
-            )}
-          </div>
-          <div className="form-group mb-5">
-            <label htmlFor="email" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Email
-            </label>
-            <input
-              onChange={(e) => handleFieldChange('email', e.target.value, setEmail)}
-              onBlur={() => handleBlur('email')}
-              value={email}
-              type="email"
-              id="email"
-              placeholder="amo@gmail.com"
-              className={`w-full p-3 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.email && touchedFields.has('email')
-                ? 'border-red-500'
-                : 'border-[#F8645A]'
-                }`}
-              disabled={isLoading}
-              required
-            />
-            {errors.email && touchedFields.has('email') && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
-          </div>
-          <div className="form-group mb-5">
-            <label htmlFor="password" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Şifre
-            </label>
+        <main className="grid overflow-hidden rounded-[2rem] border border-orange-100 bg-white shadow-[0_28px_80px_-42px_rgba(104,56,23,0.45)] lg:grid-cols-[0.36fr_0.64fr]" aria-hidden={showSuccess}>
+          <aside className="relative overflow-hidden bg-gray-950 px-6 py-8 text-white sm:px-9 lg:flex lg:min-h-[720px] lg:flex-col lg:justify-between lg:px-10 lg:py-12">
+            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border-[42px] border-white/[0.06]" aria-hidden="true" />
             <div className="relative">
-              <input
-                onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
-                onBlur={() => handleBlur('password')}
-                value={password}
-                type={showPassword ? "text" : "password"}
-                id="password"
-                className={`w-full p-3 pr-12 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.password && touchedFields.has('password')
-                  ? 'border-red-500'
-                  : 'border-[#F8645A]'
-                  }`}
-                disabled={isLoading}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-300 hover:text-text-500 transition"
-                disabled={isLoading}
-              >
-                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-              </button>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-orange-200">
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                Güvenli başvuru
+              </span>
+              <h1 className="mt-5 max-w-sm text-3xl font-bold leading-tight tracking-[-0.025em] sm:text-4xl">Restoranınızı dijital siparişe hazırlayın.</h1>
+              <p className="mt-4 max-w-md leading-7 text-gray-300">Bilgilerinizi adım adım tamamlayın. Başvurunuz ekibimiz tarafından incelendikten sonra hesabınız kullanıma açılır.</p>
             </div>
-            {errors.password && touchedFields.has('password') && (
-              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-            )}
-          </div>
-          <div className="form-group mb-5">
-            <label htmlFor="confirmPassword" className="block mb-2 font-medium" style={{ color: "#683817" }}>
-              Şifre Tekrar
-            </label>
-            <div className="relative">
-              <input
-                onChange={(e) => handleFieldChange('confirmPassword', e.target.value, setConfirmPassword)}
-                onBlur={() => handleBlur('confirmPassword')}
-                value={confirmPassword}
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
-                className={`w-full p-3 pr-12 border-2 rounded-lg text-text-500 placeholder:text-text-200 focus:border-[#E11383] text-base ${errors.confirmPassword && touchedFields.has('confirmPassword')
-                  ? 'border-red-500'
-                  : 'border-[#F8645A]'
-                  }`}
-                disabled={isLoading}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-300 hover:text-text-500 transition"
-                disabled={isLoading}
-              >
-                {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-              </button>
+
+            <div className="relative mt-8 hidden space-y-4 lg:block">
+              {["Bilgileriniz adımlar arasında korunur", "Başvurunuz manuel olarak incelenir", "Onay sonrası panelinize giriş yaparsınız"].map((item) => (
+                <div key={item} className="flex items-center gap-3 text-sm font-medium text-gray-200">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-500 text-gray-950"><Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /></span>
+                  {item}
+                </div>
+              ))}
             </div>
-            {errors.confirmPassword && touchedFields.has('confirmPassword') && (
-              <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-            )}
-          </div>
-          <div className="my-6">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-lg font-semibold text-text-500">Restoran Lokasyonunuzu İşaretleyin</p>
-                <p className="text-sm text-text-300">Haritaya tıklayın veya konum bilginizi kullanın</p>
+          </aside>
+
+          <section className="px-5 py-7 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
+            <div className="mb-8 lg:hidden">
+              <div className="mb-2 flex items-center justify-between text-sm font-bold">
+                <span className="text-secondary-600">Adım {currentStep + 1} / {steps.length}</span>
+                <span className="text-gray-500">%{Math.round(progress)} tamamlandı</span>
               </div>
-              <button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                className="px-3 py-2 text-sm font-semibold text-white bg-[#F8645A] rounded-lg hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading}
-              >
-                {isLoading ? "...Alınıyor..." : "Konumumu Kullan"}
-              </button>
-            </div>
-            {errors.general && (
-              <div className="mb-3 p-3 bg-orange-50 border border-orange-300 rounded-lg">
-                <p className="text-sm text-orange-800 font-medium">⚠️ {errors.general}</p>
-                <p className="text-xs text-orange-700 mt-1">Lütfen haritaya tıklayarak restoranınızın konumunu manuel olarak seçin.</p>
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={currentStep + 1} aria-label="Başvuru ilerlemesi">
+                <div className="h-full rounded-full bg-linear-to-r from-primary-500 to-secondary-500 transition-[width] duration-300" style={{ width: `${progress}%` }} />
               </div>
-            )}
-            <LocationPicker
-              latitude={latitude}
-              longitude={longitude}
-              onChange={handleLocationSelect}
-            />
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-
-              {errors.latitude && touchedFields.has("latitude") && (
-                <p className="mt-1 text-sm text-red-600">{errors.latitude}</p>
-              )}
-
-              {errors.longitude && touchedFields.has("longitude") && (
-                <p className="mt-1 text-sm text-red-600">{errors.longitude}</p>
-              )}
             </div>
-          </div>
-          <button
-            type="submit"
-            className="w-full py-3 bg-[#F8645A] text-white rounded-lg text-lg font-bold mb-5 hover:bg-[#E11383] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Lütfen Bekleyiniz...' : 'Kayıt Ol'}
-          </button>
 
-          {/*<button
-            type="button"
-            className="w-full py-3 bg-white border-2 border-[#F8645A] rounded-lg text-[#F8645A] text-base flex items-center justify-center gap-2 hover:border-[#E11383] hover:text-[#E11383] transition"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Sign Up with Google
-          </button>*/}
-        </form>
-        <div className="text-center mt-8 text-text-500 text-base">
-          Zaten hesabınız var mı? <a href="/log-in" className="text-[#E11383] font-bold">Giriş Yap</a>
-        </div>
+            <ol className="mb-10 hidden grid-cols-4 gap-2 lg:grid" aria-label="Başvuru adımları">
+              {steps.map((step, index) => {
+                const isActive = index === currentStep;
+                const isCompleted = index < currentStep || index < highestStep;
+                const isAvailable = index <= highestStep;
+                return (
+                  <li key={step.shortTitle}>
+                    <button type="button" onClick={() => goToStep(index)} disabled={!isAvailable || isSubmitting} aria-current={isActive ? "step" : undefined} className="group w-full text-left disabled:cursor-not-allowed">
+                      <span className={`mb-3 block h-1.5 rounded-full transition-colors ${isActive || isCompleted ? "bg-secondary-500" : "bg-gray-200"}`} />
+                      <span className="flex items-center gap-2">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${isActive ? "bg-secondary-500 text-white" : isCompleted ? "bg-pink-100 text-secondary-700" : "bg-gray-100 text-gray-400"}`}>
+                          {isCompleted && !isActive ? <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /> : index + 1}
+                        </span>
+                        <span className={`text-sm font-bold ${isActive ? "text-gray-950" : "text-gray-500"}`}>{step.shortTitle}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <div className="mx-auto max-w-2xl">
+              <div className="mb-7">
+                <p className="mb-2 text-sm font-bold uppercase tracking-[0.16em] text-secondary-600">Adım {currentStep + 1}</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold tracking-tight text-gray-950 outline-none sm:text-3xl">{steps[currentStep].title}</h2>
+                <p className="mt-3 leading-7 text-gray-600">{steps[currentStep].description}</p>
+              </div>
+
+              <form onSubmit={handleFormSubmit} noValidate>
+                {currentStep === 0 && (
+                  <div className="space-y-5">
+                    <FormField label="Kullanıcı adı" id="userName" error={errors.userName?.message} icon={<UserRound className="h-5 w-5" />}>
+                      <input id="userName" type="text" autoComplete="username" placeholder="Örn. cafeamo" disabled={isSubmitting} aria-invalid={Boolean(errors.userName)} aria-describedby={errors.userName ? "userName-error" : undefined} className={inputClass(Boolean(errors.userName))} {...register("userName")} />
+                    </FormField>
+
+                    <FormField label="E-posta adresi" id="email" error={errors.email?.message} icon={<Mail className="h-5 w-5" />}>
+                      <input id="email" type="email" autoComplete="email" placeholder="ornek@restoran.com" disabled={isSubmitting} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined} className={inputClass(Boolean(errors.email))} {...register("email")} />
+                    </FormField>
+
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <FormField label="Şifre" id="password" error={errors.password?.message} icon={<LockKeyhole className="h-5 w-5" />}>
+                        <input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" disabled={isSubmitting} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "password-error password-rules" : "password-rules"} className={`${inputClass(Boolean(errors.password))} pr-11`} {...register("password")} />
+                        <PasswordToggle visible={showPassword} onClick={() => setShowPassword((visible) => !visible)} label="Şifre" />
+                      </FormField>
+
+                      <FormField label="Şifre tekrarı" id="confirmPassword" error={errors.confirmPassword?.message} icon={<LockKeyhole className="h-5 w-5" />}>
+                        <input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" disabled={isSubmitting} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined} className={`${inputClass(Boolean(errors.confirmPassword))} pr-11`} {...register("confirmPassword")} />
+                        <PasswordToggle visible={showConfirmPassword} onClick={() => setShowConfirmPassword((visible) => !visible)} label="Şifre tekrarını" />
+                      </FormField>
+                    </div>
+
+                    <div id="password-rules" className="grid gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2" aria-live="polite">
+                      {passwordChecks.map((check) => (
+                        <div key={check.label} className={`flex items-center gap-2 text-sm font-medium ${check.valid ? "text-green-700" : "text-gray-500"}`}>
+                          <span className={`flex h-5 w-5 items-center justify-center rounded-full ${check.valid ? "bg-green-100" : "bg-gray-200"}`}><Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" /></span>
+                          {check.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 1 && (
+                  <div className="space-y-6">
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <FormField label="Restoran adı" id="restaurantName" error={errors.restaurantName?.message} icon={<Store className="h-5 w-5" />}>
+                        <input id="restaurantName" type="text" autoComplete="organization" placeholder="Örn. Cafe Amo" disabled={isSubmitting} aria-invalid={Boolean(errors.restaurantName)} aria-describedby={errors.restaurantName ? "restaurantName-error" : undefined} className={inputClass(Boolean(errors.restaurantName))} {...register("restaurantName")} />
+                      </FormField>
+                      <FormField label="Adres / bölge" id="restaurantLocation" error={errors.restaurantLocation?.message} icon={<MapPin className="h-5 w-5" />}>
+                        <input id="restaurantLocation" type="text" autoComplete="street-address" placeholder="Örn. Beşiktaş, İstanbul" disabled={isSubmitting} aria-invalid={Boolean(errors.restaurantLocation)} aria-describedby={errors.restaurantLocation ? "restaurantLocation-error" : undefined} className={inputClass(Boolean(errors.restaurantLocation))} {...register("restaurantLocation")} />
+                      </FormField>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {renderUploadCard("restaurantLogo", "Restoran logosu", "Menünüzde ve yönetim panelinizde kullanılabilir.", restaurantLogoPreview, restaurantLogo, restaurantLogoRef)}
+                      {renderUploadCard("profilePhoto", "Profil fotoğrafı", "Yönetici hesabınızı kişiselleştirir.", profilePhotoPreview, profilePhoto, profilePhotoRef)}
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 2 && (
+                  <div className="space-y-5">
+                    <div className="flex flex-col gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-orange-700 shadow-sm"><LocateFixed className="h-5 w-5" aria-hidden="true" /></span>
+                        <div><p className="font-bold text-gray-900">Hızlı konum seçimi</p><p className="mt-1 text-sm leading-5 text-gray-600">Tarayıcınızın konum iznini kullanabilirsiniz.</p></div>
+                      </div>
+                      <button type="button" onClick={handleUseCurrentLocation} disabled={isLocating || isSubmitting} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                        {isLocating ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LocateFixed className="h-4 w-4" aria-hidden="true" />}
+                        {isLocating ? "Konum alınıyor" : "Konumumu kullan"}
+                      </button>
+                    </div>
+
+                    {generalError && <div className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-900" role="alert"><p className="font-bold">Konum alınamadı</p><p className="mt-1">{generalError} Haritaya dokunarak konumu manuel seçebilirsiniz.</p></div>}
+
+                    <LocationPicker latitude={values.latitude} longitude={values.longitude} onChange={handleLocationSelect} />
+
+                    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${values.latitude && values.longitude ? "border-green-200 bg-green-50 text-green-800" : errors.latitude || errors.longitude ? "border-red-200 bg-red-50 text-red-700" : "border-gray-200 bg-gray-50 text-gray-600"}`}>
+                      {values.latitude && values.longitude ? <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" /> : <MapPin className="h-5 w-5 shrink-0" aria-hidden="true" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold">{values.latitude && values.longitude ? "Konum seçildi" : "Haritadan bir konum seçin"}</p>
+                        {values.latitude && values.longitude && <p className="mt-0.5 truncate text-sm">{values.latitude}, {values.longitude}</p>}
+                        {(errors.latitude || errors.longitude) && <p className="mt-0.5 text-sm" role="alert">Restoran konumu gereklidir.</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 3 && (
+                  <div className="space-y-4">
+                    <ReviewCard icon={<CircleUserRound className="h-5 w-5" aria-hidden="true" />} title="Hesap bilgileri" onEdit={() => goToStep(0)}>
+                      <p className="font-semibold text-gray-900">{values.userName}</p><p className="mt-1 break-all text-sm text-gray-600">{values.email}</p><p className="mt-2 text-sm text-gray-500">Şifreniz güvenli biçimde kaydedilecek.</p>
+                    </ReviewCard>
+                    <ReviewCard icon={<Store className="h-5 w-5" aria-hidden="true" />} title="Restoran bilgileri" onEdit={() => goToStep(1)}>
+                      <p className="font-semibold text-gray-900">{values.restaurantName}</p><p className="mt-1 text-sm text-gray-600">{values.restaurantLocation}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-gray-600"><span className="rounded-full bg-gray-100 px-2.5 py-1">{restaurantLogo ? "Logo eklendi" : "Logo eklenmedi"}</span><span className="rounded-full bg-gray-100 px-2.5 py-1">{profilePhoto ? "Profil fotoğrafı eklendi" : "Profil fotoğrafı eklenmedi"}</span></div>
+                    </ReviewCard>
+                    <ReviewCard icon={<MapPin className="h-5 w-5" aria-hidden="true" />} title="Restoran konumu" onEdit={() => goToStep(2)}>
+                      <p className="font-semibold text-gray-900">Konum haritada işaretlendi</p><p className="mt-1 text-sm text-gray-600">{values.latitude}, {values.longitude}</p>
+                    </ReviewCard>
+                    <div className="flex items-start gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-4 text-sm leading-6 text-orange-950"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-700" aria-hidden="true" /><p>Başvurunuz gönderildikten sonra ekibimiz restoran bilgilerinizi inceleyecek. Onay tamamlandığında giriş yapabilirsiniz.</p></div>
+                    <div className={`rounded-2xl border p-4 ${reviewError ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
+                      <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={reviewConfirmed}
+                          onChange={(event) => {
+                            setReviewConfirmed(event.target.checked);
+                            if (event.target.checked) setReviewError("");
+                          }}
+                          aria-invalid={Boolean(reviewError)}
+                          aria-describedby={reviewError ? "review-confirmation-error" : undefined}
+                          className="checkbox checkbox-sm mt-0.5 border-gray-300 [--chkbg:var(--color-secondary-500)] [--chkfg:white]"
+                        />
+                        <span className="text-sm font-semibold leading-6 text-gray-800">Yukarıdaki bilgilerin doğru olduğunu ve başvurunun incelemeye gönderilmesini onaylıyorum.</span>
+                      </label>
+                      {reviewError && <p id="review-confirmation-error" className="mt-2 pl-8 text-sm font-medium text-red-600" role="alert">{reviewError}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {generalError && currentStep !== 2 && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">{generalError}</div>}
+
+                <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  {currentStep > 0 ? (
+                    <button type="button" onClick={handleBack} disabled={isSubmitting} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 font-bold text-gray-700 transition hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Geri</button>
+                  ) : <span />}
+
+                  {currentStep < steps.length - 1 ? (
+                    <button key="next-step" type="button" onClick={(event) => { event.preventDefault(); void handleNext(); }} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-secondary-500 px-6 font-bold text-white shadow-lg shadow-pink-200/60 transition hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">{currentStep === steps.length - 2 ? "Bilgileri kontrol et" : "Devam et"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+                  ) : (
+                    <button key="submit-application" type="submit" disabled={isSubmitting} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-secondary-500 px-6 font-bold text-white shadow-lg shadow-pink-200/60 transition hover:bg-secondary-600 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                      {isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-5 w-5" aria-hidden="true" />}{isSubmitting ? "Başvuru gönderiliyor" : "Başvuruyu gönder"}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </section>
+        </main>
       </div>
-      {/* Prevent gray background on autofill/autocomplete */}
-      <style jsx>{`
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px white inset !important;
-          -webkit-text-fill-color: #683817 !important;
-          transition: background-color 5000s ease-in-out 0s;
-        }
-      `}</style>
+
+      {showSuccess && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/65 px-4 py-8 backdrop-blur-sm" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="success-description" onKeyDown={(event) => { if (event.key === "Tab") { event.preventDefault(); successButtonRef.current?.focus(); } }} className="w-full max-w-md rounded-[2rem] bg-white p-7 text-center shadow-2xl sm:p-9">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100 text-green-700"><CheckCircle2 className="h-8 w-8" aria-hidden="true" /></div>
+            <h2 id="success-title" className="mt-5 text-2xl font-bold tracking-tight text-gray-950">Başvurunuz alındı</h2>
+            <p id="success-description" className="mt-3 leading-7 text-gray-600">Restoranınız manuel inceleme aşamasına alındı. Onay tamamlandıktan sonra hesabınızla giriş yapabilirsiniz.</p>
+            <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-orange-900">Durumu kontrol etmek istediğinizde giriş sayfasından hesabınızla giriş yapmayı deneyebilirsiniz.</div>
+            <button ref={successButtonRef} type="button" onClick={() => router.replace("/")} className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary-500 px-5 font-bold text-white transition hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">Anladım, ana sayfaya dön<ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
-export default SignUpPage;
+function FormField({ label, id, error, icon, children }: { label: string; id: string; error?: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm font-bold text-gray-800">{label}</label>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-gray-400" aria-hidden="true">{icon}</span>
+        {children}
+      </div>
+      {error && <p id={`${id}-error`} className="mt-2 text-sm font-medium text-red-600" role="alert">{error}</p>}
+    </div>
+  );
+}
+
+function PasswordToggle({ visible, onClick, label }: { visible: boolean; onClick: () => void; label: string }) {
+  return (
+    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-secondary-500" aria-label={visible ? `${label} gizle` : `${label} göster`}>
+      {visible ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+    </button>
+  );
+}
+
+function ReviewCard({ icon, title, onEdit, children }: { icon: React.ReactNode; title: string; onEdit: () => void; children: React.ReactNode }) {
+  return (
+    <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">{icon}</span><h3 className="font-bold text-gray-950">{title}</h3></div>
+        <button type="button" onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-bold text-secondary-600 transition hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-secondary-500"><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Düzenle</button>
+      </div>
+      <div className="pl-[3.25rem]">{children}</div>
+    </article>
+  );
+}

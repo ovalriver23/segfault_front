@@ -268,7 +268,7 @@ export default async function Home() {
   const cookieStore = await cookies();
   const hasSession = !!cookieStore.get("JWT_TOKEN")?.value;
   const user = hasSession ? await getCurrentUser(cookieStore) : null;
-  const isLoggedIn = hasSession;
+  const isLoggedIn = Boolean(user);
   const panelHref = getPanelHref(user?.role);
   const displayName = user?.username?.trim();
   const welcomeContent = getWelcomeContent(user);
