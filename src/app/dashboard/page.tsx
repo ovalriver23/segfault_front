@@ -81,7 +81,7 @@ const parseOrderDate = (value: string) => {
     Number(year),
     Number(month) - 1,
     Number(day),
-    Number(hour) - 3,
+    Number(hour),
     Number(minute),
     Number(second),
   );
