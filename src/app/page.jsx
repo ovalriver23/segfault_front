@@ -17,6 +17,71 @@ import {
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+
+async function getCurrentUser(cookieStore) {
+  const cookieHeader = cookieStore
+    .getAll()
+    .map(({ name, value }) => `${name}=${value}`)
+    .join("; ");
+
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/account/me`, {
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        Cookie: cookieHeader,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+function getPanelHref(role) {
+  if (role === "SUPER_ADMIN") return "/Superadmin";
+  if (role === "STAFF") return "/waiter/tables";
+  return "/dashboard";
+}
+
+function getWelcomeContent(user) {
+  if (user?.role === "SUPER_ADMIN") {
+    return {
+      emoji: "🛡️",
+      emojiLabel: "Süper yönetici",
+      message: "Yönetim merkeziniz hazır; kaldığınız yerden devam edin.",
+    };
+  }
+
+  if (user?.role === "STAFF") {
+    return {
+      emoji: "🛎️",
+      emojiLabel: "Servis zili",
+      message: "Servis ekranınız hazır; kaldığınız yerden devam edin.",
+    };
+  }
+
+  if (user?.role === "MANAGER") {
+    return {
+      emoji: "🧑‍🍳",
+      emojiLabel: "Şef",
+      message: user.restaurantName
+        ? `${user.restaurantName} yönetim paneliniz hazır.`
+        : "Restoran yönetim paneliniz hazır; kaldığınız yerden devam edin.",
+    };
+  }
+
+  return {
+    emoji: "👋",
+    emojiLabel: "Selamlama",
+    message: "Kaldığınız yerden devam etmeye hazırsınız.",
+  };
+}
+
 const capabilities = [
   { icon: QrCode, label: "Masaya özel QR menü" },
   { icon: Bell, label: "Anlık sipariş akışı" },
@@ -201,11 +266,16 @@ function DashboardPreview() {
 
 export default async function Home() {
   const cookieStore = await cookies();
-  const isLoggedIn = !!cookieStore.get('JWT_TOKEN')?.value;
+  const hasSession = !!cookieStore.get("JWT_TOKEN")?.value;
+  const user = hasSession ? await getCurrentUser(cookieStore) : null;
+  const isLoggedIn = hasSession;
+  const panelHref = getPanelHref(user?.role);
+  const displayName = user?.username?.trim();
+  const welcomeContent = getWelcomeContent(user);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white text-gray-900">
-      <Navbar isLoggedIn={isLoggedIn} />
+      <Navbar isLoggedIn={isLoggedIn} panelHref={panelHref} />
 
       <main>
         <section className="relative isolate overflow-hidden bg-[#fffaf6] px-4 pb-16 pt-28 sm:px-8 sm:pb-20 sm:pt-32 lg:px-16 lg:pb-24 lg:pt-36">
@@ -214,6 +284,24 @@ export default async function Home() {
 
           <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.88fr_1.12fr] lg:gap-10 xl:gap-16">
             <div className="max-w-2xl">
+              {isLoggedIn && (
+                <div className="mb-6 inline-flex max-w-full items-center gap-3 rounded-2xl border border-orange-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur">
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary-100 to-secondary-100 text-xl"
+                    role="img"
+                    aria-label={welcomeContent.emojiLabel}
+                  >
+                    {welcomeContent.emoji}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-gray-900">
+                      Tekrar hoş geldiniz{displayName ? `, ${displayName}` : ""}!
+                    </p>
+                    <p className="text-sm text-gray-600">{welcomeContent.message}</p>
+                  </div>
+                </div>
+              )}
+
               <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-[-0.03em] text-gray-950 sm:text-5xl lg:text-6xl xl:text-[4.35rem]">
                 Masadan yönetime,
                 <span className="block bg-linear-to-r from-primary-600 via-orange-500 to-secondary-600 bg-clip-text text-transparent">
@@ -227,7 +315,7 @@ export default async function Home() {
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 {isLoggedIn ? (
-                  <Link href="/dashboard" className="btn h-12 min-h-12 rounded-xl border-none bg-secondary-500 px-6 text-base font-semibold text-white shadow-lg shadow-pink-200/70 hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+                  <Link href={panelHref} className="btn h-12 min-h-12 rounded-xl border-none bg-secondary-500 px-6 text-base font-semibold text-white shadow-lg shadow-pink-200/70 hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
                     Panele Git
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
@@ -391,7 +479,7 @@ export default async function Home() {
                 <p className="mt-4 text-lg leading-8 text-pink-50">Menüden masaya, siparişten rapora kadar ihtiyaç duyduğunuz araçlar EasyOrder’da.</p>
               </div>
               <Link
-                href={isLoggedIn ? "/dashboard" : "/sign-up"}
+                href={isLoggedIn ? panelHref : "/sign-up"}
                 className="btn h-12 min-h-12 shrink-0 rounded-xl border-none bg-white px-6 text-base font-bold text-secondary-600 shadow-lg hover:bg-pink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 {isLoggedIn ? "Panele Git" : "Hemen Başla"}

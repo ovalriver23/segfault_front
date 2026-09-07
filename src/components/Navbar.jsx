@@ -11,7 +11,7 @@ const navigation = [
   { label: "Detaylı Bilgi", href: "/LearnMore" },
 ];
 
-export default function Navbar({ isLoggedIn = false }) {
+export default function Navbar({ isLoggedIn = false, panelHref = "/dashboard" }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Navbar({ isLoggedIn = false }) {
 
         <div className="hidden items-center gap-2 lg:flex">
           {isLoggedIn ? (
-            <Link href="/dashboard" className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+            <Link href={panelHref} className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
               Panele Git
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -78,7 +78,7 @@ export default function Navbar({ isLoggedIn = false }) {
           </ul>
           <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4">
             {isLoggedIn ? (
-              <Link href="/dashboard" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">
+              <Link href={panelHref} onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">
                 Panele Git
               </Link>
             ) : (
