@@ -12,6 +12,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 // Order status types based on actual backend enum
 export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
+type MenuTheme = 'DEFAULT' | 'MODERN' | 'ELEGANT';
 
 export interface OrderItem {
     menuItemName: string;
@@ -119,33 +120,116 @@ function formatDateTime(dateString: string): string {
 }
 
 const celebrationParticles = [
-    { left: '8%', top: '16%', color: 'bg-amber-300', delay: 0.05, rotate: 24 },
-    { left: '18%', top: '72%', color: 'bg-emerald-300', delay: 0.18, rotate: -32 },
-    { left: '31%', top: '10%', color: 'bg-orange-300', delay: 0.3, rotate: 58 },
-    { left: '69%', top: '12%', color: 'bg-lime-300', delay: 0.12, rotate: -18 },
-    { left: '82%', top: '69%', color: 'bg-amber-200', delay: 0.24, rotate: 45 },
-    { left: '92%', top: '25%', color: 'bg-emerald-200', delay: 0.36, rotate: -48 },
+    { left: '8%', top: '16%', delay: 0.05, rotate: 24 },
+    { left: '18%', top: '72%', delay: 0.18, rotate: -32 },
+    { left: '31%', top: '10%', delay: 0.3, rotate: 58 },
+    { left: '69%', top: '12%', delay: 0.12, rotate: -18 },
+    { left: '82%', top: '69%', delay: 0.24, rotate: 45 },
+    { left: '92%', top: '25%', delay: 0.36, rotate: -48 },
 ];
 
-function ServedCelebration({ orderId, onDismiss }: { orderId: number; onDismiss: () => void }) {
+const celebrationThemeStyles = {
+    DEFAULT: {
+        background: "bg-[radial-gradient(circle_at_50%_32%,#fff7ed_0%,#ffffff_48%,#fce7f3_100%)]",
+        text: "text-gray-900",
+        eyebrow: "text-pink-600",
+        body: "text-gray-600",
+        glowStart: "bg-orange-300/30",
+        glowEnd: "bg-pink-300/25",
+        steam: "bg-orange-400/55",
+        plate: "border-orange-200 bg-white/85 shadow-[0_24px_80px_rgba(236,72,153,0.18)]",
+        button: "border-pink-400 bg-pink-500 text-white active:bg-pink-600",
+        progress: "bg-pink-500",
+        particleColors: ['#EC4899', '#F8A45A', '#FDBA74', '#F9A8D4'],
+        dishFill: '#F8A45A',
+        dishStroke: '#DB2777',
+        checkStroke: '#FFFFFF',
+        font: ""
+    },
+    MODERN: {
+        background: "bg-[radial-gradient(circle_at_50%_30%,#4a2819_0%,#1f1f1f_45%,#111111_100%)]",
+        text: "text-white",
+        eyebrow: "text-orange-400",
+        body: "text-gray-300",
+        glowStart: "bg-orange-500/25",
+        glowEnd: "bg-red-600/15",
+        steam: "bg-orange-300/60",
+        plate: "border-orange-500/30 bg-[#2d2d2d]/90 shadow-[0_24px_80px_rgba(234,88,12,0.25)]",
+        button: "border-orange-500 bg-[#ea580c] text-white active:bg-[#c2410c]",
+        progress: "bg-[#ea580c]",
+        particleColors: ['#EA580C', '#F8A45A', '#FB923C', '#FFFFFF'],
+        dishFill: '#EA580C',
+        dishStroke: '#F8A45A',
+        checkStroke: '#FFFFFF',
+        font: ""
+    },
+    ELEGANT: {
+        background: "bg-[radial-gradient(circle_at_50%_30%,#fdfbf7_0%,#f5f5dc_52%,#e6dcc3_100%)]",
+        text: "text-[#5c4033]",
+        eyebrow: "text-[#8b4513]",
+        body: "text-[#8b4513]/75",
+        glowStart: "bg-[#d2b48c]/35",
+        glowEnd: "bg-[#9C6644]/15",
+        steam: "bg-[#8b4513]/40",
+        plate: "border-[#d2b48c] bg-[#fdfbf7]/90 shadow-[0_24px_80px_rgba(92,64,51,0.16)]",
+        button: "border-[#9C6644] bg-[#9C6644] text-[#fdfbf7] active:bg-[#7f5539]",
+        progress: "bg-[#9C6644]",
+        particleColors: ['#9C6644', '#D2B48C', '#8B4513', '#E6DCC3'],
+        dishFill: '#D2B48C',
+        dishStroke: '#8B4513',
+        checkStroke: '#5C4033',
+        font: "font-serif"
+    }
+} satisfies Record<MenuTheme, {
+    background: string;
+    text: string;
+    eyebrow: string;
+    body: string;
+    glowStart: string;
+    glowEnd: string;
+    steam: string;
+    plate: string;
+    button: string;
+    progress: string;
+    particleColors: string[];
+    dishFill: string;
+    dishStroke: string;
+    checkStroke: string;
+    font: string;
+}>;
+
+function ServedCelebration({
+    orderId,
+    onDismiss,
+    theme
+}: {
+    orderId: number;
+    onDismiss: () => void;
+    theme: MenuTheme;
+}) {
     const prefersReducedMotion = useReducedMotion();
+    const styles = celebrationThemeStyles[theme];
 
     return (
         <motion.div
-            className="fixed inset-0 flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_35%,#23745d_0%,#145443_38%,#0b3029_100%)] px-6 py-10 text-white"
+            className={`fixed inset-0 flex min-h-[100dvh] items-center justify-center overflow-hidden px-6 py-10 ${styles.background} ${styles.text} ${styles.font}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: prefersReducedMotion ? 0.1 : 0.35 }}
         >
-            <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
-            <div className="absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-emerald-200/10 blur-3xl" />
+            <div className={`absolute -left-24 -top-24 h-72 w-72 rounded-full blur-3xl ${styles.glowStart}`} />
+            <div className={`absolute -bottom-28 -right-24 h-80 w-80 rounded-full blur-3xl ${styles.glowEnd}`} />
 
-            {!prefersReducedMotion && celebrationParticles.map((particle) => (
+            {!prefersReducedMotion && celebrationParticles.map((particle, index) => (
                 <motion.span
                     key={`${particle.left}-${particle.top}`}
-                    className={`absolute h-2.5 w-6 rounded-full ${particle.color}`}
-                    style={{ left: particle.left, top: particle.top }}
+                    className="absolute h-2.5 w-6 rounded-full"
+                    style={{
+                        left: particle.left,
+                        top: particle.top,
+                        backgroundColor: styles.particleColors[index % styles.particleColors.length]
+                    }}
                     initial={{ opacity: 0, y: -30, rotate: 0, scale: 0.4 }}
                     animate={{ opacity: [0, 1, 1, 0], y: [-30, 0, 18, 58], rotate: particle.rotate + 180, scale: [0.4, 1, 1, 0.7] }}
                     transition={{ duration: 3.2, delay: particle.delay, repeat: Infinity, repeatDelay: 0.7, ease: 'easeOut' }}
@@ -166,7 +250,7 @@ function ServedCelebration({ orderId, onDismiss }: { orderId: number; onDismiss:
                             {[0, 1, 2].map((steam) => (
                                 <motion.span
                                     key={steam}
-                                    className="block h-9 w-1.5 rounded-full bg-white/55 blur-[1px]"
+                                    className={`block h-9 w-1.5 rounded-full blur-[1px] ${styles.steam}`}
                                     initial={{ opacity: 0, y: 12, scaleY: 0.6 }}
                                     animate={{ opacity: [0, 0.75, 0], y: [12, -10, -24], x: [0, steam % 2 === 0 ? 5 : -5, 0], scaleY: [0.6, 1, 0.8] }}
                                     transition={{ duration: 2, delay: steam * 0.25, repeat: Infinity, ease: 'easeOut' }}
@@ -176,22 +260,22 @@ function ServedCelebration({ orderId, onDismiss }: { orderId: number; onDismiss:
                     )}
 
                     <motion.div
-                        className="flex h-36 w-36 items-center justify-center rounded-full border border-white/25 bg-white/12 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-md"
+                        className={`flex h-36 w-36 items-center justify-center rounded-full border backdrop-blur-md ${styles.plate}`}
                         animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
                         transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                     >
                         <svg viewBox="0 0 120 120" className="h-24 w-24" fill="none" aria-hidden="true">
-                            <path d="M22 73h76" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-                            <path d="M31 70c1-20 13-34 29-34s28 14 29 34H31Z" fill="#FCD34D" stroke="white" strokeWidth="4" strokeLinejoin="round" />
-                            <path d="M53 31a7 7 0 0 1 14 0" stroke="white" strokeWidth="5" strokeLinecap="round" />
-                            <path d="m47 55 8 8 18-18" stroke="#145443" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M17 83c15 7 71 7 86 0" stroke="white" strokeWidth="5" strokeLinecap="round" />
+                            <path d="M22 73h76" stroke={styles.dishStroke} strokeWidth="6" strokeLinecap="round" />
+                            <path d="M31 70c1-20 13-34 29-34s28 14 29 34H31Z" fill={styles.dishFill} stroke={styles.dishStroke} strokeWidth="4" strokeLinejoin="round" />
+                            <path d="M53 31a7 7 0 0 1 14 0" stroke={styles.dishStroke} strokeWidth="5" strokeLinecap="round" />
+                            <path d="m47 55 8 8 18-18" stroke={styles.checkStroke} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M17 83c15 7 71 7 86 0" stroke={styles.dishStroke} strokeWidth="5" strokeLinecap="round" />
                         </svg>
                     </motion.div>
                 </div>
 
                 <motion.p
-                    className="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-amber-200"
+                    className={`mb-3 text-xs font-bold uppercase tracking-[0.32em] ${styles.eyebrow}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: prefersReducedMotion ? 0 : 0.35 }}
@@ -201,21 +285,21 @@ function ServedCelebration({ orderId, onDismiss }: { orderId: number; onDismiss:
                 <h2 id="served-celebration-title" className="text-5xl font-black tracking-tight sm:text-6xl">
                     Afiyet olsun!
                 </h2>
-                <p className="mt-4 max-w-xs text-base leading-relaxed text-emerald-50/80">
+                <p className={`mt-4 max-w-xs text-base leading-relaxed ${styles.body}`}>
                     Siparişiniz masanızda. Keyifli bir yemek dileriz.
                 </p>
 
                 <button
                     type="button"
                     onClick={onDismiss}
-                    className="mt-9 min-h-12 rounded-full border border-white/25 bg-white px-8 py-3 text-sm font-bold text-emerald-900 shadow-lg transition-transform active:scale-95"
+                    className={`mt-9 min-h-12 rounded-full border px-8 py-3 text-sm font-bold shadow-lg transition-transform active:scale-95 ${styles.button}`}
                 >
                     Teşekkürler
                 </button>
             </motion.div>
 
             <motion.div
-                className="absolute bottom-0 left-0 h-1.5 bg-amber-300"
+                className={`absolute bottom-0 left-0 h-1.5 ${styles.progress}`}
                 initial={{ width: '100%' }}
                 animate={{ width: '0%' }}
                 transition={{ duration: SERVED_CELEBRATION_DURATION_MS / 1000, ease: 'linear' }}
@@ -230,7 +314,7 @@ export default function OrdersModal({
     qrToken,
     onRefresh,
     theme = 'DEFAULT'
-}: OrdersModalProps & { theme?: 'DEFAULT' | 'MODERN' | 'ELEGANT' }) {
+}: OrdersModalProps & { theme?: MenuTheme }) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -556,6 +640,18 @@ export default function OrdersModal({
                                             </div>
                                         </div>
 
+                                        {/* Temporary animation test trigger */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setServedCelebrationOrderId(order.id)}
+                                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-amber-400/70 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-600 transition-colors hover:bg-amber-400/20 active:bg-amber-400/30"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                                            </svg>
+                                            Afiyet Olsun Animasyonunu Test Et
+                                        </button>
+
                                         {/* Order Items */}
                                         <div className="space-y-2">
                                             {order.items.map((item, index) => (
@@ -699,7 +795,13 @@ export default function OrdersModal({
                 dismissServedCelebration();
             }}
             onClose={() => setServedCelebrationOrderId(null)}
-            className="m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0 outline-none backdrop:bg-slate-950/70"
+            className={`m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0 outline-none ${
+                theme === 'MODERN'
+                    ? 'backdrop:bg-black/80'
+                    : theme === 'ELEGANT'
+                        ? 'backdrop:bg-[#5c4033]/30'
+                        : 'backdrop:bg-white/70'
+            }`}
         >
             <AnimatePresence>
                 {servedCelebrationOrderId !== null && (
@@ -707,6 +809,7 @@ export default function OrdersModal({
                         key={servedCelebrationOrderId}
                         orderId={servedCelebrationOrderId}
                         onDismiss={dismissServedCelebration}
+                        theme={theme}
                     />
                 )}
             </AnimatePresence>
