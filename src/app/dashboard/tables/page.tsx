@@ -5,7 +5,7 @@
 import type { UUID } from 'crypto';
 import type QRCodeStyling from 'qr-code-styling';
 import type { CornerDotType, CornerSquareType, DotType, DrawType, Options } from 'qr-code-styling';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import jsPDF from 'jspdf';
 
@@ -50,6 +50,8 @@ interface QRCustomization {
 }
 
 const TABLE_URL_BASE = 'https://easyorder.com.tr/table';
+
+const POLLING_INTERVAL_MS = 10_000;
 
 const ORDER_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
     RECEIVED: { label: 'Alındı', className: 'bg-blue-100 text-blue-700' },
@@ -213,10 +215,97 @@ export default function Tables() {
     const qrPreviewContainerRef = useRef<HTMLDivElement>(null);
     const qrPreviewRef = useRef<QRCodeStyling | null>(null);
 
-    // Fetch tables on component mount
+    // Track whether the initial fetch has completed so polling never shows the skeleton.
+    const hasInitiallyLoaded = useRef(false);
+    // Track in-flight poll to skip overlapping requests.
+    const isPollingRef = useRef(false);
+
+    /**
+     * Fetch tables from the API.
+     * @param silent – when true the loading skeleton is NOT shown (used by the poller).
+     */
+    const fetchTables = useCallback(async (silent = false) => {
+        // Guard against overlapping silent polls.
+        if (silent && isPollingRef.current) return;
+        if (silent) isPollingRef.current = true;
+
+        try {
+            if (!silent) {
+                setIsLoading(true);
+                setFetchError('');
+            }
+
+            const response = await fetch('/api/dashboard/tables/get', {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || 'Masalar yüklenirken bir hata oluştu';
+                // Only surface the error when it's the first load; polling failures are silent.
+                if (!silent) setFetchError(errorMessage);
+                return;
+            }
+
+            const tables: Table[] = await response.json();
+            setTableList(tables);
+            // Clear any previous error once a poll succeeds.
+            if (silent) setFetchError('');
+        } catch (error) {
+            if (!silent) {
+                setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
+            }
+        } finally {
+            if (!silent) setIsLoading(false);
+            if (silent) isPollingRef.current = false;
+            hasInitiallyLoaded.current = true;
+        }
+    }, []);
+
+    // Initial fetch on mount.
     useEffect(() => {
         fetchTables();
-    }, []);
+    }, [fetchTables]);
+
+    // Background polling – pauses when a modal is open or the tab is hidden.
+    useEffect(() => {
+        const isModalOpen = () =>
+            !!editingTable || !!selectedTable || isGeneratingPDF;
+
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+
+        const startPolling = () => {
+            stopPolling();
+            intervalId = setInterval(() => {
+                if (document.hidden || isModalOpen()) return;
+                fetchTables(true);
+            }, POLLING_INTERVAL_MS);
+        };
+
+        const stopPolling = () => {
+            if (intervalId !== null) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                // Tab just became visible – fetch immediately, then restart the interval.
+                fetchTables(true);
+                startPolling();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        startPolling();
+
+        return () => {
+            stopPolling();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [fetchTables, editingTable, selectedTable, isGeneratingPDF]);
 
     // Keep the modal preview in sync with the selected QR appearance.
     useEffect(() => {
@@ -255,31 +344,6 @@ export default function Tables() {
             isCancelled = true;
         };
     }, [qrCustomization, tableList, user?.restaurantLogoUrl]);
-
-    const fetchTables = async () => {
-        try {
-            setIsLoading(true);
-            setFetchError('');
-            const response = await fetch('/api/dashboard/tables/get', {
-                method: 'GET',
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.message || 'Masalar yüklenirken bir hata oluştu';
-                setFetchError(errorMessage);
-                return;
-            }
-
-            const tables: Table[] = await response.json();
-            setTableList(tables);
-        } catch (error) {
-            setFetchError('Bağlantı hatası. Lütfen sayfayı yenileyin.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const fetchTableOrders = async (table: Table) => {
         setIsLoadingTableOrders(true);
@@ -1363,7 +1427,7 @@ export default function Tables() {
                             </svg>
                             <p className="text-red-600 font-medium mb-2">{fetchError}</p>
                             <button
-                                onClick={fetchTables}
+                                onClick={() => fetchTables()}
                                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-none mt-2"
                             >
                                 Tekrar Dene

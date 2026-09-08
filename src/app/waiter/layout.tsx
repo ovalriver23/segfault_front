@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
+import RestaurantIdentity from '@/components/RestaurantIdentity';
+
+interface WaiterUser {
+  role: string;
+  restaurantName?: string | null;
+  restaurantLogoUrl?: string | null;
+}
 
 function WaiterLayoutContent({
   children,
@@ -14,6 +21,7 @@ function WaiterLayoutContent({
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [waiterUser, setWaiterUser] = useState<WaiterUser | null>(null);
   const searchParams = useSearchParams();
 
   // Check if current page is login page or change password page (only if forced)
@@ -41,7 +49,7 @@ function WaiterLayoutContent({
           return;
         }
 
-        const user = await response.json();
+        const user: WaiterUser = await response.json();
         
         if (user.role !== 'STAFF') {
           // Manager trying to access waiter pages -> show error
@@ -50,6 +58,7 @@ function WaiterLayoutContent({
           return;
         }
 
+        setWaiterUser(user);
         setIsAuthorized(true);
       } catch (error) {
         router.replace('/waiter/login');
@@ -100,6 +109,16 @@ function WaiterLayoutContent({
     <div className={`min-h-screen bg-white font-sans ${!shouldHideNavbar ? 'pb-20' : ''}`}>
       {/* Ana İçerik */}
       <main className="max-w-md mx-auto min-h-screen bg-white">
+        {!shouldHideNavbar && (
+          <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 px-6 py-3 backdrop-blur-sm">
+            <RestaurantIdentity
+              variant="mobile"
+              name={waiterUser?.restaurantName}
+              logoUrl={waiterUser?.restaurantLogoUrl}
+              className="max-w-full justify-start"
+            />
+          </header>
+        )}
         {children}
       </main>
 

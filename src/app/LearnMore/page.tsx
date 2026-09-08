@@ -59,8 +59,7 @@ export default function LearnMore() {
         'Masa tanımlama',
         'Her masa için özel QR kod',
         'Masa durumu takibi (boş/dolu/rezerve(Yakında))',
-        'Masa geçmişi',
-        'Masa bazlı hesap özeti'
+        'Masa bazlı hesap özeti'  
       ]
     },
     {
@@ -70,8 +69,7 @@ export default function LearnMore() {
       benefits: [
         'Personel ekleme',
         'Garson Modülü',
-        'Personel akiflik durumu',
-        'Garson ona etkileşimli görev paneli'
+        'Garsona ait etkileşimli görev paneli'
       ]
     },
     

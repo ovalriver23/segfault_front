@@ -757,7 +757,14 @@ export default function MenuView({ apiData }: MenuViewProps) {
       searchIcon: "text-orange-900",
       callWaiterBg: "bg-secondary-100 active:bg-secondary-200 text-secondary-700",
       categoryFilterBg: "bg-white",
-      ordersButton: "bg-primary-100 active:bg-primary-200 text-primary-700"
+      ordersButton: "bg-primary-100 active:bg-primary-200 text-primary-700",
+      waiterModalBackdrop: "bg-gray-950/50",
+      waiterModal: "border-orange-100 bg-white",
+      waiterModalIcon: "bg-orange-100 text-orange-700",
+      waiterModalTitle: "text-gray-900",
+      waiterModalBody: "text-gray-600",
+      waiterModalCancel: "border-gray-300 text-gray-700 hover:bg-gray-50",
+      waiterModalConfirm: "bg-secondary-500 text-white hover:bg-secondary-600"
     },
     MODERN: {
       bg: "bg-[#1f1f1f]",
@@ -769,7 +776,14 @@ export default function MenuView({ apiData }: MenuViewProps) {
       callWaiterBg: "bg-gray-700 active:bg-gray-600 text-white",
       categoryFilterBg: "bg-[#1f1f1f]",
       categoryTitleBg: "bg-[#1f1f1f]", // Fix white box
-      ordersButton: "bg-[#F8A45A] active:bg-[#e0914a] text-[#1f1f1f]" // Mustard yellow
+      ordersButton: "bg-[#F8A45A] active:bg-[#e0914a] text-[#1f1f1f]", // Mustard yellow
+      waiterModalBackdrop: "bg-black/75",
+      waiterModal: "border-gray-700 bg-[#2d2d2d]",
+      waiterModalIcon: "bg-[#ea580c]/15 text-[#F8A45A]",
+      waiterModalTitle: "text-white",
+      waiterModalBody: "text-gray-300",
+      waiterModalCancel: "border-gray-600 text-gray-300 hover:bg-gray-700",
+      waiterModalConfirm: "bg-[#ea580c] text-white hover:bg-[#c2410c]"
     },
     ELEGANT: {
       bg: "bg-[#f5f5dc]",
@@ -782,7 +796,14 @@ export default function MenuView({ apiData }: MenuViewProps) {
       categoryFilterBg: "bg-[#f5f5dc]",
       separatorColor: "#8b4513", // Brown for Elegant
       categoryTitleBg: "bg-[#f5f5dc]", // Match background
-      ordersButton: "bg-[#d2b48c] active:bg-[#c1a073] text-[#5c4033]" // Coffee/Tan
+      ordersButton: "bg-[#d2b48c] active:bg-[#c1a073] text-[#5c4033]", // Coffee/Tan
+      waiterModalBackdrop: "bg-[#5c4033]/45",
+      waiterModal: "border-[#d2b48c] bg-[#fdfbf7] font-serif",
+      waiterModalIcon: "bg-[#e6dcc3] text-[#8b4513]",
+      waiterModalTitle: "text-[#5c4033]",
+      waiterModalBody: "text-[#8b4513]/80",
+      waiterModalCancel: "border-[#d2b48c] text-[#8b4513] hover:bg-[#e6dcc3]/60",
+      waiterModalConfirm: "bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]"
     }
   };
 
@@ -1004,24 +1025,39 @@ export default function MenuView({ apiData }: MenuViewProps) {
       {/* Waiter Confirmation Modal */}
       {
         showWaiterConfirmModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">
+          <div
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[2px] ${currentThemeStyle.waiterModalBackdrop}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="waiter-confirm-title"
+          >
+            <div className={`w-full max-w-sm rounded-3xl border p-6 shadow-2xl ${currentThemeStyle.waiterModal}`}>
+              <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${currentThemeStyle.waiterModalIcon}`}>
+                <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 18h14M7 15a5 5 0 0 1 10 0H7Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 8V6.5M10.5 6.5h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M4 21h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <h3 id="waiter-confirm-title" className={`mb-2 text-center text-xl font-bold ${currentThemeStyle.waiterModalTitle}`}>
                 Garson çağırmak istediğinize emin misiniz?
               </h3>
-              <p className="text-sm text-gray-600 mb-6 text-center">
+              <p className={`mb-7 text-center text-sm leading-relaxed ${currentThemeStyle.waiterModalBody}`}>
                 Unutmayın, siparişlerinizi menü üzerinden kolayca verebilirsiniz.
               </p>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={handleCancelWaiterConfirm}
-                  className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                  className={`min-h-12 flex-1 rounded-xl border px-4 py-3 font-bold transition-colors ${currentThemeStyle.waiterModalCancel}`}
                 >
                   İptal
                 </button>
                 <button
+                  type="button"
                   onClick={handleConfirmCallWaiter}
-                  className="flex-1 py-3 px-4 bg-secondary-500 text-white rounded-xl font-bold hover:bg-secondary-600 transition-colors"
+                  className={`min-h-12 flex-1 rounded-xl px-4 py-3 font-bold shadow-md transition-colors ${currentThemeStyle.waiterModalConfirm}`}
                 >
                   Evet, Çağır
                 </button>
