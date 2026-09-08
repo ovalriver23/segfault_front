@@ -11,8 +11,58 @@ const navigation = [
   { label: "Detaylı Bilgi", href: "/LearnMore" },
 ];
 
-export default function Navbar({ isLoggedIn = false, panelHref = "/dashboard" }) {
+function getPanelHref(role) {
+  if (role === "SUPER_ADMIN") return "/Superadmin";
+  if (role === "STAFF") return "/waiter/tables";
+  return "/dashboard";
+}
+
+export default function Navbar({ isLoggedIn: initialIsLoggedIn, panelHref: initialPanelHref } = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [authState, setAuthState] = useState({
+    isLoggedIn: initialIsLoggedIn ?? false,
+    panelHref: initialPanelHref ?? "/dashboard",
+  });
+
+  const shouldResolveAuth = initialIsLoggedIn === undefined;
+  const { isLoggedIn, panelHref } = authState;
+
+  useEffect(() => {
+    if (!shouldResolveAuth) {
+      setAuthState({
+        isLoggedIn: initialIsLoggedIn,
+        panelHref: initialPanelHref ?? "/dashboard",
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const resolveAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) return;
+
+        const user = await response.json();
+        setAuthState({
+          isLoggedIn: true,
+          panelHref: getPanelHref(user?.role),
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setAuthState({ isLoggedIn: false, panelHref: "/dashboard" });
+        }
+      }
+    };
+
+    resolveAuth();
+    return () => controller.abort();
+  }, [initialIsLoggedIn, initialPanelHref, shouldResolveAuth]);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
