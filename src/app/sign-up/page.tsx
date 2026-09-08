@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import * as z from "zod";
 import {
   ArrowLeft,
@@ -107,6 +108,33 @@ const steps: Array<{
   },
 ];
 
+const stepMascots = [
+  {
+    src: "/images/Shawarma.webp",
+    alt: "Neşeli dürüm maskotu",
+    size: "w-[74%] max-w-[300px]",
+    eyes: { top: "45.5%", left: "44.5%", eyeSize: 12, pupilSize: 6, eyeColor: "#171717", pupilColor: "#ffffff" },
+  },
+  {
+    src: "/images/Fri.webp",
+    alt: "Neşeli patates maskotu",
+    size: "w-[78%] max-w-[315px]",
+    eyes: { top: "35.5%", left: "39%", eyeSize: 12, pupilSize: 6, eyeColor: "#171717", pupilColor: "#ffffff" },
+  },
+  {
+    src: "/images/Ham.webp",
+    alt: "Neşeli hamburger maskotu",
+    size: "w-[82%] max-w-[330px]",
+    eyes: { top: "29%", left: "41%", eyeSize: 12, pupilSize: 6, eyeColor: "#171717", pupilColor: "#ffffff" },
+  },
+  {
+    src: "/images/Pizza-no-mouth.webp",
+    alt: "Neşeli pizza maskotu",
+    size: "w-[88%] max-w-[350px]",
+    eyes: { top: "43.5%", left: "38.75%", eyeSize: 15, pupilSize: 8, eyeColor: "#ffffff", pupilColor: "#171717" },
+  },
+];
+
 const fieldBaseClass =
   "h-12 w-full rounded-xl border bg-white px-4 text-base text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-secondary-500 focus:ring-4 focus:ring-pink-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500";
 
@@ -125,11 +153,13 @@ const validateImageFile = (file: File) => {
 
 export default function SignUpPage() {
   const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState(0);
   const [highestStep, setHighestStep] = useState(0);
   const [isLocating, setIsLocating] = useState(false);
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [celebratingStep, setCelebratingStep] = useState<number | null>(null);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -144,6 +174,7 @@ export default function SignUpPage() {
   const restaurantLogoRef = useRef<HTMLInputElement>(null);
   const successButtonRef = useRef<HTMLButtonElement>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const mascotRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -200,6 +231,50 @@ export default function SignUpPage() {
     };
   }, [showSuccess]);
 
+  useEffect(() => {
+    const mascot = mascotRef.current;
+    if (!mascot) return;
+
+    const pupils = mascot.querySelectorAll<HTMLElement>("[data-mascot-pupil]");
+    const passwordIsVisible = showPassword || showConfirmPassword;
+
+    const movePupils = (clientX: number, clientY: number) => {
+      pupils.forEach((pupil) => {
+        const eye = pupil.parentElement;
+        if (!eye) return;
+        const eyeRect = eye.getBoundingClientRect();
+        const eyeX = eyeRect.left + eyeRect.width / 2;
+        const eyeY = eyeRect.top + eyeRect.height / 2;
+        const angle = Math.atan2(clientY - eyeY, clientX - eyeX);
+        const distance = Math.min(3, Math.hypot(clientX - eyeX, clientY - eyeY) / 45);
+        pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+      });
+    };
+
+    if (passwordIsVisible) {
+      pupils.forEach((pupil) => {
+        pupil.style.transform = "translate(-3px, 0)";
+      });
+      return;
+    }
+
+    pupils.forEach((pupil) => {
+      pupil.style.transform = "translate(0, 0)";
+    });
+
+    if (prefersReducedMotion) return;
+
+    const handlePointerMove = (event: PointerEvent) => movePupils(event.clientX, event.clientY);
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [currentStep, prefersReducedMotion, showConfirmPassword, showPassword]);
+
+  useEffect(() => {
+    if (celebratingStep === null) return;
+    const timer = window.setTimeout(() => setCelebratingStep(null), 850);
+    return () => window.clearTimeout(timer);
+  }, [celebratingStep]);
+
   const focusStepHeading = () => {
     window.requestAnimationFrame(() => stepHeadingRef.current?.focus());
   };
@@ -208,6 +283,7 @@ export default function SignUpPage() {
     if (stepIndex > highestStep || isSubmitting) return;
     setGeneralError("");
     setReviewError("");
+    setCelebratingStep(null);
     if (stepIndex < steps.length - 1) setReviewConfirmed(false);
     setCurrentStep(stepIndex);
     focusStepHeading();
@@ -219,6 +295,7 @@ export default function SignUpPage() {
     if (!isStepValid) return;
 
     const nextStep = Math.min(currentStep + 1, steps.length - 1);
+    setCelebratingStep(nextStep);
     setHighestStep((step) => Math.max(step, nextStep));
     setCurrentStep(nextStep);
     focusStepHeading();
@@ -227,6 +304,7 @@ export default function SignUpPage() {
   const handleBack = () => {
     setGeneralError("");
     setReviewError("");
+    setCelebratingStep(null);
     setReviewConfirmed(false);
     setCurrentStep((step) => Math.max(0, step - 1));
     focusStepHeading();
@@ -412,11 +490,13 @@ export default function SignUpPage() {
     );
   };
 
+  const activeMascot = stepMascots[currentStep];
+  const mascotIsCelebrating = celebratingStep === currentStep;
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fffaf6] px-4 py-6 text-gray-900 sm:px-6 sm:py-10 lg:px-8">
       <div className="pointer-events-none absolute -left-32 top-12 h-80 w-80 rounded-full bg-primary-200/45 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute -right-36 bottom-10 h-96 w-96 rounded-full bg-secondary-100/60 blur-3xl" aria-hidden="true" />
-
       <div className="relative mx-auto max-w-6xl">
         <header className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
           <Link href="/" className="group inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary-500" aria-label="EasyOrder ana sayfa">
@@ -429,24 +509,67 @@ export default function SignUpPage() {
         </header>
 
         <main className="grid overflow-hidden rounded-[2rem] border border-orange-100 bg-white shadow-[0_28px_80px_-42px_rgba(104,56,23,0.45)] lg:grid-cols-[0.36fr_0.64fr]" aria-hidden={showSuccess}>
-          <aside className="relative overflow-hidden bg-gray-950 px-6 py-8 text-white sm:px-9 lg:flex lg:min-h-[720px] lg:flex-col lg:justify-between lg:px-10 lg:py-12">
-            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border-[42px] border-white/[0.06]" aria-hidden="true" />
-            <div className="relative">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-sm font-semibold text-orange-200">
+          <aside className="relative grid min-h-[280px] overflow-hidden bg-[#f4a261] px-6 py-8 sm:px-9 lg:min-h-[720px] lg:grid-rows-[auto_1fr] lg:px-10 lg:py-12">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-2 bg-secondary-500" aria-hidden="true" />
+            <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-4/5 -skew-x-12 bg-primary-300/55" aria-hidden="true" />
+            <div className="pointer-events-none absolute bottom-0 right-0 h-3 w-2/3 bg-secondary-500" aria-hidden="true" />
+
+            <div className="relative z-10 max-w-md pr-28 sm:pr-40 lg:pr-0">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white px-3 py-1.5 text-sm font-bold text-orange-800 shadow-sm">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Güvenli başvuru
+                Adım {String(currentStep + 1).padStart(2, "0")}
               </span>
-              <h1 className="mt-5 max-w-sm text-3xl font-bold leading-tight tracking-[-0.025em] sm:text-4xl">Restoranınızı dijital siparişe hazırlayın.</h1>
-              <p className="mt-4 max-w-md leading-7 text-gray-300">Bilgilerinizi adım adım tamamlayın. Başvurunuz ekibimiz tarafından incelendikten sonra hesabınız kullanıma açılır.</p>
+              <h1 className="mt-5 max-w-sm text-3xl font-bold leading-tight tracking-[-0.025em] text-gray-950 sm:text-4xl">Restoranınızı dijital siparişe hazırlayın.</h1>
+              <p className="mt-4 hidden max-w-md leading-7 text-gray-700 sm:block">Bilgilerinizi adım adım tamamlayın. Her aşamada EasyOrder ekibinden bir dost size eşlik edecek.</p>
             </div>
 
-            <div className="relative mt-8 hidden space-y-4 lg:block">
-              {["Bilgileriniz adımlar arasında korunur", "Başvurunuz manuel olarak incelenir", "Onay sonrası panelinize giriş yaparsınız"].map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm font-medium text-gray-200">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-500 text-gray-950"><Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /></span>
-                  {item}
-                </div>
-              ))}
+            <div className="pointer-events-none absolute bottom-8 right-3 z-0 flex h-44 w-36 items-center justify-center sm:bottom-8 sm:right-8 sm:h-56 sm:w-48 lg:relative lg:bottom-auto lg:right-auto lg:mt-2 lg:h-auto lg:min-h-[420px] lg:w-full lg:-translate-y-6 lg:items-center">
+              <div className="absolute inset-x-0 bottom-0 top-5 rounded-t-[999px] border border-white/75 bg-[#fff5e8]/70 lg:inset-x-1 lg:top-8" aria-hidden="true" />
+              <div className="absolute bottom-5 left-1/2 h-3 w-3/5 -translate-x-1/2 rounded-full bg-orange-950/10 lg:bottom-10" aria-hidden="true" />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentStep}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 110, rotate: 7, scale: 0.88 }}
+                  animate={
+                    prefersReducedMotion
+                      ? { opacity: 1 }
+                      : mascotIsCelebrating
+                        ? { opacity: 1, x: 0, y: [0, -18, 0], rotate: [0, -6, 6, -3, 0], scale: [0.9, 1.1, 0.98, 1.04, 1] }
+                        : { opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }
+                  }
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -110, rotate: -7, scale: 0.88 }}
+                  transition={{ duration: prefersReducedMotion ? 0.15 : mascotIsCelebrating ? 0.72 : 0.42, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative z-10 flex h-full w-full items-center justify-center"
+                >
+                  <motion.div
+                    ref={mascotRef}
+                    animate={prefersReducedMotion ? undefined : { y: [0, -10, 0] }}
+                    transition={prefersReducedMotion ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className={`relative aspect-square ${activeMascot.size}`}
+                  >
+                    <Image src={activeMascot.src} alt={activeMascot.alt} fill sizes="(min-width: 1024px) 330px, 190px" className="object-contain drop-shadow-[0_22px_20px_rgba(104,56,23,0.2)]" priority={currentStep === 0} />
+                    <span
+                      className="absolute z-20 flex"
+                      style={{ top: activeMascot.eyes.top, left: activeMascot.eyes.left, gap: 7 }}
+                      aria-hidden="true"
+                    >
+                      {[0, 1].map((eye) => {
+                        const eyeStyle = activeMascot.eyes;
+                        const pupilOffset = (eyeStyle.eyeSize - eyeStyle.pupilSize) / 2;
+                        return (
+                          <span key={eye} className="relative block rounded-full" style={{ width: eyeStyle.eyeSize, height: eyeStyle.eyeSize, backgroundColor: eyeStyle.eyeColor }}>
+                            <span
+                              data-mascot-pupil
+                              className="absolute block rounded-full transition-transform duration-100"
+                              style={{ width: eyeStyle.pupilSize, height: eyeStyle.pupilSize, top: pupilOffset, left: pupilOffset, backgroundColor: eyeStyle.pupilColor }}
+                            />
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </motion.div>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </aside>
 
