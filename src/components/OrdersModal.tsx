@@ -640,18 +640,6 @@ export default function OrdersModal({
                                             </div>
                                         </div>
 
-                                        {/* Temporary animation test trigger */}
-                                        <button
-                                            type="button"
-                                            onClick={() => setServedCelebrationOrderId(order.id)}
-                                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-amber-400/70 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-600 transition-colors hover:bg-amber-400/20 active:bg-amber-400/30"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
-                                            </svg>
-                                            Afiyet Olsun Animasyonunu Test Et
-                                        </button>
-
                                         {/* Order Items */}
                                         <div className="space-y-2">
                                             {order.items.map((item, index) => (
