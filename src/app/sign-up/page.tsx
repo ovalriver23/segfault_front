@@ -520,7 +520,7 @@ export default function SignUpPage() {
                 Adım {String(currentStep + 1).padStart(2, "0")}
               </span>
               <h1 className="mt-5 max-w-sm text-3xl font-bold leading-tight tracking-[-0.025em] text-gray-950 sm:text-4xl">Restoranınızı dijital siparişe hazırlayın.</h1>
-              <p className="mt-4 hidden max-w-md leading-7 text-gray-700 sm:block">Bilgilerinizi adım adım tamamlayın. Her aşamada EasyOrder ekibinden bir dost size eşlik edecek.</p>
+              <p className="mt-4 hidden max-w-md leading-7 text-gray-700 sm:block">Bilgilerinizi adım adım tamamlayın. Kayıt olduktan sonra ekibimiz başvuruyu inceleyecektir. Hesabınız onaylandıktan sonra sisteme erişiminiz açılacaktır.</p>
             </div>
 
             <div className="pointer-events-none absolute bottom-8 right-3 z-0 flex h-44 w-36 items-center justify-center sm:bottom-8 sm:right-8 sm:h-56 sm:w-48 lg:relative lg:bottom-auto lg:right-auto lg:mt-2 lg:h-auto lg:min-h-[420px] lg:w-full lg:-translate-y-6 lg:items-center">
