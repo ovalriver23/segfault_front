@@ -278,7 +278,7 @@ export default function SignInPage() {
                 <button type="submit" disabled={isSubmitting || showSuccess} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary-500 px-6 font-bold text-white shadow-lg shadow-pink-200/60 transition hover:bg-secondary-600 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">{isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <LogIn className="h-5 w-5" aria-hidden="true" />}{isSubmitting ? "Giriş yapılıyor" : "Giriş yap"}</button>
               </form>
 
-              <div className="mt-7 border-t border-gray-100 pt-6 text-center text-sm text-gray-600">EasyOrder&apos;a yeni misiniz? <Link href="/sign-up" className="font-bold text-secondary-600 transition hover:text-secondary-700">Restoranınızı kaydedin <ArrowRight className="ml-1 inline h-4 w-4" aria-hidden="true" /></Link></div>
+              <div className="mt-7 border-t border-gray-100 pt-6 text-center text-sm text-gray-600">EasyOrder&apos;da yeni misiniz? <Link href="/sign-up" className="font-bold text-secondary-600 transition hover:text-secondary-700">Restoranınızı kaydedin <ArrowRight className="ml-1 inline h-4 w-4" aria-hidden="true" /></Link></div>
             </div>
           </section>
         </main>
