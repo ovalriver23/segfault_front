@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 // Order status types based on actual backend enum
 export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
@@ -34,6 +34,14 @@ export interface OrdersModalProps {
     modalId: string;
     qrToken: string;
     onRefresh?: () => void;
+}
+
+const ORDERS_POLL_INTERVAL_MS = 20_000;
+
+type FetchMode = 'initial' | 'manual' | 'background';
+
+function areOrdersEqual(currentOrders: Order[], nextOrders: Order[]): boolean {
+    return JSON.stringify(currentOrders) === JSON.stringify(nextOrders);
 }
 
 // Status configuration for display
@@ -115,11 +123,15 @@ export default function OrdersModal({
     theme = 'DEFAULT'
 }: OrdersModalProps & { theme?: 'DEFAULT' | 'MODERN' | 'ELEGANT' }) {
     const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
     const [isRequestingBill, setIsRequestingBill] = useState(false);
     const [billRequested, setBillRequested] = useState(false);
+    const ordersRef = useRef<Order[]>([]);
+    const hasSuccessfulFetchRef = useRef(false);
+    const activeRequestRef = useRef<AbortController | null>(null);
 
     // Theme Configuration
     const themeStyles = {
@@ -160,33 +172,84 @@ export default function OrdersModal({
 
     const styles = themeStyles[theme] || themeStyles.DEFAULT;
 
-    const fetchOrders = async () => {
-        setIsLoading(true);
-        setError(null);
+    const fetchOrders = useCallback(async (mode: FetchMode = 'manual') => {
+        // Polling never interrupts an already-running user-triggered request.
+        if (mode === 'background' && activeRequestRef.current) {
+            return;
+        }
+
+        activeRequestRef.current?.abort();
+        const controller = new AbortController();
+        activeRequestRef.current = controller;
+
+        if (mode === 'initial') {
+            setIsInitialLoading(true);
+        } else if (mode === 'manual') {
+            setIsRefreshing(true);
+        }
+
+        if (mode !== 'background') {
+            setError(null);
+        }
 
         try {
-            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(qrToken)}`);
+            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(qrToken)}`, {
+                cache: 'no-store',
+                signal: controller.signal
+            });
             const data = await response.json();
 
             if (response.ok) {
-                setOrders(data);
+                const nextOrders = data as Order[];
+                hasSuccessfulFetchRef.current = true;
+
+                if (!areOrdersEqual(ordersRef.current, nextOrders)) {
+                    ordersRef.current = nextOrders;
+                    setOrders(nextOrders);
+                }
+
+                // A successful background request also clears a previous visible error.
+                setError(null);
             } else {
-                setError(data.error || 'Siparişler yüklenirken bir hata oluştu');
+                // Keep the last successful data visible when a background poll fails.
+                if (mode !== 'background' || !hasSuccessfulFetchRef.current) {
+                    setError(data.error || 'Siparişler yüklenirken bir hata oluştu');
+                }
             }
         } catch (err) {
-            setError('Siparişler yüklenirken bir hata oluştu');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            if (err instanceof Error && err.name === 'AbortError') {
+                return;
+            }
 
-    // Fetch orders when component mounts (triggered by key change from parent)
-    useEffect(() => {
-        fetchOrders();
+            if (mode !== 'background' || !hasSuccessfulFetchRef.current) {
+                setError('Siparişler yüklenirken bir hata oluştu');
+            }
+        } finally {
+            if (activeRequestRef.current === controller) {
+                activeRequestRef.current = null;
+                setIsInitialLoading(false);
+                setIsRefreshing(false);
+            }
+        }
     }, [qrToken]);
 
+    // Fetch immediately, then refresh silently every 20 seconds.
+    useEffect(() => {
+        void fetchOrders('initial');
+
+        const intervalId = window.setInterval(() => {
+            void fetchOrders('background');
+        }, ORDERS_POLL_INTERVAL_MS);
+
+        return () => {
+            window.clearInterval(intervalId);
+            activeRequestRef.current?.abort();
+            activeRequestRef.current = null;
+        };
+    }, [fetchOrders]);
+
     const handleRefresh = () => {
-        fetchOrders();
+        void fetchOrders('manual');
         onRefresh?.();
     };
 
@@ -204,7 +267,7 @@ export default function OrdersModal({
 
             if (response.ok) {
                 // Refresh orders to show updated status
-                fetchOrders();
+                await fetchOrders('manual');
             } else {
                 // Show error
                 setError(data.error || 'İptal işlemi başarısız oldu');
@@ -250,26 +313,6 @@ export default function OrdersModal({
                 <div className={`p-6 pb-4 border-b flex justify-between items-center shrink-0 ${styles.border}`}>
                     <h2 className={`text-2xl font-bold ${styles.text}`}>Siparişlerim</h2>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleRefresh}
-                            className={`btn btn-ghost btn-sm btn-circle ${styles.iconColor} hover:bg-gray-100/10`}
-                            disabled={isLoading}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
                         <form method="dialog">
                             <button className={`btn btn-ghost btn-sm btn-circle ${styles.buttonClose}`}>
                                 <svg
@@ -293,7 +336,7 @@ export default function OrdersModal({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {isLoading ? (
+                    {isInitialLoading ? (
                         <div className="flex justify-center items-center py-12">
                             <span className="loading loading-spinner loading-lg text-pink-500"></span>
                         </div>
