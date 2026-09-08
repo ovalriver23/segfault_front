@@ -9,6 +9,8 @@ type RestaurantIdentityVariant = 'sidebar' | 'mobile' | 'dashboard';
 interface RestaurantIdentityProps {
   variant: RestaurantIdentityVariant;
   className?: string;
+  name?: string | null;
+  logoUrl?: string | null;
 }
 
 const FALLBACK_RESTAURANT_NAME = 'İşletme Paneli';
@@ -16,12 +18,14 @@ const FALLBACK_RESTAURANT_NAME = 'İşletme Paneli';
 export default function RestaurantIdentity({
   variant,
   className = '',
+  name,
+  logoUrl: logoUrlOverride,
 }: RestaurantIdentityProps) {
   const { user } = useAuth();
   const [imageFailed, setImageFailed] = useState(false);
 
-  const restaurantName = user?.restaurantName?.trim() || FALLBACK_RESTAURANT_NAME;
-  const logoUrl = user?.restaurantLogoUrl?.trim() || null;
+  const restaurantName = name?.trim() || user?.restaurantName?.trim() || FALLBACK_RESTAURANT_NAME;
+  const logoUrl = logoUrlOverride?.trim() || user?.restaurantLogoUrl?.trim() || null;
   const initial = Array.from(restaurantName)[0]?.toLocaleUpperCase('tr-TR') || 'İ';
 
   useEffect(() => {
