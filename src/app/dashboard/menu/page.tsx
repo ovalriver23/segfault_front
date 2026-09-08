@@ -1607,7 +1607,7 @@ export default function Menu() {
             {/* Main Content Grid */}
             <div className={`grid grid-cols-1 ${showPreview ? 'lg:grid-cols-[40%_60%]' : ''} gap-6 mr-6 -mt-6`}>
                 {/* Left Side - Phone Mockup with Toggle */}
-                <div className="flex flex-col items-center gap-1 lg:sticky lg:top-4 z-10">
+                <div className="flex flex-col items-center gap-1 lg:sticky lg:top-4 self-start z-10">
                     {/* Phone Mockup Preview Toggle - Always Visible */}
                     <div className="hidden md:flex md:items-center md:gap-3 md:mb-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">

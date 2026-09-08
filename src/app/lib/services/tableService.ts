@@ -46,8 +46,11 @@ export interface TableScanResponse {
 }
 
 export interface TableScanError {
+    status?: number;
     maxAllowedDistance?: number;
     actualDistance?: number;
+    restaurantName?: string;
+    banReason?: string;
     error: string;
 }
 
@@ -74,10 +77,13 @@ export const scanTable = async (
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const errorData = await response.json();
-            throw errorData as TableScanError;
+            throw { ...errorData, status: response.status } as TableScanError;
         } else {
             const textBody = await response.text();
-            throw { error: `Server Error (${response.status}): ${textBody}` } as TableScanError;
+            throw {
+                status: response.status,
+                error: `Server Error (${response.status}): ${textBody}`,
+            } as TableScanError;
         }
     }
 

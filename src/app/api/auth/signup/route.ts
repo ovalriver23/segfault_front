@@ -124,18 +124,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract Set-Cookie headers from backend response
-    const setCookieHeader = backendResponse.headers.get('set-cookie');
-
     // Create response with the same status code as backend
     const response = NextResponse.json(
       responseData,
       { status: backendResponse.status }
     );
 
-    // Forward the Set-Cookie header to the client
-    if (setCookieHeader) {
-      response.headers.set('Set-Cookie', setCookieHeader);
+    // New restaurants must wait for manual approval. Do not forward the
+    // backend session cookie, and clear any stale JWT on successful signup.
+    if (backendResponse.ok) {
+      response.cookies.delete('JWT_TOKEN');
     }
 
     return response;

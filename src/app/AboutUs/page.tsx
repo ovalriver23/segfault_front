@@ -177,7 +177,6 @@ export default function AboutUs() {
                 >
                     <motion.div variants={itemVariants} className="text-center mb-16">
                         <h2 className="text-4xl font-bold mb-4 text-gray-900">Ekibimiz</h2>
-                        <p className="text-gray-600">Herkesin parmakla gösterdiği o insanlar:</p>
                     </motion.div>
 
                     <div className="flex flex-col gap-16">

@@ -172,7 +172,7 @@ export default function MenuItemDetailPage() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${styles.pageBg}`} style={{ background: `linear-gradient(to bottom, ${styles.gradientFrom}, ${styles.gradientTo})` }}>
+      <div className={`fixed inset-0 z-50 max-w-md mx-auto min-h-screen flex items-center justify-center ${styles.pageBg}`} style={{ background: `linear-gradient(to bottom, ${styles.gradientFrom}, ${styles.gradientTo})` }}>
         <div className="loading loading-spinner loading-lg text-white"></div>
       </div>
     );
@@ -180,7 +180,7 @@ export default function MenuItemDetailPage() {
 
   if (!menuItem) {
     return (
-      <div className={`min-h-screen flex items-center justify-center`} style={{ background: `linear-gradient(to bottom, ${styles.gradientFrom}, ${styles.gradientTo})` }}>
+      <div className="fixed inset-0 z-50 max-w-md mx-auto min-h-screen flex items-center justify-center" style={{ background: `linear-gradient(to bottom, ${styles.gradientFrom}, ${styles.gradientTo})` }}>
         <div className="text-white text-center">
           <p className="text-xl mb-4">Ürün bulunamadı</p>
           <button
@@ -195,7 +195,7 @@ export default function MenuItemDetailPage() {
   }
 
   return (
-    <div className={`max-w-md mx-auto shadow-2xl h-screen overflow-y-auto relative ${styles.pageBg}`}>
+    <div className={`fixed inset-0 z-50 max-w-md mx-auto shadow-2xl h-screen overflow-y-auto ${styles.pageBg}`}>
       <div className="w-full min-h-full flex flex-col" style={{ background: `linear-gradient(to bottom, ${styles.gradientFrom}, ${styles.gradientTo})` }}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-[49px] shrink-0">

@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
       `${BACKEND_API_URL}/api/public/order?qrToken=${encodeURIComponent(qrToken)}`,
       {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
         },

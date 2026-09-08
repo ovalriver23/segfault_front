@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../app/lib/context/AuthContext';
+import RestaurantIdentity from './RestaurantIdentity';
 
 // Navigation icons imports
 const imgHome = "/images/admin/home-navbar.svg";
@@ -139,17 +140,15 @@ export default function SideNav({ activeTab = 'general', isOpen = false, onClose
           </button>
         </div>
 
-        {/* Brand section - EasyOrder logo */}
-        <div className="flex flex-row items-center justify-start px-7 pt-2 md:pt-4 pb-3">
+        {/* Restaurant-first brand section */}
+        <div className="px-4 pb-3 pt-2 md:pt-4">
           <Link
             href="/dashboard"
-            // DEĞİŞİKLİK: 'font-bold' yerine 'font-semibold' yapıldı.
-            className="text-3xl md:text-3xl font-medium text-black hover:text-gray-800 transition-colors tracking-tight"
-            style={{ fontFamily: 'Pontano Sans, sans-serif' }}
+            className="block w-full rounded-xl px-2 py-2 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             onClick={() => handleLinkClick('general')}
+            aria-label="İşletme paneline git"
           >
-            {/* Always show full EasyOrder text */}
-            EasyOrder
+            <RestaurantIdentity variant="sidebar" />
           </Link>
         </div>
 

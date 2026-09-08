@@ -7,10 +7,12 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 // Order status types based on actual backend enum
 export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
+type MenuTheme = 'DEFAULT' | 'MODERN' | 'ELEGANT';
 
 export interface OrderItem {
     menuItemName: string;
@@ -34,6 +36,15 @@ export interface OrdersModalProps {
     modalId: string;
     qrToken: string;
     onRefresh?: () => void;
+}
+
+const ORDERS_POLL_INTERVAL_MS = 20_000;
+const SERVED_CELEBRATION_DURATION_MS = 5_500;
+
+type FetchMode = 'initial' | 'manual' | 'background';
+
+function areOrdersEqual(currentOrders: Order[], nextOrders: Order[]): boolean {
+    return JSON.stringify(currentOrders) === JSON.stringify(nextOrders);
 }
 
 // Status configuration for display
@@ -108,18 +119,214 @@ function formatDateTime(dateString: string): string {
     });
 }
 
+const celebrationParticles = [
+    { left: '8%', top: '16%', delay: 0.05, rotate: 24 },
+    { left: '18%', top: '72%', delay: 0.18, rotate: -32 },
+    { left: '31%', top: '10%', delay: 0.3, rotate: 58 },
+    { left: '69%', top: '12%', delay: 0.12, rotate: -18 },
+    { left: '82%', top: '69%', delay: 0.24, rotate: 45 },
+    { left: '92%', top: '25%', delay: 0.36, rotate: -48 },
+];
+
+const celebrationThemeStyles = {
+    DEFAULT: {
+        background: "bg-[radial-gradient(circle_at_50%_32%,#fff7ed_0%,#ffffff_48%,#fce7f3_100%)]",
+        text: "text-gray-900",
+        eyebrow: "text-pink-600",
+        body: "text-gray-600",
+        glowStart: "bg-orange-300/30",
+        glowEnd: "bg-pink-300/25",
+        steam: "bg-orange-400/55",
+        plate: "border-orange-200 bg-white/85 shadow-[0_24px_80px_rgba(236,72,153,0.18)]",
+        button: "border-pink-400 bg-pink-500 text-white active:bg-pink-600",
+        progress: "bg-pink-500",
+        particleColors: ['#EC4899', '#F8A45A', '#FDBA74', '#F9A8D4'],
+        dishFill: '#F8A45A',
+        dishStroke: '#DB2777',
+        checkStroke: '#FFFFFF',
+        font: ""
+    },
+    MODERN: {
+        background: "bg-[radial-gradient(circle_at_50%_30%,#4a2819_0%,#1f1f1f_45%,#111111_100%)]",
+        text: "text-white",
+        eyebrow: "text-orange-400",
+        body: "text-gray-300",
+        glowStart: "bg-orange-500/25",
+        glowEnd: "bg-red-600/15",
+        steam: "bg-orange-300/60",
+        plate: "border-orange-500/30 bg-[#2d2d2d]/90 shadow-[0_24px_80px_rgba(234,88,12,0.25)]",
+        button: "border-orange-500 bg-[#ea580c] text-white active:bg-[#c2410c]",
+        progress: "bg-[#ea580c]",
+        particleColors: ['#EA580C', '#F8A45A', '#FB923C', '#FFFFFF'],
+        dishFill: '#EA580C',
+        dishStroke: '#F8A45A',
+        checkStroke: '#FFFFFF',
+        font: ""
+    },
+    ELEGANT: {
+        background: "bg-[radial-gradient(circle_at_50%_30%,#fdfbf7_0%,#f5f5dc_52%,#e6dcc3_100%)]",
+        text: "text-[#5c4033]",
+        eyebrow: "text-[#8b4513]",
+        body: "text-[#8b4513]/75",
+        glowStart: "bg-[#d2b48c]/35",
+        glowEnd: "bg-[#9C6644]/15",
+        steam: "bg-[#8b4513]/40",
+        plate: "border-[#d2b48c] bg-[#fdfbf7]/90 shadow-[0_24px_80px_rgba(92,64,51,0.16)]",
+        button: "border-[#9C6644] bg-[#9C6644] text-[#fdfbf7] active:bg-[#7f5539]",
+        progress: "bg-[#9C6644]",
+        particleColors: ['#9C6644', '#D2B48C', '#8B4513', '#E6DCC3'],
+        dishFill: '#D2B48C',
+        dishStroke: '#8B4513',
+        checkStroke: '#5C4033',
+        font: "font-serif"
+    }
+} satisfies Record<MenuTheme, {
+    background: string;
+    text: string;
+    eyebrow: string;
+    body: string;
+    glowStart: string;
+    glowEnd: string;
+    steam: string;
+    plate: string;
+    button: string;
+    progress: string;
+    particleColors: string[];
+    dishFill: string;
+    dishStroke: string;
+    checkStroke: string;
+    font: string;
+}>;
+
+function ServedCelebration({
+    orderId,
+    onDismiss,
+    theme
+}: {
+    orderId: number;
+    onDismiss: () => void;
+    theme: MenuTheme;
+}) {
+    const prefersReducedMotion = useReducedMotion();
+    const styles = celebrationThemeStyles[theme];
+
+    return (
+        <motion.div
+            className={`fixed inset-0 flex min-h-[100dvh] items-center justify-center overflow-hidden px-6 py-10 ${styles.background} ${styles.text} ${styles.font}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0.1 : 0.35 }}
+        >
+            <div className={`absolute -left-24 -top-24 h-72 w-72 rounded-full blur-3xl ${styles.glowStart}`} />
+            <div className={`absolute -bottom-28 -right-24 h-80 w-80 rounded-full blur-3xl ${styles.glowEnd}`} />
+
+            {!prefersReducedMotion && celebrationParticles.map((particle, index) => (
+                <motion.span
+                    key={`${particle.left}-${particle.top}`}
+                    className="absolute h-2.5 w-6 rounded-full"
+                    style={{
+                        left: particle.left,
+                        top: particle.top,
+                        backgroundColor: styles.particleColors[index % styles.particleColors.length]
+                    }}
+                    initial={{ opacity: 0, y: -30, rotate: 0, scale: 0.4 }}
+                    animate={{ opacity: [0, 1, 1, 0], y: [-30, 0, 18, 58], rotate: particle.rotate + 180, scale: [0.4, 1, 1, 0.7] }}
+                    transition={{ duration: 3.2, delay: particle.delay, repeat: Infinity, repeatDelay: 0.7, ease: 'easeOut' }}
+                    aria-hidden="true"
+                />
+            ))}
+
+            <motion.div
+                className="relative z-10 flex w-full max-w-sm flex-col items-center text-center"
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 30, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 18, delay: prefersReducedMotion ? 0 : 0.12 }}
+            >
+                <div className="relative mb-8">
+                    {!prefersReducedMotion && (
+                        <div className="absolute -top-9 left-1/2 flex -translate-x-1/2 gap-3" aria-hidden="true">
+                            {[0, 1, 2].map((steam) => (
+                                <motion.span
+                                    key={steam}
+                                    className={`block h-9 w-1.5 rounded-full blur-[1px] ${styles.steam}`}
+                                    initial={{ opacity: 0, y: 12, scaleY: 0.6 }}
+                                    animate={{ opacity: [0, 0.75, 0], y: [12, -10, -24], x: [0, steam % 2 === 0 ? 5 : -5, 0], scaleY: [0.6, 1, 0.8] }}
+                                    transition={{ duration: 2, delay: steam * 0.25, repeat: Infinity, ease: 'easeOut' }}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    <motion.div
+                        className={`flex h-36 w-36 items-center justify-center rounded-full border backdrop-blur-md ${styles.plate}`}
+                        animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                        <svg viewBox="0 0 120 120" className="h-24 w-24" fill="none" aria-hidden="true">
+                            <path d="M22 73h76" stroke={styles.dishStroke} strokeWidth="6" strokeLinecap="round" />
+                            <path d="M31 70c1-20 13-34 29-34s28 14 29 34H31Z" fill={styles.dishFill} stroke={styles.dishStroke} strokeWidth="4" strokeLinejoin="round" />
+                            <path d="M53 31a7 7 0 0 1 14 0" stroke={styles.dishStroke} strokeWidth="5" strokeLinecap="round" />
+                            <path d="m47 55 8 8 18-18" stroke={styles.checkStroke} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M17 83c15 7 71 7 86 0" stroke={styles.dishStroke} strokeWidth="5" strokeLinecap="round" />
+                        </svg>
+                    </motion.div>
+                </div>
+
+                <motion.p
+                    className={`mb-3 text-xs font-bold uppercase tracking-[0.32em] ${styles.eyebrow}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: prefersReducedMotion ? 0 : 0.35 }}
+                >
+                    Sipariş #{orderId} servis edildi
+                </motion.p>
+                <h2 id="served-celebration-title" className="text-5xl font-black tracking-tight sm:text-6xl">
+                    Afiyet olsun!
+                </h2>
+                <p className={`mt-4 max-w-xs text-base leading-relaxed ${styles.body}`}>
+                    Siparişiniz masanızda. Keyifli bir yemek dileriz.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={onDismiss}
+                    className={`mt-9 min-h-12 rounded-full border px-8 py-3 text-sm font-bold shadow-lg transition-transform active:scale-95 ${styles.button}`}
+                >
+                    Teşekkürler
+                </button>
+            </motion.div>
+
+            <motion.div
+                className={`absolute bottom-0 left-0 h-1.5 ${styles.progress}`}
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: SERVED_CELEBRATION_DURATION_MS / 1000, ease: 'linear' }}
+                aria-hidden="true"
+            />
+        </motion.div>
+    );
+}
+
 export default function OrdersModal({
     modalId,
     qrToken,
     onRefresh,
     theme = 'DEFAULT'
-}: OrdersModalProps & { theme?: 'DEFAULT' | 'MODERN' | 'ELEGANT' }) {
+}: OrdersModalProps & { theme?: MenuTheme }) {
     const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
     const [isRequestingBill, setIsRequestingBill] = useState(false);
     const [billRequested, setBillRequested] = useState(false);
+    const [servedCelebrationOrderId, setServedCelebrationOrderId] = useState<number | null>(null);
+    const ordersRef = useRef<Order[]>([]);
+    const hasSuccessfulFetchRef = useRef(false);
+    const activeRequestRef = useRef<AbortController | null>(null);
+    const celebrationDialogRef = useRef<HTMLDialogElement>(null);
 
     // Theme Configuration
     const themeStyles = {
@@ -160,33 +367,117 @@ export default function OrdersModal({
 
     const styles = themeStyles[theme] || themeStyles.DEFAULT;
 
-    const fetchOrders = async () => {
-        setIsLoading(true);
-        setError(null);
+    const fetchOrders = useCallback(async (mode: FetchMode = 'manual') => {
+        // Polling never interrupts an already-running user-triggered request.
+        if (mode === 'background' && activeRequestRef.current) {
+            return;
+        }
+
+        activeRequestRef.current?.abort();
+        const controller = new AbortController();
+        activeRequestRef.current = controller;
+
+        if (mode === 'initial') {
+            setIsInitialLoading(true);
+        } else if (mode === 'manual') {
+            setIsRefreshing(true);
+        }
+
+        if (mode !== 'background') {
+            setError(null);
+        }
 
         try {
-            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(qrToken)}`);
+            const response = await fetch(`/api/public/table/order?qrToken=${encodeURIComponent(qrToken)}`, {
+                cache: 'no-store',
+                signal: controller.signal
+            });
             const data = await response.json();
 
             if (response.ok) {
-                setOrders(data);
+                const nextOrders = data as Order[];
+                const newlyServedOrder = hasSuccessfulFetchRef.current
+                    ? nextOrders.find((nextOrder) => {
+                        const previousOrder = ordersRef.current.find((order) => order.id === nextOrder.id);
+                        return nextOrder.status === 'SERVED' && previousOrder !== undefined && previousOrder.status !== 'SERVED';
+                    })
+                    : undefined;
+
+                hasSuccessfulFetchRef.current = true;
+
+                if (!areOrdersEqual(ordersRef.current, nextOrders)) {
+                    ordersRef.current = nextOrders;
+                    setOrders(nextOrders);
+                }
+
+                if (newlyServedOrder) {
+                    setServedCelebrationOrderId(newlyServedOrder.id);
+                }
+
+                // A successful background request also clears a previous visible error.
+                setError(null);
             } else {
-                setError(data.error || 'Siparişler yüklenirken bir hata oluştu');
+                // Keep the last successful data visible when a background poll fails.
+                if (mode !== 'background' || !hasSuccessfulFetchRef.current) {
+                    setError(data.error || 'Siparişler yüklenirken bir hata oluştu');
+                }
             }
         } catch (err) {
-            setError('Siparişler yüklenirken bir hata oluştu');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            if (err instanceof Error && err.name === 'AbortError') {
+                return;
+            }
 
-    // Fetch orders when component mounts (triggered by key change from parent)
-    useEffect(() => {
-        fetchOrders();
+            if (mode !== 'background' || !hasSuccessfulFetchRef.current) {
+                setError('Siparişler yüklenirken bir hata oluştu');
+            }
+        } finally {
+            if (activeRequestRef.current === controller) {
+                activeRequestRef.current = null;
+                setIsInitialLoading(false);
+                setIsRefreshing(false);
+            }
+        }
     }, [qrToken]);
 
+    // Fetch immediately, then refresh silently every 20 seconds.
+    useEffect(() => {
+        void fetchOrders('initial');
+
+        const intervalId = window.setInterval(() => {
+            void fetchOrders('background');
+        }, ORDERS_POLL_INTERVAL_MS);
+
+        return () => {
+            window.clearInterval(intervalId);
+            activeRequestRef.current?.abort();
+            activeRequestRef.current = null;
+        };
+    }, [fetchOrders]);
+
+    const dismissServedCelebration = useCallback(() => {
+        celebrationDialogRef.current?.close();
+        setServedCelebrationOrderId(null);
+    }, []);
+
+    useEffect(() => {
+        if (servedCelebrationOrderId === null) {
+            return;
+        }
+
+        const dialog = celebrationDialogRef.current;
+        if (dialog && !dialog.open) {
+            dialog.showModal();
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dismissServedCelebration();
+        }, SERVED_CELEBRATION_DURATION_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [dismissServedCelebration, servedCelebrationOrderId]);
+
     const handleRefresh = () => {
-        fetchOrders();
+        void fetchOrders('manual');
         onRefresh?.();
     };
 
@@ -204,7 +495,7 @@ export default function OrdersModal({
 
             if (response.ok) {
                 // Refresh orders to show updated status
-                fetchOrders();
+                await fetchOrders('manual');
             } else {
                 // Show error
                 setError(data.error || 'İptal işlemi başarısız oldu');
@@ -244,32 +535,13 @@ export default function OrdersModal({
     const hasActiveOrder = orders.some((order) => order.status !== 'SERVED' && order.status !== 'COMPLETED' && order.status !== 'CANCELLED');
 
     return (
+        <>
         <dialog id={modalId} className="modal modal-bottom">
             <div className={`modal-box w-full max-w-md h-[70vh] max-h-[70vh] flex flex-col p-0 rounded-t-3xl rounded-b-none m-0 mx-auto ${styles.bg}`}>
                 {/* Header */}
                 <div className={`p-6 pb-4 border-b flex justify-between items-center shrink-0 ${styles.border}`}>
                     <h2 className={`text-2xl font-bold ${styles.text}`}>Siparişlerim</h2>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleRefresh}
-                            className={`btn btn-ghost btn-sm btn-circle ${styles.iconColor} hover:bg-gray-100/10`}
-                            disabled={isLoading}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </button>
                         <form method="dialog">
                             <button className={`btn btn-ghost btn-sm btn-circle ${styles.buttonClose}`}>
                                 <svg
@@ -293,7 +565,7 @@ export default function OrdersModal({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {isLoading ? (
+                    {isInitialLoading ? (
                         <div className="flex justify-center items-center py-12">
                             <span className="loading loading-spinner loading-lg text-pink-500"></span>
                         </div>
@@ -502,5 +774,34 @@ export default function OrdersModal({
                 <button>close</button>
             </form>
         </dialog>
+
+        <dialog
+            ref={celebrationDialogRef}
+            aria-labelledby="served-celebration-title"
+            onCancel={(event) => {
+                event.preventDefault();
+                dismissServedCelebration();
+            }}
+            onClose={() => setServedCelebrationOrderId(null)}
+            className={`m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0 outline-none ${
+                theme === 'MODERN'
+                    ? 'backdrop:bg-black/80'
+                    : theme === 'ELEGANT'
+                        ? 'backdrop:bg-[#5c4033]/30'
+                        : 'backdrop:bg-white/70'
+            }`}
+        >
+            <AnimatePresence>
+                {servedCelebrationOrderId !== null && (
+                    <ServedCelebration
+                        key={servedCelebrationOrderId}
+                        orderId={servedCelebrationOrderId}
+                        onDismiss={dismissServedCelebration}
+                        theme={theme}
+                    />
+                )}
+            </AnimatePresence>
+        </dialog>
+        </>
     );
 }

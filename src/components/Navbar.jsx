@@ -11,8 +11,58 @@ const navigation = [
   { label: "Detaylı Bilgi", href: "/LearnMore" },
 ];
 
-export default function Navbar({ isLoggedIn = false }) {
+function getPanelHref(role) {
+  if (role === "SUPER_ADMIN") return "/Superadmin";
+  if (role === "STAFF") return "/waiter/tables";
+  return "/dashboard";
+}
+
+export default function Navbar({ isLoggedIn: initialIsLoggedIn, panelHref: initialPanelHref } = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [authState, setAuthState] = useState({
+    isLoggedIn: initialIsLoggedIn ?? false,
+    panelHref: initialPanelHref ?? "/dashboard",
+  });
+
+  const shouldResolveAuth = initialIsLoggedIn === undefined;
+  const { isLoggedIn, panelHref } = authState;
+
+  useEffect(() => {
+    if (!shouldResolveAuth) {
+      setAuthState({
+        isLoggedIn: initialIsLoggedIn,
+        panelHref: initialPanelHref ?? "/dashboard",
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const resolveAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) return;
+
+        const user = await response.json();
+        setAuthState({
+          isLoggedIn: true,
+          panelHref: getPanelHref(user?.role),
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setAuthState({ isLoggedIn: false, panelHref: "/dashboard" });
+        }
+      }
+    };
+
+    resolveAuth();
+    return () => controller.abort();
+  }, [initialIsLoggedIn, initialPanelHref, shouldResolveAuth]);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
@@ -43,7 +93,7 @@ export default function Navbar({ isLoggedIn = false }) {
 
         <div className="hidden items-center gap-2 lg:flex">
           {isLoggedIn ? (
-            <Link href="/dashboard" className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
+            <Link href={panelHref} className="btn h-10 min-h-10 rounded-xl border-none bg-secondary-500 px-4 text-sm font-semibold text-white hover:bg-secondary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500">
               Panele Git
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -78,7 +128,7 @@ export default function Navbar({ isLoggedIn = false }) {
           </ul>
           <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4">
             {isLoggedIn ? (
-              <Link href="/dashboard" onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">
+              <Link href={panelHref} onClick={closeMenu} tabIndex={isOpen ? 0 : -1} className="btn h-11 min-h-11 rounded-xl border-none bg-secondary-500 text-white hover:bg-secondary-600">
                 Panele Git
               </Link>
             ) : (
