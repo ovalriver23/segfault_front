@@ -8,6 +8,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 // Order status types based on actual backend enum
 export type OrderStatus = 'RECEIVED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED';
@@ -37,6 +38,7 @@ export interface OrdersModalProps {
 }
 
 const ORDERS_POLL_INTERVAL_MS = 20_000;
+const SERVED_CELEBRATION_DURATION_MS = 5_500;
 
 type FetchMode = 'initial' | 'manual' | 'background';
 
@@ -116,6 +118,113 @@ function formatDateTime(dateString: string): string {
     });
 }
 
+const celebrationParticles = [
+    { left: '8%', top: '16%', color: 'bg-amber-300', delay: 0.05, rotate: 24 },
+    { left: '18%', top: '72%', color: 'bg-emerald-300', delay: 0.18, rotate: -32 },
+    { left: '31%', top: '10%', color: 'bg-orange-300', delay: 0.3, rotate: 58 },
+    { left: '69%', top: '12%', color: 'bg-lime-300', delay: 0.12, rotate: -18 },
+    { left: '82%', top: '69%', color: 'bg-amber-200', delay: 0.24, rotate: 45 },
+    { left: '92%', top: '25%', color: 'bg-emerald-200', delay: 0.36, rotate: -48 },
+];
+
+function ServedCelebration({ orderId, onDismiss }: { orderId: number; onDismiss: () => void }) {
+    const prefersReducedMotion = useReducedMotion();
+
+    return (
+        <motion.div
+            className="fixed inset-0 flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_35%,#23745d_0%,#145443_38%,#0b3029_100%)] px-6 py-10 text-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0.1 : 0.35 }}
+        >
+            <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
+            <div className="absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-emerald-200/10 blur-3xl" />
+
+            {!prefersReducedMotion && celebrationParticles.map((particle) => (
+                <motion.span
+                    key={`${particle.left}-${particle.top}`}
+                    className={`absolute h-2.5 w-6 rounded-full ${particle.color}`}
+                    style={{ left: particle.left, top: particle.top }}
+                    initial={{ opacity: 0, y: -30, rotate: 0, scale: 0.4 }}
+                    animate={{ opacity: [0, 1, 1, 0], y: [-30, 0, 18, 58], rotate: particle.rotate + 180, scale: [0.4, 1, 1, 0.7] }}
+                    transition={{ duration: 3.2, delay: particle.delay, repeat: Infinity, repeatDelay: 0.7, ease: 'easeOut' }}
+                    aria-hidden="true"
+                />
+            ))}
+
+            <motion.div
+                className="relative z-10 flex w-full max-w-sm flex-col items-center text-center"
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 30, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 18, delay: prefersReducedMotion ? 0 : 0.12 }}
+            >
+                <div className="relative mb-8">
+                    {!prefersReducedMotion && (
+                        <div className="absolute -top-9 left-1/2 flex -translate-x-1/2 gap-3" aria-hidden="true">
+                            {[0, 1, 2].map((steam) => (
+                                <motion.span
+                                    key={steam}
+                                    className="block h-9 w-1.5 rounded-full bg-white/55 blur-[1px]"
+                                    initial={{ opacity: 0, y: 12, scaleY: 0.6 }}
+                                    animate={{ opacity: [0, 0.75, 0], y: [12, -10, -24], x: [0, steam % 2 === 0 ? 5 : -5, 0], scaleY: [0.6, 1, 0.8] }}
+                                    transition={{ duration: 2, delay: steam * 0.25, repeat: Infinity, ease: 'easeOut' }}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    <motion.div
+                        className="flex h-36 w-36 items-center justify-center rounded-full border border-white/25 bg-white/12 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-md"
+                        animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                        <svg viewBox="0 0 120 120" className="h-24 w-24" fill="none" aria-hidden="true">
+                            <path d="M22 73h76" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                            <path d="M31 70c1-20 13-34 29-34s28 14 29 34H31Z" fill="#FCD34D" stroke="white" strokeWidth="4" strokeLinejoin="round" />
+                            <path d="M53 31a7 7 0 0 1 14 0" stroke="white" strokeWidth="5" strokeLinecap="round" />
+                            <path d="m47 55 8 8 18-18" stroke="#145443" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M17 83c15 7 71 7 86 0" stroke="white" strokeWidth="5" strokeLinecap="round" />
+                        </svg>
+                    </motion.div>
+                </div>
+
+                <motion.p
+                    className="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-amber-200"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: prefersReducedMotion ? 0 : 0.35 }}
+                >
+                    Sipariş #{orderId} servis edildi
+                </motion.p>
+                <h2 id="served-celebration-title" className="text-5xl font-black tracking-tight sm:text-6xl">
+                    Afiyet olsun!
+                </h2>
+                <p className="mt-4 max-w-xs text-base leading-relaxed text-emerald-50/80">
+                    Siparişiniz masanızda. Keyifli bir yemek dileriz.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={onDismiss}
+                    className="mt-9 min-h-12 rounded-full border border-white/25 bg-white px-8 py-3 text-sm font-bold text-emerald-900 shadow-lg transition-transform active:scale-95"
+                >
+                    Teşekkürler
+                </button>
+            </motion.div>
+
+            <motion.div
+                className="absolute bottom-0 left-0 h-1.5 bg-amber-300"
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: SERVED_CELEBRATION_DURATION_MS / 1000, ease: 'linear' }}
+                aria-hidden="true"
+            />
+        </motion.div>
+    );
+}
+
 export default function OrdersModal({
     modalId,
     qrToken,
@@ -129,9 +238,11 @@ export default function OrdersModal({
     const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
     const [isRequestingBill, setIsRequestingBill] = useState(false);
     const [billRequested, setBillRequested] = useState(false);
+    const [servedCelebrationOrderId, setServedCelebrationOrderId] = useState<number | null>(null);
     const ordersRef = useRef<Order[]>([]);
     const hasSuccessfulFetchRef = useRef(false);
     const activeRequestRef = useRef<AbortController | null>(null);
+    const celebrationDialogRef = useRef<HTMLDialogElement>(null);
 
     // Theme Configuration
     const themeStyles = {
@@ -201,11 +312,22 @@ export default function OrdersModal({
 
             if (response.ok) {
                 const nextOrders = data as Order[];
+                const newlyServedOrder = hasSuccessfulFetchRef.current
+                    ? nextOrders.find((nextOrder) => {
+                        const previousOrder = ordersRef.current.find((order) => order.id === nextOrder.id);
+                        return nextOrder.status === 'SERVED' && previousOrder !== undefined && previousOrder.status !== 'SERVED';
+                    })
+                    : undefined;
+
                 hasSuccessfulFetchRef.current = true;
 
                 if (!areOrdersEqual(ordersRef.current, nextOrders)) {
                     ordersRef.current = nextOrders;
                     setOrders(nextOrders);
+                }
+
+                if (newlyServedOrder) {
+                    setServedCelebrationOrderId(newlyServedOrder.id);
                 }
 
                 // A successful background request also clears a previous visible error.
@@ -247,6 +369,28 @@ export default function OrdersModal({
             activeRequestRef.current = null;
         };
     }, [fetchOrders]);
+
+    const dismissServedCelebration = useCallback(() => {
+        celebrationDialogRef.current?.close();
+        setServedCelebrationOrderId(null);
+    }, []);
+
+    useEffect(() => {
+        if (servedCelebrationOrderId === null) {
+            return;
+        }
+
+        const dialog = celebrationDialogRef.current;
+        if (dialog && !dialog.open) {
+            dialog.showModal();
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dismissServedCelebration();
+        }, SERVED_CELEBRATION_DURATION_MS);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [dismissServedCelebration, servedCelebrationOrderId]);
 
     const handleRefresh = () => {
         void fetchOrders('manual');
@@ -307,6 +451,7 @@ export default function OrdersModal({
     const hasActiveOrder = orders.some((order) => order.status !== 'SERVED' && order.status !== 'COMPLETED' && order.status !== 'CANCELLED');
 
     return (
+        <>
         <dialog id={modalId} className="modal modal-bottom">
             <div className={`modal-box w-full max-w-md h-[70vh] max-h-[70vh] flex flex-col p-0 rounded-t-3xl rounded-b-none m-0 mx-auto ${styles.bg}`}>
                 {/* Header */}
@@ -545,5 +690,27 @@ export default function OrdersModal({
                 <button>close</button>
             </form>
         </dialog>
+
+        <dialog
+            ref={celebrationDialogRef}
+            aria-labelledby="served-celebration-title"
+            onCancel={(event) => {
+                event.preventDefault();
+                dismissServedCelebration();
+            }}
+            onClose={() => setServedCelebrationOrderId(null)}
+            className="m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0 outline-none backdrop:bg-slate-950/70"
+        >
+            <AnimatePresence>
+                {servedCelebrationOrderId !== null && (
+                    <ServedCelebration
+                        key={servedCelebrationOrderId}
+                        orderId={servedCelebrationOrderId}
+                        onDismiss={dismissServedCelebration}
+                    />
+                )}
+            </AnimatePresence>
+        </dialog>
+        </>
     );
 }
