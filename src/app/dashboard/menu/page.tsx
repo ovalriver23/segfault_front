@@ -107,6 +107,7 @@ export default function Menu() {
                 restaurantId: "preview-restaurant"
             },
             restaurantName: restaurantName || "Restoranım",
+            restaurantLogo: null,
             restaurantLocation: "Preview Location",
             restaurantLatitude: 0,
             restaurantLongitude: 0,

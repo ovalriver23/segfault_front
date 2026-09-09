@@ -69,6 +69,7 @@ export type Table = {
 export type ApiResponse = {
   table: Table;
   restaurantName: string;
+  restaurantLogo: string | null;
   restaurantLocation: string;
   restaurantLatitude: number;
   restaurantLongitude: number;
@@ -452,6 +453,12 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const [isCallingWaiter, setIsCallingWaiter] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [showWaiterConfirmModal, setShowWaiterConfirmModal] = useState(false);
+  const [restaurantLogoFailed, setRestaurantLogoFailed] = useState(false);
+  const restaurantLogo = apiData.restaurantLogo?.trim() || null;
+
+  useEffect(() => {
+    setRestaurantLogoFailed(false);
+  }, [restaurantLogo]);
 
   // API verisini MenuSection formatına dönüştür
   const menuData: MenuSection[] = useMemo(() => {
@@ -764,7 +771,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-gray-900",
       waiterModalBody: "text-gray-600",
       waiterModalCancel: "border-gray-300 text-gray-700 hover:bg-gray-50",
-      waiterModalConfirm: "bg-secondary-500 text-white hover:bg-secondary-600"
+      waiterModalConfirm: "bg-secondary-500 text-white hover:bg-secondary-600",
+      headerBorder: "border-orange-100/80",
+      logoSurface: "bg-white ring-orange-100",
+      mutedText: "text-gray-500"
     },
     MODERN: {
       bg: "bg-[#1f1f1f]",
@@ -783,7 +793,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-white",
       waiterModalBody: "text-gray-300",
       waiterModalCancel: "border-gray-600 text-gray-300 hover:bg-gray-700",
-      waiterModalConfirm: "bg-[#ea580c] text-white hover:bg-[#c2410c]"
+      waiterModalConfirm: "bg-[#ea580c] text-white hover:bg-[#c2410c]",
+      headerBorder: "border-white/10",
+      logoSurface: "bg-white ring-white/15",
+      mutedText: "text-gray-400"
     },
     ELEGANT: {
       bg: "bg-[#f5f5dc]",
@@ -803,7 +816,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-[#5c4033]",
       waiterModalBody: "text-[#8b4513]/80",
       waiterModalCancel: "border-[#d2b48c] text-[#8b4513] hover:bg-[#e6dcc3]/60",
-      waiterModalConfirm: "bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]"
+      waiterModalConfirm: "bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]",
+      headerBorder: "border-[#d2b48c]/60",
+      logoSurface: "bg-[#fdfbf7] ring-[#d2b48c]",
+      mutedText: "text-[#8b4513]/70"
     }
   };
 
@@ -820,14 +836,43 @@ export default function MenuView({ apiData }: MenuViewProps) {
       className={`max-w-md mx-auto rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
-        {/* Left: Menu Title */}
-        <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
+      <header className={`sticky top-0 z-10 flex h-[88px] items-center justify-between gap-3 border-b px-4 py-4 ${currentThemeStyle.headerBorder} ${currentThemeStyle.headerBg}`}>
+        {/* Left: Restaurant Identity */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {restaurantLogo && !restaurantLogoFailed && (
+            <div className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ${currentThemeStyle.logoSurface}`}>
+              <Image
+                src={restaurantLogo}
+                alt={`${apiData.restaurantName} logosu`}
+                fill
+                sizes="44px"
+                priority
+                className="object-contain p-1.5"
+                onError={() => setRestaurantLogoFailed(true)}
+              />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1
+              className={`truncate text-lg font-bold leading-tight ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}
+              title={apiData.restaurantName}
+            >
+              {apiData.restaurantName}
+            </h1>
+            <p className={`mt-1 flex min-w-0 items-center gap-1 text-xs font-medium ${currentThemeStyle.mutedText}`}>
+              <span className="truncate" title={apiData.table.name}>{apiData.table.name}</span>
+              <span className="shrink-0" aria-hidden="true">·</span>
+              <span className="shrink-0">Menü</span>
+            </p>
+          </div>
+        </div>
 
-        {/* Center: Orders Button */}
+        {/* Right: Orders Button */}
         <button
           onClick={handleOpenOrders}
-          className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
+          type="button"
+          aria-label="Siparişlerimi görüntüle"
+          className={`flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 ${currentThemeStyle.ordersButton}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -843,30 +888,8 @@ export default function MenuView({ apiData }: MenuViewProps) {
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
             />
           </svg>
-          <span className="text-xs sm:text-sm font-medium">Siparişlerim</span>
+          <span className="hidden text-xs font-medium min-[360px]:inline sm:text-sm">Siparişlerim</span>
         </button>
-
-        {/* Right: Restaurant Info */}
-        <div className="flex flex-col items-end text-right">
-          <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
-            <span>{apiData.restaurantName}</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-5 h-5 text-gray-400"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          <span className="text-sm text-gray-500 font-medium mt-1">
-            {apiData.table.name.length > 8 ? `${apiData.table.name.substring(0, 8)}...` : apiData.table.name}
-          </span>
-        </div>
       </header>
 
       {/* Ana İçerik Alanı */}
