@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { getBasket, updateItemNote, updateGeneralNote, prepareOrderRequest } from "../lib/services/basketService";
+import { getBasket, updateItemNote, updateGeneralNote } from "../lib/services/basketService";
 
 export interface CartItem {
   id: number;
@@ -46,10 +46,10 @@ export default function CartModal({
   theme = 'DEFAULT'
 }: CartModalProps & { theme?: 'DEFAULT' | 'MODERN' | 'ELEGANT' }) {
   const [itemsWithNotes, setItemsWithNotes] = useState<CartItem[]>(items);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
-  const [tempItemNote, setTempItemNote] = useState("");
-  const [isEditingGeneralNote, setIsEditingGeneralNote] = useState(false);
-  const [tempGeneralNote, setTempGeneralNote] = useState(generalNote);
+  const [activeNoteEditor, setActiveNoteEditor] = useState<
+    { type: "item"; itemId: number } | { type: "general" } | null
+  >(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   // Theme Configuration
   const themeStyles = {
@@ -66,8 +66,7 @@ export default function CartModal({
       inputBg: "bg-white",
       inputText: "text-gray-900",
       inputBorder: "border-gray-300",
-      buttonClose: "text-gray-500 hover:bg-gray-100",
-      secondaryButton: "btn-outline border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      buttonClose: "text-gray-500 hover:bg-gray-100"
     },
     MODERN: {
       bg: "bg-[#1f1f1f]",
@@ -82,8 +81,7 @@ export default function CartModal({
       inputBg: "bg-[#1a1a1a]",
       inputText: "text-gray-100",
       inputBorder: "border-gray-600",
-      buttonClose: "text-gray-400 hover:bg-gray-700 hover:text-white",
-      secondaryButton: "text-gray-300 border-gray-500 hover:bg-gray-700 hover:text-white"
+      buttonClose: "text-gray-400 hover:bg-gray-700 hover:text-white"
     },
     ELEGANT: {
       bg: "bg-[#f5f5dc]",
@@ -98,8 +96,7 @@ export default function CartModal({
       inputBg: "bg-[#fdfbf7]",
       inputText: "text-[#5c4033]",
       inputBorder: "border-[#d2b48c]",
-      buttonClose: "text-[#8b4513] hover:bg-[#d2b48c]/20",
-      secondaryButton: "border-[#8b4513] text-[#8b4513] hover:bg-[#8b4513] hover:text-[#fdfbf7]"
+      buttonClose: "text-[#8b4513] hover:bg-[#d2b48c]/20"
     }
   };
 
@@ -116,8 +113,7 @@ export default function CartModal({
       };
     });
     setItemsWithNotes(itemsWithNotesFromBasket);
-    setTempGeneralNote(generalNote);
-  }, [items, qrToken, generalNote]);
+  }, [items, qrToken]);
 
   const totalPrice = itemsWithNotes.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -127,36 +123,45 @@ export default function CartModal({
   const totalItems = itemsWithNotes.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleEditItemNote = (itemId: number, currentNote: string = "") => {
-    setEditingItemId(itemId);
-    setTempItemNote(currentNote);
-  };
-
-  const handleSaveItemNote = (itemId: number) => {
-    updateItemNote(qrToken, itemId, tempItemNote);
-    // Update local state immediately
-    setItemsWithNotes(prev =>
-      prev.map(item =>
-        item.id === itemId ? { ...item, note: tempItemNote } : item
-      )
-    );
-    setEditingItemId(null);
+    setActiveNoteEditor({ type: "item", itemId });
+    setNoteDraft(currentNote);
   };
 
   const handleEditGeneralNote = () => {
-    setIsEditingGeneralNote(true);
-    setTempGeneralNote(generalNote);
+    setActiveNoteEditor({ type: "general" });
+    setNoteDraft(generalNote);
   };
 
-  const handleSaveGeneralNote = () => {
-    updateGeneralNote(qrToken, tempGeneralNote);
-    onUpdateGeneralNote(tempGeneralNote);
-    setIsEditingGeneralNote(false);
+  const handleNoteChange = (note: string) => {
+    setNoteDraft(note);
+
+    if (activeNoteEditor?.type === "item") {
+      updateItemNote(qrToken, activeNoteEditor.itemId, note);
+      setItemsWithNotes(prev =>
+        prev.map(item =>
+          item.id === activeNoteEditor.itemId ? { ...item, note } : item
+        )
+      );
+      return;
+    }
+
+    if (activeNoteEditor?.type === "general") {
+      updateGeneralNote(qrToken, note);
+      onUpdateGeneralNote(note);
+    }
+  };
+
+  const handleNoteBlur = () => {
+    setActiveNoteEditor(null);
+  };
+
+  const handleNoteFocus = (element: HTMLTextAreaElement) => {
+    window.setTimeout(() => {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 180);
   };
 
   const handleOrder = () => {
-    // Prepare order data
-    const orderData = prepareOrderRequest(qrToken);
-
     // Call the parent's submit handler
     onSubmitOrder();
 
@@ -167,7 +172,7 @@ export default function CartModal({
 
   return (
     <dialog id={modalId} className="modal modal-bottom">
-      <div className={`modal-box w-full max-w-md h-[70vh] max-h-[70vh] flex flex-col p-0 rounded-t-3xl rounded-b-none m-0 mx-auto ${styles.bg}`}>
+      <div className={`modal-box w-full max-w-md h-[82dvh] max-h-[calc(100dvh-0.75rem)] flex flex-col p-0 rounded-t-3xl rounded-b-none m-0 mx-auto overflow-hidden ${styles.bg}`}>
         {/* Header */}
         <div className={`p-6 pb-4 border-b flex justify-between items-center shrink-0 ${styles.border}`}>
           <h2 className={`text-2xl font-bold ${styles.text}`}>Sepetim</h2>
@@ -192,7 +197,7 @@ export default function CartModal({
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:p-6 space-y-4">
           {itemsWithNotes.length === 0 ? (
             <div className="text-center py-12">
               <p className={`${styles.textSecondary} text-lg`}>Sepetiniz boş</p>
@@ -272,38 +277,47 @@ export default function CartModal({
                   </div>
 
                   {/* Item Note Section */}
-                  {editingItemId === item.id ? (
-                    <div className="space-y-2">
+                  {activeNoteEditor?.type === "item" && activeNoteEditor.itemId === item.id ? (
+                    <div className={`rounded-xl border p-3 ${styles.inputBg} ${styles.inputBorder}`}>
+                      <label
+                        htmlFor={`item-note-${item.id}`}
+                        className={`mb-2 block text-sm font-semibold ${styles.text}`}
+                      >
+                        Ürün notu
+                      </label>
                       <textarea
-                        className={`textarea textarea-bordered w-full text-sm h-16 resize-none ${styles.inputBg} ${styles.inputText} placeholder-gray-400 ${styles.inputBorder}`}
-                        placeholder="Özel istek yazın..."
-                        value={tempItemNote}
-                        onChange={(e) => setTempItemNote(e.target.value)}
+                        id={`item-note-${item.id}`}
+                        autoFocus
+                        enterKeyHint="done"
+                        className={`textarea w-full min-h-20 resize-none border-0 bg-transparent p-0 text-base leading-6 shadow-none outline-none focus:outline-none ${styles.inputText} placeholder:text-gray-400`}
+                        placeholder="Örn. soğansız, az acılı..."
+                        value={noteDraft}
+                        onChange={(e) => handleNoteChange(e.target.value)}
+                        onBlur={handleNoteBlur}
+                        onFocus={(e) => handleNoteFocus(e.currentTarget)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") e.currentTarget.blur();
+                        }}
                         maxLength={200}
+                        aria-describedby={`item-note-help-${item.id}`}
                       />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveItemNote(item.id)}
-                          className={`btn btn-sm ${styles.primaryButton} text-white border-none flex-1`}
-                        >
-                          Kaydet
-                        </button>
-                        <button
-                          onClick={() => setEditingItemId(null)}
-                          className={`btn btn-sm btn-outline flex-1 ${styles.secondaryButton}`}
-                        >
-                          İptal
-                        </button>
+                      <div
+                        id={`item-note-help-${item.id}`}
+                        className={`mt-2 text-right text-xs ${styles.textSecondary}`}
+                      >
+                        <span>{noteDraft.length}/200</span>
                       </div>
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => handleEditItemNote(item.id, item.note)}
-                      className={`${styles.primaryText} text-sm font-medium flex items-center gap-1 transition-colors`}
+                      className={`flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${styles.inputBorder} ${styles.inputBg}`}
+                      aria-label={item.note ? `${item.name} notunu düzenle` : `${item.name} için not ekle`}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
+                        className={`h-5 w-5 shrink-0 ${styles.primaryText}`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -315,7 +329,24 @@ export default function CartModal({
                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                         />
                       </svg>
-                      {item.note ? `Not: ${item.note}` : "Not ekle"}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-medium ${styles.text}`}>
+                          {item.note ? "Ürün notu" : "Not ekle"}
+                        </span>
+                        {item.note && (
+                          <span className={`mt-0.5 block line-clamp-2 text-sm leading-5 ${styles.textSecondary}`}>
+                            {item.note}
+                          </span>
+                        )}
+                      </span>
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className={`h-5 w-5 shrink-0 ${styles.textSecondary}`}
+                      >
+                        <path d="m7.5 5 5 5-5 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </button>
                   )}
                 </div>
@@ -341,41 +372,44 @@ export default function CartModal({
                   Genel Not
                 </h3>
 
-                {isEditingGeneralNote ? (
-                  <div className="space-y-2">
+                {activeNoteEditor?.type === "general" ? (
+                  <div className={`rounded-xl border p-3 ${styles.inputBg} ${styles.inputBorder}`}>
+                    <label htmlFor="general-order-note" className="sr-only">
+                      Genel sipariş notu
+                    </label>
                     <textarea
-                      className={`textarea textarea-bordered w-full text-sm h-20 resize-none ${styles.inputBg} ${styles.inputText} placeholder-gray-400 ${styles.inputBorder}`}
-                      placeholder="Siparişiniz için genel bir not yazın..."
-                      value={tempGeneralNote}
-                      onChange={(e) => setTempGeneralNote(e.target.value)}
+                      id="general-order-note"
+                      autoFocus
+                      enterKeyHint="done"
+                      className={`textarea w-full min-h-24 resize-none border-0 bg-transparent p-0 text-base leading-6 shadow-none outline-none focus:outline-none ${styles.inputText} placeholder:text-gray-400`}
+                      placeholder="Örn. hepsi aynı anda gelsin..."
+                      value={noteDraft}
+                      onChange={(e) => handleNoteChange(e.target.value)}
+                      onBlur={handleNoteBlur}
+                      onFocus={(e) => handleNoteFocus(e.currentTarget)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") e.currentTarget.blur();
+                      }}
                       maxLength={500}
+                      aria-describedby="general-note-help"
                     />
-                    <div className={`text-right text-xs ${styles.textSecondary} mb-2`}>
-                      {tempGeneralNote.length}/500
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveGeneralNote}
-                        className={`btn btn-sm ${styles.primaryButton} text-white border-none flex-1`}
-                      >
-                        Kaydet
-                      </button>
-                      <button
-                        onClick={() => setIsEditingGeneralNote(false)}
-                        className={`btn btn-sm btn-outline flex-1 ${styles.secondaryButton}`}
-                      >
-                        İptal
-                      </button>
+                    <div
+                      id="general-note-help"
+                      className={`mt-2 text-right text-xs ${styles.textSecondary}`}
+                    >
+                      <span>{noteDraft.length}/500</span>
                     </div>
                   </div>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleEditGeneralNote}
-                    className={`${styles.primaryText} text-sm font-medium flex items-center gap-1 transition-colors`}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${styles.inputBorder} ${styles.inputBg}`}
+                    aria-label={generalNote ? "Genel sipariş notunu düzenle" : "Genel sipariş notu ekle"}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
+                      className={`h-5 w-5 shrink-0 ${styles.primaryText}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -387,7 +421,24 @@ export default function CartModal({
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    {generalNote ? generalNote : "Genel not ekle"}
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-sm font-medium ${styles.text}`}>
+                        {generalNote ? "Notu düzenle" : "Genel not ekle"}
+                      </span>
+                      {generalNote && (
+                        <span className={`mt-0.5 block line-clamp-2 text-sm leading-5 ${styles.textSecondary}`}>
+                          {generalNote}
+                        </span>
+                      )}
+                    </span>
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      className={`h-5 w-5 shrink-0 ${styles.textSecondary}`}
+                    >
+                      <path d="m7.5 5 5 5-5 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -396,17 +447,17 @@ export default function CartModal({
         </div>
 
         {/* Footer - Total and Order Button */}
-        {itemsWithNotes.length > 0 && (
-          <div className={`p-6 pt-4 border-t ${styles.border} space-y-3 shrink-0`}>
+        {itemsWithNotes.length > 0 && !activeNoteEditor && (
+          <div className={`px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 border-t ${styles.border} space-y-2.5 shrink-0`}>
             <div className="flex justify-between items-center">
               <span className={styles.textSecondary}>Toplam ({totalItems} ürün)</span>
-              <span className={`text-2xl font-bold ${styles.text}`}>
+              <span className={`text-[1.375rem] leading-tight font-bold ${styles.text}`}>
                 {totalPrice.toFixed(2)} TL
               </span>
             </div>
             <button
               onClick={handleOrder}
-              className={`btn w-full ${styles.primaryButton} text-white border-none text-lg h-14`}
+              className={`btn h-[3.25rem] min-h-[3.25rem] w-full border-none text-base font-semibold text-white ${styles.primaryButton}`}
             >
               Siparişi Tamamla
             </button>
