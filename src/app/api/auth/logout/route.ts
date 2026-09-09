@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json;charset=UTF-8',
+        'Authorization': `Bearer ${jwtToken}`,
       },
       credentials: 'include'
     });

@@ -243,20 +243,65 @@ export function usePushNotification() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const registration = await navigator.serviceWorker.ready;
+      if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+        setState(prev => ({
+          ...prev,
+          isSubscribed: false,
+          isLoading: false
+        }));
+        return true;
+      }
+
+      // `ready` henüz aktif bir service worker yoksa sonsuza kadar bekleyebilir.
+      // Mevcut kaydı doğrudan okuyarak çıkış akışını bloke etmiyoruz.
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        setState(prev => ({
+          ...prev,
+          isSubscribed: false,
+          isLoading: false
+        }));
+        return true;
+      }
+
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
-        // Backend'den sil
-        await fetch('/api/waiter/notifications/unsubscribe', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ endpoint: subscription.endpoint })
-        });
+        let backendError: Error | null = null;
+
+        // Backend kaydı silinemezse bile tarayıcı aboneliğini mutlaka iptal et.
+        // Böylece eski endpoint'e gönderilen push'lar kullanıcıya ulaşmaz.
+        try {
+          const response = await fetch('/api/waiter/notifications/unsubscribe', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ endpoint: subscription.endpoint })
+          });
+
+          if (!response.ok) {
+            throw new Error('Abonelik sunucudan silinemedi');
+          }
+        } catch (err) {
+          backendError = err instanceof Error ? err : new Error('Abonelik sunucudan silinemedi');
+          console.error('Backend unsubscribe error:', err);
+        }
 
         // Tarayıcıdan sil
-        await subscription.unsubscribe();
+        const browserUnsubscribed = await subscription.unsubscribe();
+        if (!browserUnsubscribed) {
+          throw new Error('Tarayıcı bildirim aboneliği iptal edilemedi');
+        }
+
+        if (backendError) {
+          setState(prev => ({
+            ...prev,
+            isSubscribed: false,
+            isLoading: false,
+            error: backendError.message
+          }));
+          return false;
+        }
       }
 
       setState(prev => ({
