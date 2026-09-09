@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import {
   calculateDistance,
+  GEOLOCATION_ERROR_CODE,
   getUserLocation,
   type GeolocationError,
   type LocationCoordinates,
@@ -24,6 +25,7 @@ type ValidationError = {
   title: string;
   message: string;
   type: "location" | "scan";
+  actionLabel: string;
 };
 
 type DistanceValidationError = {
@@ -55,10 +57,18 @@ const isDistanceValidationError = (error: unknown): error is DistanceValidationE
 
 const normalizeValidationError = (error: unknown): ValidationError => {
   if (isGeolocationError(error)) {
+    const titleByCode: Record<number, string> = {
+      [GEOLOCATION_ERROR_CODE.UNSUPPORTED]: "Konum Desteklenmiyor",
+      [GEOLOCATION_ERROR_CODE.PERMISSION_DENIED]: "Konum Erişimi Kapalı",
+      [GEOLOCATION_ERROR_CODE.POSITION_UNAVAILABLE]: "Konum Servisi Kapalı Olabilir",
+      [GEOLOCATION_ERROR_CODE.TIMEOUT]: "Konum Alınamadı",
+    };
+
     return {
-      title: error.code === 1 ? "Konum İzni Gerekli" : "Konum Doğrulanamadı",
+      title: titleByCode[error.code] ?? "Konum Doğrulanamadı",
       message: error.message,
       type: "location",
+      actionLabel: "Konumu Tekrar Kontrol Et",
     };
   }
 
@@ -67,6 +77,7 @@ const normalizeValidationError = (error: unknown): ValidationError => {
       title: "Restorana Çok Uzaksınız",
       message: `Restorana çok uzaksınız. Mevcut mesafe: ${error.actualDistance.toFixed(1)} metre (Maksimum: ${MAX_ALLOWED_DISTANCE_METERS.toFixed(1)} metre)`,
       type: "location",
+      actionLabel: "Konumu Yeniden Kontrol Et",
     };
   }
 
@@ -78,14 +89,22 @@ const normalizeValidationError = (error: unknown): ValidationError => {
       title: "Restoran Hizmet Dışı",
       message,
       type: "scan",
+      actionLabel: "Tekrar Dene",
     };
   }
 
   if (scanError?.status === 403 && scanError.maxAllowedDistance !== undefined) {
+    const actualDistance = scanError.actualDistance;
+    const distanceMessage =
+      typeof actualDistance === "number"
+        ? `Restorana çok uzaksınız. Mevcut mesafe: ${actualDistance.toFixed(1)} metre (Maksimum: ${scanError.maxAllowedDistance.toFixed(1)} metre)`
+        : message;
+
     return {
       title: "Restorana Çok Uzaksınız",
-      message,
+      message: distanceMessage,
       type: "location",
+      actionLabel: "Konumu Yeniden Kontrol Et",
     };
   }
 
@@ -94,6 +113,7 @@ const normalizeValidationError = (error: unknown): ValidationError => {
       title: "Masa Doğrulama Hatası",
       message: "Restoran konumu yapılandırılmamış. Lütfen restoranla iletişime geçin.",
       type: "scan",
+      actionLabel: "Tekrar Dene",
     };
   }
 
@@ -101,6 +121,7 @@ const normalizeValidationError = (error: unknown): ValidationError => {
     title: "Masa Doğrulama Hatası",
     message,
     type: "scan",
+    actionLabel: "Tekrar Dene",
   };
 };
 
@@ -131,6 +152,7 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
 
   const [menuData, setMenuData] = useState<TableScanResponse | null>(null);
   const [validationError, setValidationError] = useState<ValidationError | null>(null);
+  const [validationAttempt, setValidationAttempt] = useState(0);
 
   useEffect(() => {
     if (!qrToken) return;
@@ -172,20 +194,6 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
       }, delay);
     };
 
-    const getCurrentLocation = async (): Promise<LocationCoordinates> => {
-      try {
-        return await getUserLocation();
-      } catch (error) {
-        const isFallbackEnabled =
-          process.env.NEXT_PUBLIC_ENABLE_GEOLOCATION_FALLBACK === "true";
-
-        if (!isGeolocationError(error) || !isFallbackEnabled) throw error;
-
-        console.warn("Geolocation failed, using fallback location:", error.message);
-        return { latitude: 0, longitude: 0 };
-      }
-    };
-
     const validateLocation = async () => {
       if (isDisposed || isValidationRunning) return;
 
@@ -197,7 +205,7 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
       let nextValidationDelay = LOCATION_VALIDATION_INTERVAL_MS;
 
       try {
-        const userLocation = await getCurrentLocation();
+        const userLocation = await getUserLocation();
         if (isDisposed) return;
 
         if (restaurantCoordinates === null) {
@@ -243,12 +251,25 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
         const normalizedError = normalizeValidationError(error);
 
         if (isGeolocationError(error)) {
-          // GPS/permission failures can be transient. Keep the current UI and
-          // surface the error only if every retry fails throughout the grace period.
           latestLocationError = normalizedError;
-          consecutiveLocationFailureStartedAt ??= Date.now();
-          scheduleGracePeriodError();
-          nextValidationDelay = LOCATION_VALIDATION_RETRY_MS;
+
+          const shouldShowImmediately =
+            restaurantCoordinates === null ||
+            error.code === GEOLOCATION_ERROR_CODE.PERMISSION_DENIED ||
+            error.code === GEOLOCATION_ERROR_CODE.UNSUPPORTED;
+
+          if (shouldShowImmediately) {
+            // There is no usable content on the initial request, while denied
+            // permission is conclusive even after the menu has loaded.
+            setValidationError(normalizedError);
+            shouldScheduleNextValidation = false;
+          } else {
+            // A temporary GPS failure should not interrupt an open menu. Keep
+            // retrying in the background and surface it after the grace period.
+            consecutiveLocationFailureStartedAt ??= Date.now();
+            scheduleGracePeriodError();
+            nextValidationDelay = LOCATION_VALIDATION_RETRY_MS;
+          }
         } else if (isDistanceValidationError(error)) {
           // A measured out-of-range position is a conclusive result, not an
           // unavailable location, so show it immediately and keep checking locally.
@@ -290,7 +311,13 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", validateWhenPageBecomesActive);
       window.removeEventListener("online", validateWhenPageBecomesActive);
     };
-  }, [qrToken]);
+  }, [qrToken, validationAttempt]);
+
+  const retryValidation = () => {
+    setValidationError(null);
+    setMenuData(null);
+    setValidationAttempt((currentAttempt) => currentAttempt + 1);
+  };
 
   if (!qrToken) {
     return (
@@ -306,32 +333,36 @@ export default function TableMenuShell({ children }: { children: ReactNode }) {
 
   if (validationError) {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
-        <div className="text-center p-6">
-          <div className="text-red-500 text-6xl mb-4">
+      <main className="mx-auto flex min-h-[100dvh] max-w-md items-center justify-center bg-white px-5 py-8 sm:rounded-3xl sm:shadow-2xl">
+        <div className="w-full text-center" role="alert" aria-live="assertive">
+          <div className="mb-4 text-6xl" aria-hidden="true">
             {validationError.type === "location" ? "📍" : "⚠️"}
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">{validationError.title}</h2>
-          <p className="text-gray-600 mb-4">{validationError.message}</p>
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">{validationError.title}</h2>
+          <p className="mx-auto mb-6 max-w-sm text-base leading-6 text-gray-600">
+            {validationError.message}
+          </p>
           <button
-            onClick={() => window.location.reload()}
-            className="btn bg-[#FF9F5A] hover:bg-[#e88d48] text-white border-none"
+            type="button"
+            onClick={retryValidation}
+            className="btn h-12 min-h-12 w-full max-w-sm border-none bg-[#FF9F5A] text-base font-bold text-white hover:bg-[#e88d48] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF9F5A]"
           >
-            Tekrar Dene
+            {validationError.actionLabel}
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!menuData) {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl h-screen flex items-center justify-center">
-        <div className="text-center p-6">
+      <main className="mx-auto flex min-h-[100dvh] max-w-md items-center justify-center bg-white px-5 py-8 sm:rounded-3xl sm:shadow-2xl">
+        <div className="text-center" role="status" aria-live="polite">
           <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-          <p className="text-gray-600 text-lg">Menü yükleniyor...</p>
+          <p className="text-lg font-semibold text-gray-700">Konumunuz doğrulanıyor...</p>
+          <p className="mt-2 text-sm leading-5 text-gray-500">Bu işlem birkaç saniye sürebilir.</p>
         </div>
-      </div>
+      </main>
     );
   }
 
