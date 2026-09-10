@@ -35,6 +35,8 @@ import {
 import CartModal from "./CartModal";
 import OrdersModal from "./OrdersModal";
 import NotificationModal, { showNotification, type NotificationType } from "./NotificationModal";
+import MenuCategoryFilter, { type CategoryFilterItem } from "./MenuCategoryFilter";
+import MenuPoweredBy from "./MenuPoweredBy";
 
 // --- API Response Types (Based on Section 9.3) ---
 export type MenuItem = {
@@ -69,6 +71,7 @@ export type Table = {
 export type ApiResponse = {
   table: Table;
   restaurantName: string;
+  restaurantLogo: string | null;
   restaurantLocation: string;
   restaurantLatitude: number;
   restaurantLongitude: number;
@@ -96,12 +99,6 @@ type MenuSection = {
   categoryName: string;
   items: Product[];
 };
-
-type CategoryFilterItem = {
-  id: number;
-  name: string;
-  imageUrl: string | null;
-}
 
 // --- Alt Bileşenler ---
 
@@ -284,107 +281,6 @@ function ProductCard({
   );
 }
 
-// 2. Kategori Filtresi
-function CategoryFilter({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  theme
-}: {
-  categories: CategoryFilterItem[];
-  selectedCategory: string;
-  onSelectCategory: (categoryName: string) => void;
-  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
-}) {
-  const themeStyles = {
-    DEFAULT: {
-      bgActive: "#F8A45A",
-      bgInactive: "#FFC898",
-      border: "border-secondary-500",
-      text: "text-gray-800",
-      iconBg: ""
-    },
-    MODERN: {
-      bgActive: "#ea580c",
-      bgInactive: "#374151",
-      border: "border-orange-500",
-      text: "text-gray-200",
-      // Rainbow gradient for inactive state (faint)
-      iconBg: "bg-gradient-to-tr from-indigo-100/10 via-purple-100/10 to-pink-100/10"
-    },
-    ELEGANT: {
-      bgActive: "#9C6644",
-      bgInactive: "#d2b48c",
-      border: "border-[#5c4033]",
-      text: "text-[#5c4033]",
-      iconBg: ""
-    }
-  };
-  const styles = themeStyles[theme] || themeStyles.DEFAULT;
-
-  return (
-    <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
-      {/* "All" butonu */}
-      <button
-        key="all"
-        onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
-          }`}
-      >
-        <div
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
-            ? `border-2 ${styles.border}`
-            : ""
-            } ${theme === 'MODERN' && selectedCategory !== "All" ? styles.iconBg : ''}`}
-          style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
-        >
-          <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
-        </div>
-        <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
-      </button>
-
-      {/* Dinamik kategoriler */}
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
-            }`}
-        >
-          <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
-              ? `border-2 ${styles.border}`
-              : ""
-              } ${theme === 'MODERN' && selectedCategory !== cat.name ? styles.iconBg : ''}`}
-            style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
-          >
-            {cat.imageUrl ? (
-              <div className="relative w-16 h-16">
-                <Image
-                  src={cat.imageUrl}
-                  alt={cat.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  className="mask mask-squircle object-cover"
-                />
-              </div>
-            ) : (
-              <Image
-                src="/images/burger.png"
-                alt={cat.name}
-                width={63}
-                height={63}
-                className="mask mask-squircle"
-              />
-            )}
-          </div>
-          <span className={`font-semibold text-sm ${styles.text}`}>{cat.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function CartSummary({
   itemCount,
   totalPrice,
@@ -452,6 +348,12 @@ export default function MenuView({ apiData }: MenuViewProps) {
   const [isCallingWaiter, setIsCallingWaiter] = useState(false);
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [showWaiterConfirmModal, setShowWaiterConfirmModal] = useState(false);
+  const [restaurantLogoFailed, setRestaurantLogoFailed] = useState(false);
+  const restaurantLogo = apiData.restaurantLogo?.trim() || null;
+
+  useEffect(() => {
+    setRestaurantLogoFailed(false);
+  }, [restaurantLogo]);
 
   // API verisini MenuSection formatına dönüştür
   const menuData: MenuSection[] = useMemo(() => {
@@ -656,7 +558,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292;
+      const STICKY_OFFSET = 264;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = main.getBoundingClientRect().top;
       const currentScrollTop = main.scrollTop;
@@ -764,7 +666,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-gray-900",
       waiterModalBody: "text-gray-600",
       waiterModalCancel: "border-gray-300 text-gray-700 hover:bg-gray-50",
-      waiterModalConfirm: "bg-secondary-500 text-white hover:bg-secondary-600"
+      waiterModalConfirm: "bg-secondary-500 text-white hover:bg-secondary-600",
+      headerBorder: "border-orange-100/80",
+      logoSurface: "bg-white ring-orange-100",
+      mutedText: "text-gray-500"
     },
     MODERN: {
       bg: "bg-[#1f1f1f]",
@@ -783,7 +688,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-white",
       waiterModalBody: "text-gray-300",
       waiterModalCancel: "border-gray-600 text-gray-300 hover:bg-gray-700",
-      waiterModalConfirm: "bg-[#ea580c] text-white hover:bg-[#c2410c]"
+      waiterModalConfirm: "bg-[#ea580c] text-white hover:bg-[#c2410c]",
+      headerBorder: "border-white/10",
+      logoSurface: "bg-white ring-white/15",
+      mutedText: "text-gray-400"
     },
     ELEGANT: {
       bg: "bg-[#f5f5dc]",
@@ -803,7 +711,10 @@ export default function MenuView({ apiData }: MenuViewProps) {
       waiterModalTitle: "text-[#5c4033]",
       waiterModalBody: "text-[#8b4513]/80",
       waiterModalCancel: "border-[#d2b48c] text-[#8b4513] hover:bg-[#e6dcc3]/60",
-      waiterModalConfirm: "bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]"
+      waiterModalConfirm: "bg-[#9C6644] text-[#fdfbf7] hover:bg-[#7f5539]",
+      headerBorder: "border-[#d2b48c]/60",
+      logoSurface: "bg-[#fdfbf7] ring-[#d2b48c]",
+      mutedText: "text-[#8b4513]/70"
     }
   };
 
@@ -820,14 +731,43 @@ export default function MenuView({ apiData }: MenuViewProps) {
       className={`max-w-md mx-auto rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
-        {/* Left: Menu Title */}
-        <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
+      <header className={`sticky top-0 z-30 flex h-[88px] items-center justify-between gap-3 border-b px-4 py-4 ${currentThemeStyle.headerBorder} ${currentThemeStyle.headerBg}`}>
+        {/* Left: Restaurant Identity */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {restaurantLogo && !restaurantLogoFailed && (
+            <div className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ${currentThemeStyle.logoSurface}`}>
+              <Image
+                src={restaurantLogo}
+                alt={`${apiData.restaurantName} logosu`}
+                fill
+                sizes="44px"
+                priority
+                className="object-contain p-1.5"
+                onError={() => setRestaurantLogoFailed(true)}
+              />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1
+              className={`truncate text-lg font-bold leading-tight ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}
+              title={apiData.restaurantName}
+            >
+              {apiData.restaurantName}
+            </h1>
+            <p className={`mt-1 flex min-w-0 items-center gap-1 text-xs font-medium ${currentThemeStyle.mutedText}`}>
+              <span className="truncate" title={apiData.table.name}>{apiData.table.name}</span>
+              <span className="shrink-0" aria-hidden="true">·</span>
+              <span className="shrink-0">Menü</span>
+            </p>
+          </div>
+        </div>
 
-        {/* Center: Orders Button */}
+        {/* Right: Orders Button */}
         <button
           onClick={handleOpenOrders}
-          className={`flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl absolute left-1/2 -translate-x-1/2 ${currentThemeStyle.ordersButton}`}
+          type="button"
+          aria-label="Siparişlerimi görüntüle"
+          className={`flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-2.5 sm:px-3 ${currentThemeStyle.ordersButton}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -843,46 +783,25 @@ export default function MenuView({ apiData }: MenuViewProps) {
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
             />
           </svg>
-          <span className="text-xs sm:text-sm font-medium">Siparişlerim</span>
+          <span className="hidden text-xs font-medium min-[360px]:inline sm:text-sm">Siparişlerim</span>
         </button>
-
-        {/* Right: Restaurant Info */}
-        <div className="flex flex-col items-end text-right">
-          <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
-            <span>{apiData.restaurantName}</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-5 h-5 text-gray-400"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          <span className="text-sm text-gray-500 font-medium mt-1">
-            {apiData.table.name.length > 8 ? `${apiData.table.name.substring(0, 8)}...` : apiData.table.name}
-          </span>
-        </div>
       </header>
 
       {/* Ana İçerik Alanı */}
       <main className="px-2">
 
         {/* Search Bar and Call Waiter Button */}
-        <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky top-[88px] z-20 flex h-[72px] w-full gap-2.5 px-4 py-3 transition-[transform,opacity] duration-300 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
           }`}>
-          {/* Search Bar (60%) */}
-          <div className="w-[60%]">
-            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full ${currentThemeStyle.searchBg}`}>
+          {/* Search Bar */}
+          <div className="min-w-0 flex-1">
+            <label className={`input input-bordered flex h-12 w-full items-center gap-2 rounded-2xl border-none px-3.5 shadow-sm ${currentThemeStyle.searchBg}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
+                className={`h-5 w-5 shrink-0 opacity-70 ${currentThemeStyle.searchIcon}`}
+                aria-hidden="true"
               >
                 <path
                   fillRule="evenodd"
@@ -892,18 +811,19 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </svg>
               <input
                 type="text"
-                className={`grow bg-transparent w-full ${currentThemeStyle.searchInput}`}
-                placeholder="Ara"
+                aria-label="Menüde ara"
+                className={`min-w-0 grow bg-transparent text-base outline-none ${currentThemeStyle.searchInput}`}
+                placeholder="Menüde ara"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </label>
           </div>
 
-          {/* Call Waiter Button (40%) */}
-          <div className="w-[40%] h-14">
+          {/* Call Waiter Button */}
+          <div className="h-12 w-[132px] shrink-0">
             {waiterCalled ? (
-              <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
+              <div className="flex h-full w-full items-center justify-center gap-1.5 rounded-2xl bg-green-100 px-3 text-green-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -913,28 +833,29 @@ export default function MenuView({ apiData }: MenuViewProps) {
               <button
                 onClick={handleShowWaiterConfirm}
                 disabled={isCallingWaiter}
-                className={`w-full h-full flex items-center justify-center gap-1 px-3 rounded-full transition-colors shadow-sm ${currentThemeStyle.callWaiterBg}`}
+                type="button"
+                className={`flex h-full w-full items-center justify-center gap-1.5 rounded-2xl px-3 shadow-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 ${currentThemeStyle.callWaiterBg}`}
               >
                 {isCallingWaiter ? (
                   <span className="loading loading-spinner loading-xs"></span>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 17.5 21.502" fill="none" aria-hidden="true">
                     <g id="Group">
                       <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </g>
                   </svg>
                 )}
-                <span className="text-sm font-medium">Garson Çağır</span>
+                <span className="whitespace-nowrap text-sm font-semibold">Garson Çağır</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky top-[160px] z-20 h-[104px] w-full pt-2 transition-[transform,opacity] duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
           }`}>
-          <CategoryFilter
+          <MenuCategoryFilter
             categories={categoriesForFilter}
             selectedCategory={selectedCategory}
             onSelectCategory={handleCategoryClick}
@@ -973,6 +894,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </div>
             </section>
           ))}
+          <MenuPoweredBy theme={theme} />
         </div>
       </main>
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import MenuPreview from "@/components/MenuPreview";
 import type { ApiResponse } from "@/components/MenuView";
+import { useAuth } from "@/app/lib/context/AuthContext";
 
 interface CategoryItem {
     id: number;
@@ -30,6 +31,7 @@ interface CategoryWithItems {
 }
 
 export default function Menu() {
+    const { user } = useAuth()
     const [categories, setCategories] = useState<CategoryItem[]>([])
     const [menuItemsByCategory, setMenuItemsByCategory] = useState<CategoryWithItems[]>([])
     const [categoryForm, setCategoryForm] = useState({ name: '', file: null as File | null })
@@ -106,7 +108,8 @@ export default function Menu() {
                 status: "available",
                 restaurantId: "preview-restaurant"
             },
-            restaurantName: restaurantName || "Restoranım",
+            restaurantName: restaurantName || user?.restaurantName || "Restoranım",
+            restaurantLogo: user?.restaurantLogoUrl?.trim() || null,
             restaurantLocation: "Preview Location",
             restaurantLatitude: 0,
             restaurantLongitude: 0,
@@ -133,7 +136,7 @@ export default function Menu() {
             }),
             menuTheme: currentTheme
         };
-    }, [menuItemsByCategory, categories, currentTheme]);
+    }, [menuItemsByCategory, categories, currentTheme, restaurantName, user?.restaurantLogoUrl, user?.restaurantName]);
 
     // Show alert with auto-hide
     const showSuccessAlert = (message: string) => {

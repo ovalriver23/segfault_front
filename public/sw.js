@@ -28,17 +28,33 @@ self.addEventListener('push', function(event) {
     }
   }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      tag: data.tag,
-      requireInteraction: data.requireInteraction,
-      vibrate: [200, 100, 200],
-      data: data.data
-    })
-  );
+  event.waitUntil((async function() {
+    try {
+      // Eski/stale bir push endpoint'i backend'de kalmış olsa bile, aktif
+      // bir garson oturumu yokken bildirimi kullanıcıya gösterme.
+      const authResponse = await fetch('/api/auth/me', {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+
+      if (!authResponse.ok) return;
+
+      const user = await authResponse.json();
+      if (user.role !== 'STAFF') return;
+
+      await self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: data.icon,
+        badge: data.badge,
+        tag: data.tag,
+        requireInteraction: data.requireInteraction,
+        vibrate: [200, 100, 200],
+        data: data.data
+      });
+    } catch (error) {
+      console.error('Push session check failed:', error);
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', function(event) {

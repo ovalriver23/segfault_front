@@ -3,6 +3,7 @@
 import { User, LogOut, Lock, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePushNotification } from '@/lib/hooks/usePushNotification';
 
 interface UserProfile {
   id: number;
@@ -14,8 +15,10 @@ interface UserProfile {
 
 export default function WaiterProfilePage() {
   const router = useRouter();
+  const { unsubscribe } = usePushNotification();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,17 +49,33 @@ export default function WaiterProfilePage() {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
     try {
+      // JWT silinmeden önce endpoint'i yetkili olarak backend'den kaldır ve
+      // tarayıcı aboneliğini iptal et.
+      await unsubscribe();
+
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
 
-      if (response.ok) {
-        router.push('/waiter/login');
+      if (!response.ok) {
+        console.error('Logout failed:', await response.text());
       }
+
+      router.replace('/waiter/login');
     } catch (err) {
       console.error('Logout error:', err);
+      // Push temizliği veya backend logout'u hata verse bile kullanıcıyı
+      // istemci tarafında giriş ekranına döndür.
+      router.replace('/waiter/login');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -174,14 +193,17 @@ export default function WaiterProfilePage() {
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-between p-4 hover:bg-red-50 rounded-xl transition-colors group"
+            disabled={isLoggingOut}
+            className="w-full flex items-center justify-between p-4 hover:bg-red-50 rounded-xl transition-colors group disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
                 <LogOut className="w-5 h-5 text-red-500" strokeWidth={2} />
               </div>
               <div className="text-left">
-                <p className="text-base font-medium text-red-600">Çıkış Yap</p>
+                <p className="text-base font-medium text-red-600">
+                  {isLoggingOut ? 'Çıkış yapılıyor...' : 'Çıkış Yap'}
+                </p>
                 <p className="text-xs text-red-400">Hesabınızdan çıkış yapın</p>
               </div>
             </div>
