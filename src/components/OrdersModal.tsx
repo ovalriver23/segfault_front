@@ -38,7 +38,7 @@ export interface OrdersModalProps {
     onRefresh?: () => void;
 }
 
-const ORDERS_POLL_INTERVAL_MS = 20_000;
+const ORDERS_POLL_INTERVAL_MS = 15_000;
 const SERVED_CELEBRATION_DURATION_MS = 5_500;
 
 type FetchMode = 'initial' | 'manual' | 'background';

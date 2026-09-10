@@ -38,6 +38,7 @@ export interface TableInfo {
 export interface TableScanResponse {
     table: TableInfo;
     restaurantName: string;
+    restaurantLogo: string | null;
     restaurantLocation: string;
     restaurantLatitude: number;
     restaurantLongitude: number;

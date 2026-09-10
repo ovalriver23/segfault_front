@@ -27,6 +27,13 @@ type ChangePillProps = {
   value: number;
 };
 
+type StatsPeriod = 'today' | 'week' | 'month' | 'custom';
+
+type DailySales = {
+  date: string;
+  revenue: number;
+};
+
 type DashboardStats = {
   totalRevenue: number;
   revenueChangePercent: number;
@@ -36,7 +43,7 @@ type DashboardStats = {
   customerChangePercent: number;
   activeTableCount: number;
   pendingRequestCount: number;
-  salesTrend: { date: string; revenue: number }[] | null;
+  salesTrend: DailySales[] | null;
   hourlySalesTrend: { hour: string; revenue: number }[] | null;
   topMenuItems: { name: string; orderCount: number; revenue: number; changePercent: number }[];
   busyHours: { hour: string; orderCount: number }[];
@@ -76,8 +83,79 @@ const periodMapping: Record<string, string> = {
   'custom': 'Özel Tarih'
 };
 
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatSalesDate = (date: Date) => `${date.getDate()} ${monthNames[date.getMonth()]}`;
+
+const getSalesDateRange = (
+  period: StatsPeriod,
+  customStartDate: Date | null,
+  customEndDate: Date | null
+) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (period === 'week') {
+    const start = new Date(today);
+    const daysSinceMonday = (today.getDay() + 6) % 7;
+    start.setDate(today.getDate() - daysSinceMonday);
+    return {
+      start,
+      end: today
+    };
+  }
+
+  if (period === 'month') {
+    return {
+      start: new Date(today.getFullYear(), today.getMonth(), 1),
+      end: today
+    };
+  }
+
+  if (period === 'custom' && customStartDate && customEndDate) {
+    const start = new Date(customStartDate);
+    const end = new Date(customEndDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (start <= end) {
+      return { start, end };
+    }
+  }
+
+  return null;
+};
+
+const fillMissingSalesDays = (
+  salesTrend: DailySales[],
+  range: { start: Date; end: Date } | null
+) => {
+  if (!range) {
+    return salesTrend;
+  }
+
+  const revenueByDate = new Map(
+    salesTrend.map(item => [item.date.trim().toLowerCase(), item.revenue])
+  );
+  const completedSalesTrend: DailySales[] = [];
+
+  for (
+    let date = new Date(range.start);
+    date <= range.end;
+    date.setDate(date.getDate() + 1)
+  ) {
+    const dateLabel = formatSalesDate(date);
+    completedSalesTrend.push({
+      date: dateLabel,
+      revenue: revenueByDate.get(dateLabel.toLowerCase()) ?? 0
+    });
+  }
+
+  return completedSalesTrend;
+};
+
 export default function StatsPage() {
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'month' | 'custom'>('week');
+  const [activeTab, setActiveTab] = useState<StatsPeriod>('week');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,12 +213,6 @@ export default function StatsPage() {
   // X-axis için gün isimleri (Pazartesi'den başlayarak)
   const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Pazar'];
 
-  // Ayın son gününü hesapla
-  const getLastDayOfMonth = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  };
-
   // X-axis etiketlerini formatlama fonksiyonu
   const formatXAxisLabel = (value: string, index: number) => {
     if (activeTab === 'week') {
@@ -181,15 +253,18 @@ export default function StatsPage() {
     return value;
   };
 
-  const salesChartData = stats?.salesTrend?.map((item, index) => ({
-    name: item.date,
-    index: index,
-    value: item.revenue
-  })) || stats?.hourlySalesTrend?.map((item, index) => ({
-    name: item.hour,
-    index: index,
-    value: item.revenue
-  })) || [];
+  const salesDateRange = getSalesDateRange(activeTab, customStartDate, customEndDate);
+  const salesChartData = stats?.salesTrend
+    ? fillMissingSalesDays(stats.salesTrend, salesDateRange).map((item, index) => ({
+      name: item.date,
+      index,
+      value: item.revenue
+    }))
+    : stats?.hourlySalesTrend?.map((item, index) => ({
+      name: item.hour,
+      index,
+      value: item.revenue
+    })) || [];
 
   const busyHoursChartData = stats?.busyHours?.map(item => ({
     hour: item.hour,

@@ -9,6 +9,13 @@ export interface GeolocationError {
     message: string;
 }
 
+export const GEOLOCATION_ERROR_CODE = {
+    UNSUPPORTED: 0,
+    PERMISSION_DENIED: 1,
+    POSITION_UNAVAILABLE: 2,
+    TIMEOUT: 3,
+} as const;
+
 /**
  * Get user's current geolocation
  * Returns a promise that resolves with coordinates or rejects with an error
@@ -18,8 +25,8 @@ export const getUserLocation = (): Promise<LocationCoordinates> => {
         // Check if geolocation is supported
         if (!navigator.geolocation) {
             reject({
-                code: 0,
-                message: 'Geolocation is not supported by your browser'
+                code: GEOLOCATION_ERROR_CODE.UNSUPPORTED,
+                message: 'Tarayıcınız konum özelliğini desteklemiyor. Lütfen güncel bir tarayıcıyla tekrar deneyin.'
             } as GeolocationError);
             return;
         }
@@ -40,13 +47,13 @@ export const getUserLocation = (): Promise<LocationCoordinates> => {
                 
                 switch (error.code) {
                     case error.PERMISSION_DENIED:
-                        errorMessage = 'Konum izni reddedildi. Lütfen tarayıcı ayarlarından konum iznini açın.';
+                        errorMessage = 'Telefonunuzun konum servislerini ve bu tarayıcı için konum iznini açın, ardından tekrar deneyin.';
                         break;
                     case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Konum bilgisi alınamıyor. GPS açık olduğundan emin olun.';
+                        errorMessage = 'Konumunuz alınamıyor. Telefonunuzun konum servislerinin açık olduğundan emin olun ve tekrar deneyin.';
                         break;
                     case error.TIMEOUT:
-                        errorMessage = 'Konum alınırken zaman aşımı oluştu. Lütfen tekrar deneyin.';
+                        errorMessage = 'Konumunuz belirlenirken zaman aşımı oluştu. Açık bir alanda tekrar deneyin.';
                         break;
                 }
                 

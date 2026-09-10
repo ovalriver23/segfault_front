@@ -40,6 +40,7 @@ interface StaffStats {
 // --- SAHTE VERİLER (Özet Kartları için) ---
 // Rezervasyon kartı için mock data
 const mockReservationCount = 0;
+const BACKEND_CLOCK_OFFSET_HOURS = 3;
 
 // --- ALT BİLEŞENLER ---
 
@@ -82,7 +83,7 @@ const parseOrderDate = (value: string) => {
     Number(year),
     Number(month) - 1,
     Number(day),
-    Number(hour),
+    Number(hour) - BACKEND_CLOCK_OFFSET_HOURS,
     Number(minute),
     Number(second),
   );
