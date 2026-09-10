@@ -324,43 +324,51 @@ function CategoryFilter({
   const styles = themeStyles[theme] || themeStyles.DEFAULT;
 
   return (
-    <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
+    <div
+      className="scrollbar-hidden flex h-full snap-x snap-proximity items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 pb-2 touch-pan-x"
+      aria-label="Menü kategorileri"
+    >
       {/* "All" butonu */}
       <button
         key="all"
+        type="button"
         onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
+        aria-pressed={selectedCategory === "All"}
+        className={`flex w-[68px] shrink-0 snap-start flex-col items-center rounded-2xl outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 ${selectedCategory !== "All" ? "opacity-70" : ""
           }`}
       >
         <div
-          className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 ${selectedCategory === "All"
+          className={`flex h-[60px] w-[60px] items-center justify-center rounded-2xl shadow-sm transition-transform active:scale-95 ${selectedCategory === "All"
             ? `border-2 ${styles.border}`
             : ""
             } ${theme === 'MODERN' && selectedCategory !== "All" ? styles.iconBg : ''}`}
           style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
         >
-          <Image src="/images/burger.png" alt="All" width={63} height={63} className="rounded-lg" />
+          <Image src="/images/burger.png" alt="" width={48} height={48} className="rounded-xl" />
         </div>
-        <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
+        <span className={`mt-1.5 w-full truncate text-center text-[13px] font-semibold leading-5 ${styles.text}`}>Tümü</span>
       </button>
 
       {/* Dinamik kategoriler */}
       {categories.map((cat) => (
         <button
           key={cat.id}
+          type="button"
           onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
+          aria-pressed={selectedCategory === cat.name}
+          title={cat.name}
+          className={`flex w-[68px] shrink-0 snap-start flex-col items-center rounded-2xl outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 ${selectedCategory !== cat.name ? "opacity-70" : ""
             }`}
         >
           <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
+            className={`flex h-[60px] w-[60px] items-center justify-center overflow-hidden rounded-2xl shadow-sm transition-transform active:scale-95 ${selectedCategory === cat.name
               ? `border-2 ${styles.border}`
               : ""
               } ${theme === 'MODERN' && selectedCategory !== cat.name ? styles.iconBg : ''}`}
             style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
           >
             {cat.imageUrl ? (
-              <div className="relative w-16 h-16">
+              <div className="relative h-[52px] w-[52px]">
                 <Image
                   src={cat.imageUrl}
                   alt={cat.name}
@@ -372,14 +380,14 @@ function CategoryFilter({
             ) : (
               <Image
                 src="/images/burger.png"
-                alt={cat.name}
-                width={63}
-                height={63}
+                alt=""
+                width={48}
+                height={48}
                 className="mask mask-squircle"
               />
             )}
           </div>
-          <span className={`font-semibold text-sm ${styles.text}`}>{cat.name}</span>
+          <span className={`mt-1.5 w-full truncate text-center text-[13px] font-semibold leading-5 ${styles.text}`}>{cat.name}</span>
         </button>
       ))}
     </div>
@@ -663,7 +671,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292;
+      const STICKY_OFFSET = 264;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = main.getBoundingClientRect().top;
       const currentScrollTop = main.scrollTop;
@@ -836,7 +844,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
       className={`max-w-md mx-auto rounded-3xl shadow-2xl h-screen overflow-y-auto relative pb-4 scroll-smooth ${currentThemeStyle.bg}`}
     >
       {/* YAPIŞKAN BAŞLIKLAR: */}
-      <header className={`sticky top-0 z-10 flex h-[88px] items-center justify-between gap-3 border-b px-4 py-4 ${currentThemeStyle.headerBorder} ${currentThemeStyle.headerBg}`}>
+      <header className={`sticky top-0 z-30 flex h-[88px] items-center justify-between gap-3 border-b px-4 py-4 ${currentThemeStyle.headerBorder} ${currentThemeStyle.headerBg}`}>
         {/* Left: Restaurant Identity */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {restaurantLogo && !restaurantLogoFailed && (
@@ -896,16 +904,17 @@ export default function MenuView({ apiData }: MenuViewProps) {
       <main className="px-2">
 
         {/* Search Bar and Call Waiter Button */}
-        <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex gap-2 px-4 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky top-[88px] z-20 flex h-[72px] w-full gap-2.5 px-4 py-3 transition-[transform,opacity] duration-300 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
           }`}>
-          {/* Search Bar (60%) */}
-          <div className="w-[60%]">
-            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full ${currentThemeStyle.searchBg}`}>
+          {/* Search Bar */}
+          <div className="min-w-0 flex-1">
+            <label className={`input input-bordered flex h-12 w-full items-center gap-2 rounded-2xl border-none px-3.5 shadow-sm ${currentThemeStyle.searchBg}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
+                className={`h-5 w-5 shrink-0 opacity-70 ${currentThemeStyle.searchIcon}`}
+                aria-hidden="true"
               >
                 <path
                   fillRule="evenodd"
@@ -915,18 +924,19 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </svg>
               <input
                 type="text"
-                className={`grow bg-transparent w-full ${currentThemeStyle.searchInput}`}
-                placeholder="Ara"
+                aria-label="Menüde ara"
+                className={`min-w-0 grow bg-transparent text-base outline-none ${currentThemeStyle.searchInput}`}
+                placeholder="Menüde ara"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </label>
           </div>
 
-          {/* Call Waiter Button (40%) */}
-          <div className="w-[40%] h-14">
+          {/* Call Waiter Button */}
+          <div className="h-12 w-[132px] shrink-0">
             {waiterCalled ? (
-              <div className="w-full h-full flex items-center justify-center gap-1 bg-green-100 text-green-700 px-3 rounded-full shadow-sm">
+              <div className="flex h-full w-full items-center justify-center gap-1.5 rounded-2xl bg-green-100 px-3 text-green-700 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -936,26 +946,27 @@ export default function MenuView({ apiData }: MenuViewProps) {
               <button
                 onClick={handleShowWaiterConfirm}
                 disabled={isCallingWaiter}
-                className={`w-full h-full flex items-center justify-center gap-1 px-3 rounded-full transition-colors shadow-sm ${currentThemeStyle.callWaiterBg}`}
+                type="button"
+                className={`flex h-full w-full items-center justify-center gap-1.5 rounded-2xl px-3 shadow-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 ${currentThemeStyle.callWaiterBg}`}
               >
                 {isCallingWaiter ? (
                   <span className="loading loading-spinner loading-xs"></span>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 17.5 21.502" fill="none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 17.5 21.502" fill="none" aria-hidden="true">
                     <g id="Group">
                       <path id="Vector" d="M16.75 20.752V14.778C16.75 13.828 16.75 13.354 16.592 12.98C16.3917 12.5071 16.0172 12.1293 15.546 11.925C15.173 11.764 14.699 11.76 13.75 11.752C13.75 16.752 8.75 18.752 8.75 18.752C8.75 18.752 3.75 16.752 3.75 11.752C2.818 11.752 2.352 11.752 1.985 11.904C1.74227 12.0044 1.5217 12.1516 1.33588 12.3373C1.15005 12.5229 1.00262 12.7434 0.902 12.986C0.75 13.354 0.750001 13.82 0.750001 14.752V20.752" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       <path id="Vector_2" d="M8.75 12.25L10.75 11.25V13.25L8.75 12.25ZM8.75 12.25L6.75 11.25V13.25L8.75 12.25ZM12.25 5.25V4.25C12.25 3.79037 12.1595 3.33525 11.9836 2.91061C11.8077 2.48597 11.5499 2.10013 11.2249 1.77513C10.8999 1.45012 10.514 1.19231 10.0894 1.01642C9.66475 0.84053 9.20963 0.75 8.75 0.75C8.29037 0.75 7.83525 0.84053 7.41061 1.01642C6.98597 1.19231 6.60013 1.45012 6.27513 1.77513C5.95012 2.10013 5.69231 2.48597 5.51642 2.91061C5.34053 3.33525 5.25 3.79037 5.25 4.25V5.25C5.25 5.70963 5.34053 6.16475 5.51642 6.58939C5.69231 7.01403 5.95012 7.39987 6.27513 7.72487C6.60013 8.04988 6.98597 8.30769 7.41061 8.48358C7.83525 8.65947 8.29037 8.75 8.75 8.75C9.20963 8.75 9.66475 8.65947 10.0894 8.48358C10.514 8.30769 10.8999 8.04988 11.2249 7.72487C11.5499 7.39987 11.8077 7.01403 11.9836 6.58939C12.1595 6.16475 12.25 5.70963 12.25 5.25Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </g>
                   </svg>
                 )}
-                <span className="text-sm font-medium">Garson Çağır</span>
+                <span className="whitespace-nowrap text-sm font-semibold">Garson Çağır</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Kategori Filtresi */}
-        <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+        <div className={`sticky top-[160px] z-20 h-[104px] w-full pt-2 transition-[transform,opacity] duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
           }`}>
           <CategoryFilter
             categories={categoriesForFilter}
