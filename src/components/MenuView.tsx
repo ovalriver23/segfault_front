@@ -35,6 +35,8 @@ import {
 import CartModal from "./CartModal";
 import OrdersModal from "./OrdersModal";
 import NotificationModal, { showNotification, type NotificationType } from "./NotificationModal";
+import MenuCategoryFilter, { type CategoryFilterItem } from "./MenuCategoryFilter";
+import MenuPoweredBy from "./MenuPoweredBy";
 
 // --- API Response Types (Based on Section 9.3) ---
 export type MenuItem = {
@@ -97,12 +99,6 @@ type MenuSection = {
   categoryName: string;
   items: Product[];
 };
-
-type CategoryFilterItem = {
-  id: number;
-  name: string;
-  imageUrl: string | null;
-}
 
 // --- Alt Bileşenler ---
 
@@ -281,115 +277,6 @@ function ProductCard({
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-// 2. Kategori Filtresi
-function CategoryFilter({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  theme
-}: {
-  categories: CategoryFilterItem[];
-  selectedCategory: string;
-  onSelectCategory: (categoryName: string) => void;
-  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
-}) {
-  const themeStyles = {
-    DEFAULT: {
-      bgActive: "#F8A45A",
-      bgInactive: "#FFC898",
-      border: "border-secondary-500",
-      text: "text-gray-800",
-      iconBg: ""
-    },
-    MODERN: {
-      bgActive: "#ea580c",
-      bgInactive: "#374151",
-      border: "border-orange-500",
-      text: "text-gray-200",
-      // Rainbow gradient for inactive state (faint)
-      iconBg: "bg-gradient-to-tr from-indigo-100/10 via-purple-100/10 to-pink-100/10"
-    },
-    ELEGANT: {
-      bgActive: "#9C6644",
-      bgInactive: "#d2b48c",
-      border: "border-[#5c4033]",
-      text: "text-[#5c4033]",
-      iconBg: ""
-    }
-  };
-  const styles = themeStyles[theme] || themeStyles.DEFAULT;
-
-  return (
-    <div
-      className="scrollbar-hidden flex h-full snap-x snap-proximity items-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 pb-2 touch-pan-x"
-      aria-label="Menü kategorileri"
-    >
-      {/* "All" butonu */}
-      <button
-        key="all"
-        type="button"
-        onClick={() => onSelectCategory("All")}
-        aria-pressed={selectedCategory === "All"}
-        className={`flex w-[68px] shrink-0 snap-start flex-col items-center rounded-2xl outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 ${selectedCategory !== "All" ? "opacity-70" : ""
-          }`}
-      >
-        <div
-          className={`flex h-[60px] w-[60px] items-center justify-center rounded-2xl shadow-sm transition-transform active:scale-95 ${selectedCategory === "All"
-            ? `border-2 ${styles.border}`
-            : ""
-            } ${theme === 'MODERN' && selectedCategory !== "All" ? styles.iconBg : ''}`}
-          style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
-        >
-          <Image src="/images/burger.png" alt="" width={48} height={48} className="rounded-xl" />
-        </div>
-        <span className={`mt-1.5 w-full truncate text-center text-[13px] font-semibold leading-5 ${styles.text}`}>Tümü</span>
-      </button>
-
-      {/* Dinamik kategoriler */}
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          type="button"
-          onClick={() => onSelectCategory(cat.name)}
-          aria-pressed={selectedCategory === cat.name}
-          title={cat.name}
-          className={`flex w-[68px] shrink-0 snap-start flex-col items-center rounded-2xl outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 ${selectedCategory !== cat.name ? "opacity-70" : ""
-            }`}
-        >
-          <div
-            className={`flex h-[60px] w-[60px] items-center justify-center overflow-hidden rounded-2xl shadow-sm transition-transform active:scale-95 ${selectedCategory === cat.name
-              ? `border-2 ${styles.border}`
-              : ""
-              } ${theme === 'MODERN' && selectedCategory !== cat.name ? styles.iconBg : ''}`}
-            style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : (theme === 'MODERN' ? 'transparent' : styles.bgInactive) }}
-          >
-            {cat.imageUrl ? (
-              <div className="relative h-[52px] w-[52px]">
-                <Image
-                  src={cat.imageUrl}
-                  alt={cat.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  className="mask mask-squircle object-cover"
-                />
-              </div>
-            ) : (
-              <Image
-                src="/images/burger.png"
-                alt=""
-                width={48}
-                height={48}
-                className="mask mask-squircle"
-              />
-            )}
-          </div>
-          <span className={`mt-1.5 w-full truncate text-center text-[13px] font-semibold leading-5 ${styles.text}`}>{cat.name}</span>
-        </button>
-      ))}
     </div>
   );
 }
@@ -968,7 +855,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
         {/* Kategori Filtresi */}
         <div className={`sticky top-[160px] z-20 h-[104px] w-full pt-2 transition-[transform,opacity] duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
           }`}>
-          <CategoryFilter
+          <MenuCategoryFilter
             categories={categoriesForFilter}
             selectedCategory={selectedCategory}
             onSelectCategory={handleCategoryClick}
@@ -1007,6 +894,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
               </div>
             </section>
           ))}
+          <MenuPoweredBy theme={theme} />
         </div>
       </main>
 

@@ -19,7 +19,9 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
-import type { ApiResponse, MenuItem, Category } from "./MenuView";
+import type { ApiResponse } from "./MenuView";
+import MenuCategoryFilter, { type CategoryFilterItem } from "./MenuCategoryFilter";
+import MenuPoweredBy from "./MenuPoweredBy";
 
 // --- Internal Types for UI ---
 type Product = {
@@ -41,12 +43,6 @@ type MenuSection = {
   categoryName: string;
   items: Product[];
 };
-
-type CategoryFilterItem = {
-  id: number;
-  name: string;
-  imageUrl: string | null;
-}
 
 // --- Sub Components ---
 
@@ -205,157 +201,7 @@ function ProductCard({
   );
 }
 
-// 2. Category Filter
-function CategoryFilter({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  theme
-}: {
-  categories: CategoryFilterItem[];
-  selectedCategory: string;
-  onSelectCategory: (categoryName: string) => void;
-  theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
-}) {
-  const themeStyles = {
-    DEFAULT: {
-      bgActive: "#F8A45A",
-      bgInactive: "#FFC898",
-      border: "border-secondary-500",
-      text: "text-gray-800"
-    },
-    MODERN: {
-      bgActive: "#ea580c",
-      bgInactive: "#4b5563",
-      border: "border-orange-500",
-      text: "text-gray-200"
-    },
-    ELEGANT: {
-      bgActive: "#8b4513",
-      bgInactive: "#d2b48c",
-      border: "border-[#5c4033]",
-      text: "text-[#5c4033]"
-    }
-  };
-  const styles = themeStyles[theme] || themeStyles.DEFAULT;
-
-  return (
-    <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
-      {/* "All" button */}
-      <button
-        key="all"
-        onClick={() => onSelectCategory("All")}
-        className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== "All" ? "opacity-70" : ""
-          }`}
-      >
-        <div
-          className={`w-20 h-20 rounded-2xl shadow-md mb-2 overflow-hidden ${selectedCategory === "All"
-            ? `border-2 ${styles.border}`
-            : ""
-            }`}
-          style={{ backgroundColor: selectedCategory === "All" ? styles.bgActive : styles.bgInactive }}
-        >
-          {(() => {
-            const imgs = categories.filter(c => c.imageUrl).slice(0, 4);
-            if (imgs.length === 0) {
-              return (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Image src="/images/burger.png" alt="All" width={63} height={63} className="mask mask-squircle rounded-lg" />
-                </div>
-              );
-            }
-            if (imgs.length === 1) {
-              return (
-                <div className="relative w-full h-full">
-                  <Image src={imgs[0].imageUrl!} alt={imgs[0].name} fill sizes="80px" className="object-cover" />
-                </div>
-              );
-            }
-            if (imgs.length === 2) {
-              return (
-                <div className="w-full h-full flex">
-                  {imgs.map((c) => (
-                    <div key={c.id} className="relative flex-1 h-full">
-                      <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
-                    </div>
-                  ))}
-                </div>
-              );
-            }
-            if (imgs.length === 3) {
-              return (
-                <div className="w-full h-full flex">
-                  <div className="relative w-1/2 h-full">
-                    <Image src={imgs[0].imageUrl!} alt={imgs[0].name} fill sizes="40px" className="object-cover" />
-                  </div>
-                  <div className="flex flex-col flex-1 h-full">
-                    {imgs.slice(1).map((c) => (
-                      <div key={c.id} className="relative flex-1">
-                        <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-            // 4 images — 2×2 grid
-            return (
-              <div className="w-full h-full grid grid-cols-2 grid-rows-2">
-                {imgs.map((c) => (
-                  <div key={c.id} className="relative">
-                    <Image src={c.imageUrl!} alt={c.name} fill sizes="40px" className="object-cover" />
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-        <span className={`font-semibold text-sm ${styles.text}`}>Tümü</span>
-      </button>
-
-      {/* Dynamic categories */}
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          onClick={() => onSelectCategory(cat.name)}
-          className={`flex flex-col items-center shrink-0 w-20 ${selectedCategory !== cat.name ? "opacity-70" : ""
-            }`}
-        >
-          <div
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md mb-2 overflow-hidden ${selectedCategory === cat.name
-              ? `border-2 ${styles.border}`
-              : ""
-              }`}
-            style={{ backgroundColor: selectedCategory === cat.name ? styles.bgActive : styles.bgInactive }}
-          >
-            {cat.imageUrl ? (
-              <div className="relative w-16 h-16">
-                <Image
-                  src={cat.imageUrl}
-                  alt={cat.name}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  className="mask mask-squircle object-cover"
-                />
-              </div>
-            ) : (
-              <Image
-                src="/images/burger.png"
-                alt={cat.name}
-                width={63}
-                height={63}
-                className="mask mask-squircle"
-              />
-            )}
-          </div>
-          <span className={`font-semibold text-sm ${styles.text}`}>{cat.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// 3. Cart Summary (Preview version - relative positioning)
+// 2. Cart Summary (Preview version - relative positioning)
 function CartSummary({
   itemCount,
   totalPrice,
@@ -411,6 +257,12 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
   const [isSearchVisible, setIsSearchVisible] = useState(true);
   const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [restaurantLogoFailed, setRestaurantLogoFailed] = useState(false);
+  const restaurantLogo = apiData.restaurantLogo?.trim() || null;
+
+  useEffect(() => {
+    setRestaurantLogoFailed(false);
+  }, [restaurantLogo]);
 
   // Transform API data to MenuSection format
   const menuData: MenuSection[] = useMemo(() => {
@@ -494,7 +346,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
 
     const section = sectionRefs.current[categoryName];
     if (section) {
-      const STICKY_OFFSET = 292;
+      const STICKY_OFFSET = 264;
       const sectionTop = section.getBoundingClientRect().top;
       const containerTop = scrollContainer.getBoundingClientRect().top;
       const currentScrollTop = scrollContainer.scrollTop;
@@ -590,7 +442,10 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       searchBg: "bg-orange-100/70",
       searchInput: "placeholder-orange-900/60 text-[#6b3b1f]",
       searchIcon: "text-orange-900",
-      categoryFilterBg: "bg-white"
+      categoryFilterBg: "bg-white",
+      headerBorder: "border-orange-100/80",
+      logoSurface: "bg-white ring-orange-100",
+      mutedText: "text-gray-500"
     },
     MODERN: {
       bg: "bg-[#1f1f1f]",
@@ -600,7 +455,10 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       searchInput: "placeholder-gray-400 text-white",
       searchIcon: "text-gray-400",
       categoryFilterBg: "bg-[#1f1f1f]",
-      categoryTitleBg: "bg-[#1f1f1f]" // Fix white box
+      categoryTitleBg: "bg-[#1f1f1f]", // Fix white box
+      headerBorder: "border-white/10",
+      logoSurface: "bg-white ring-white/15",
+      mutedText: "text-gray-400"
     },
     ELEGANT: {
       bg: "bg-[#f5f5dc]",
@@ -611,7 +469,10 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       searchIcon: "text-[#8b4513]",
       categoryFilterBg: "bg-[#f5f5dc]",
       separatorColor: "#8b4513",
-      categoryTitleBg: "bg-[#f5f5dc]"
+      categoryTitleBg: "bg-[#f5f5dc]",
+      headerBorder: "border-[#d2b48c]/60",
+      logoSurface: "bg-[#fdfbf7] ring-[#d2b48c]",
+      mutedText: "text-[#8b4513]/70"
     }
   };
 
@@ -630,27 +491,33 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
       {/* Scrollable Content Area */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth pb-24">
         {/* STICKY HEADERS */}
-        <header className={`pt-6 pl-6 pr-6 pb-4 flex justify-between items-start sticky top-0 z-10 border-b border-gray-100 ${currentThemeStyle.headerBg}`}>
-          {/* Left: Menu Title */}
-          <h1 className={`text-4xl font-bold ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}>Menü</h1>
-
-          <div className="flex flex-col items-end text-right">
-            <div className={`flex items-center space-x-1 font-bold text-lg ${currentThemeStyle.text}`}>
-              <span>{apiData.restaurantName}</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="w-5 h-5 text-gray-400"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9.796 17 6.042 13.866 3 10 3S3 6.042 3 9.796c0 2.697 1.698 5.192 3.57 6.79.829.799 1.654 1.381 2.274 1.765.31.193.57.337.757.433.096.049.19.099.281.14l.018.008.006.003zM10 11.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                  clipRule="evenodd"
+        <header className={`sticky top-0 z-30 flex h-[88px] items-center border-b px-4 py-4 ${currentThemeStyle.headerBorder} ${currentThemeStyle.headerBg}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {restaurantLogo && !restaurantLogoFailed && (
+              <div className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ${currentThemeStyle.logoSurface}`}>
+                <Image
+                  src={restaurantLogo}
+                  alt={`${apiData.restaurantName} logosu`}
+                  fill
+                  sizes="44px"
+                  className="object-contain p-1.5"
+                  onError={() => setRestaurantLogoFailed(true)}
                 />
-              </svg>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h1
+                className={`truncate text-lg font-bold leading-tight ${theme === 'MODERN' ? 'text-[#ea580c]' : currentThemeStyle.text}`}
+                title={apiData.restaurantName}
+              >
+                {apiData.restaurantName}
+              </h1>
+              <p className={`mt-1 flex min-w-0 items-center gap-1 text-xs font-medium ${currentThemeStyle.mutedText}`}>
+                <span className="truncate">Önizleme</span>
+                <span className="shrink-0" aria-hidden="true">·</span>
+                <span className="shrink-0">Menü</span>
+              </p>
             </div>
-            <span className="text-sm text-gray-500 font-medium mt-1">{apiData.table.name}</span>
           </div>
         </header>
 
@@ -658,14 +525,15 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
         <main className="px-2">
 
           {/* Search Bar */}
-          <div className={`sticky w-full top-[88px] pt-2 pb-4 z-5 h-20 transition-transform duration-300 flex justify-center ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          <div className={`sticky top-[88px] z-20 flex h-[72px] w-full px-4 py-3 transition-[transform,opacity] duration-300 ${currentThemeStyle.headerBg} ${isSearchVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
             }`}>
-            <label className={`input input-bordered flex items-center gap-2 rounded-full h-14 border-none w-full scale-[0.9] ${currentThemeStyle.searchBg}`}>
+            <label className={`input input-bordered flex h-12 w-full items-center gap-2 rounded-2xl border-none px-3.5 shadow-sm ${currentThemeStyle.searchBg}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className={`w-5 h-5 opacity-70 ${currentThemeStyle.searchIcon}`}
+                className={`h-5 w-5 shrink-0 opacity-70 ${currentThemeStyle.searchIcon}`}
+                aria-hidden="true"
               >
                 <path
                   fillRule="evenodd"
@@ -675,8 +543,9 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
               </svg>
               <input
                 type="text"
-                className={`grow bg-transparent ${currentThemeStyle.searchInput}`}
-                placeholder="Ara"
+                aria-label="Menüde ara"
+                className={`min-w-0 grow bg-transparent text-base outline-none ${currentThemeStyle.searchInput}`}
+                placeholder="Menüde ara"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -684,9 +553,9 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
           </div>
 
           {/* Category Filter */}
-          <div className={`sticky w-full top-[168px] pt-2 pb-1 z-5 h-[124px] transition-transform duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0' : '-translate-y-[200%]'
+          <div className={`sticky top-[160px] z-20 h-[104px] w-full pt-2 transition-[transform,opacity] duration-300 ${currentThemeStyle.categoryFilterBg} ${isCategoryFilterVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[200%] opacity-0'
             }`}>
-            <CategoryFilter
+            <MenuCategoryFilter
               categories={categoriesForFilter}
               selectedCategory={selectedCategory}
               onSelectCategory={handleCategoryClick}
@@ -724,6 +593,7 @@ export default function MenuPreview({ apiData }: MenuPreviewProps) {
                 </div>
               </section>
             ))}
+            <MenuPoweredBy theme={theme} />
           </div>
         </main>
       </div>
