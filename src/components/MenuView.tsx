@@ -109,7 +109,8 @@ function ProductCard({
   onAddToCart,
   onUpdateQuantity,
   qrToken,
-  theme
+  theme,
+  index = 0
 }: {
   product: Product;
   itemInCart?: CartItem;
@@ -117,6 +118,7 @@ function ProductCard({
   onUpdateQuantity: (productId: number, newQuantity: number) => void;
   qrToken: string;
   theme: 'DEFAULT' | 'MODERN' | 'ELEGANT';
+  index?: number;
 }) {
   const router = useRouter();
   // Check if product is popular (you can adjust this logic based on your data)
@@ -192,8 +194,8 @@ function ProductCard({
           alt={product.name}
           fill
           className="object-cover"
-          sizes="(max-width: 768px) 50vw, 25vw"
-          loading="eager"
+          sizes="(max-width: 448px) calc(50vw - 32px), 192px"
+          {...(index < 4 ? { priority: true } : { loading: "lazy" as const })}
         />
       </div>
 
@@ -646,6 +648,16 @@ export default function MenuView({ apiData }: MenuViewProps) {
     return new Map(cart.map((item) => [item.id, item]));
   }, [cart]);
 
+  // --- Helper: compute the flat index of a product across all sections ---
+  const globalIndex = (sections: MenuSection[], categoryId: number, localIndex: number): number => {
+    let count = 0;
+    for (const s of sections) {
+      if (s.categoryId === categoryId) return count + localIndex;
+      count += s.items.length;
+    }
+    return count + localIndex;
+  };
+
   // --- RENDER ---
   const theme = apiData.menuTheme || 'DEFAULT';
 
@@ -880,7 +892,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
                 </h2>
               </div>
               <div className="grid grid-cols-2 gap-4 w-full">
-                {section.items.map((product) => (
+                {section.items.map((product, productIndex) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -889,6 +901,7 @@ export default function MenuView({ apiData }: MenuViewProps) {
                     onUpdateQuantity={handleUpdateQuantity}
                     qrToken={qrToken}
                     theme={theme}
+                    index={globalIndex(filteredMenu, section.categoryId, productIndex)}
                   />
                 ))}
               </div>
